@@ -17,10 +17,10 @@ Goal: Maintain a working baseline before expanding functionality.
 Chunk 1 — Scientific data model
 
 Define what an ECAS spectrum is independently of the interface.
-- Establish a consistent spectrum representation.
-- Preserve source paths, column information, and metadata.
-- Separate file-import validation from scientific suitability checks.
-- Add tests for the model and its validation rules.
+- ✓ Establish a consistent spectrum representation.
+- ✓/x Preserve source paths, column information, and metadata.
+- x Separate file-import validation from scientific suitability checks.
+- ✓/x Add tests for the model and its validation rules.
 Completion criterion: Imported spectra become structured, validated objects rather than loosely organized dictionaries.
 
 
