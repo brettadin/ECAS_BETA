@@ -246,7 +246,11 @@ class ECASWindow(QMainWindow):
 
 
     def _import_csv(self):
-        """Import a CSV spectrum and display its validated measurements."""
+        """Import a CSV spectrum and display its validated measurements.
+
+        Opens a file dialog via QFileDialog.getOpenFileName(). For testing,
+        use the private _import_csv_from_path() method instead.
+        """
         file_name, _ = QFileDialog.getOpenFileName(
             self,
             "Import Spectrum CSV",
@@ -279,7 +283,7 @@ class ECASWindow(QMainWindow):
 
         for row_index, row in enumerate(rows):
             for column_index, column in enumerate(columns):
-            # Show missing values as blank cells; preserve None in the data model.
+                # Display missing values as blank cells without changing stored data.
                 value = row[column]
                 item = QTableWidgetItem("" if value is None else str(value))
                 self.spectrum_table.setItem(
@@ -293,6 +297,52 @@ class ECASWindow(QMainWindow):
         self.spectrum_status.setText(
             f"Loaded: {source_name} — {spectrum.row_count} rows"
         )
-        self.statusBar().showMessage(
-            f"Imported {spectrum.row_count} measurements"
+        status_message = (
+            f"Imported {spectrum.row_count} measurements. "
+            + (", ".join(spectrum.warnings) if spectrum.warnings else "")
         )
+        self.statusBar().showMessage(status_message)
+
+    def _import_csv_from_path(self, path: str):
+        """Import a CSV from a specific path for testing purposes."""
+        try:
+            spectrum = import_spectrum_csv(path)
+        except SpectrumImportError as exc:
+            QMessageBox.warning(
+                self,
+                "Spectrum Import Failed",
+                str(exc),
+            )
+            self.statusBar().showMessage("Import failed")
+            return
+
+        # SpectrumData uses attributes instead of dictionary keys.
+        rows = spectrum.rows
+        columns = list(spectrum.columns)
+
+        self.spectrum_table.setRowCount(0)
+        self.spectrum_table.setColumnCount(len(columns))
+        self.spectrum_table.setHorizontalHeaderLabels(columns)
+        self.spectrum_table.setRowCount(len(rows))
+
+        for row_index, row in enumerate(rows):
+            for column_index, column in enumerate(columns):
+                # Display missing values as blank cells without changing stored data.
+                value = row[column]
+                item = QTableWidgetItem("" if value is None else str(value))
+                self.spectrum_table.setItem(
+                    row_index, column_index, item
+                )
+
+        self.spectrum_table.resizeColumnsToContents()
+        self.current_spectrum = spectrum
+
+        source_name = spectrum.source_file.name
+        self.spectrum_status.setText(
+            f"Loaded: {source_name} — {spectrum.row_count} rows"
+        )
+        status_message = (
+            f"Imported {spectrum.row_count} measurements. "
+            + (", ".join(spectrum.warnings) if spectrum.warnings else "")
+        )
+        self.statusBar().showMessage(status_message)

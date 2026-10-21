@@ -125,3 +125,48 @@ def test_blank_uncertainty_is_preserved_and_warned(tmp_path):
     assert len(result.warnings) == 1
     assert "1 measurement row(s)" in result.warnings[0]
     assert "not zero uncertainty" in result.warnings[0]
+
+
+def test_import_csv_without_uncertainty_column(tmp_path):
+    """Test A: Import succeeds with no uncertainty column; uncertainty is not added."""
+    path = tmp_path / "spectrum.csv"
+    path.write_text(
+        "wavelength,signal\n"
+        "400,12.5\n"
+        "401,13.1\n",
+        encoding="utf-8",
+    )
+
+    result = import_spectrum_csv(path)
+
+    # Import succeeds without the optional column.
+    assert isinstance(result, SpectrumData)
+    assert result.row_count == 2
+    assert result.columns == ("wavelength", "signal")
+
+    # The measurement rows are retained.
+    assert result.rows[0]["wavelength"] == 400
+    assert result.rows[0]["signal"] == 12.5
+
+    # Uncertainty is not added (column does not exist in the model).
+    assert "uncertainty" not in result.rows[0]
+
+    # No warnings since uncertainty was optional and absent.
+    assert len(result.warnings) == 0
+
+
+def test_missing_required_measurement(tmp_path):
+    """Test B: Import raises SpectrumImportError when a required value is blank."""
+    path = tmp_path / "bad.csv"
+    path.write_text(
+        "wavelength,signal\n"
+        "400,\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        SpectrumImportError, match="'signal' must be numeric"
+    ):
+        import_spectrum_csv(path)
+
+

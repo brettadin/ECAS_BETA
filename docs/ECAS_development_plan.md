@@ -7,7 +7,7 @@ Proposed development chunks
 Chunk 0 — Working foundation
 Complete
 
-Desktop shell, navigation, CSV import, table display, initial tests.
+- ✓ Desktop shell, navigation, CSV import, table display, initial tests.
 
 Goal: Maintain a working baseline before expanding functionality.
 
@@ -17,10 +17,11 @@ Goal: Maintain a working baseline before expanding functionality.
 Chunk 1 — Scientific data model
 
 Define what an ECAS spectrum is independently of the interface.
-- ✓ Establish a consistent spectrum representation.
-- ✓/x Preserve source paths, column information, and metadata.
-- x Separate file-import validation from scientific suitability checks.
-- ✓/x Add tests for the model and its validation rules.
+- ✓ Establish a consistent spectrum representation (frozen dataclass).
+- ◐ Preserve source paths, column information, and metadata: path/columns retained in SpectrumData; units/signal-type remain None (uninferred per spec); no scientific metadata beyond CSV columns exists.
+- ✗ Separate file-import validation from scientific suitability checks: importer validates structure and records warnings but performs no scientific suitability evaluation.
+- ◐ Add tests for the model and its validation rules: test_csv_importer.py provides 8 functional tests covering required columns, missing values, invalid numbers; spectrum.py lacks direct type/unit assertions.
+
 Completion criterion: Imported spectra become structured, validated objects rather than loosely organized dictionaries.
 
 
