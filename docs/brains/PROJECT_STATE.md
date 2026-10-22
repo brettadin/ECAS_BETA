@@ -1,6 +1,6 @@
 # ECAS - Project State Document
 
-**Last Updated:** 2026-10-21  
+**Last Updated:** 2026-10-22  
 **Version:** 1.0 (Beta)
 
 ---
@@ -12,15 +12,19 @@ ECAS_BETA/
 ├── ecas/
 │   ├── __init__.py
 │   ├── models/
-│   │   ├── spectrum.py         # SpectrumData model
+│   │   ├── spectrum.py         # SpectrumData model (frozen dataclass)
 │   │   └── __init__.py
 │   ├── persistence.py          # SQLite storage layer (COMPLETE)
+│   ├── visualization/           # Spectral visualization component
+│   │   └── spectra_plot.py      # PyQtGraph spectrum plot widget
 │   └── ...
 ├── docs/
 │   └── brains/
 │       ├── DECISIONS.md        # Design decisions
 │       └── PROJECT_STATE.md    # This file
-├── tests/                      # Test directory (empty or with test_persistence.py)
+├── tests/                      # Test directory (complete test coverage for persistence and visualization)
+│   ├── test_persistence.py     # Persistence tests (20 passing tests)
+│   └── test_spectra_plot.py    # Visualization tests (8 passing tests)
 ├── README.md
 └── ...
 ```
@@ -29,7 +33,7 @@ ECAS_BETA/
 
 ## Component Status
 
-### ✅ persistence.py - COMPLETE
+### ✅ persistence.py - COMPLETE (Chunk 2)
 
 **Functions Implemented:**
 | Function | Description | Status |
@@ -46,7 +50,7 @@ ECAS_BETA/
 | `count_spectra()` | Counts spectra in project DB | ✅ |
 
 **Storage Format:**
-- Each spectrum stored as JSON in TEXT column
+- Each spectrum stored as JSON in TEXT column (via SQLite BLOB/TEXT)
 - JSON structure:
   ```json
   {
@@ -60,46 +64,88 @@ ECAS_BETA/
   }
   ```
 
-### ✅ models/spectrum.py - COMPLETE
+### ✅ models/spectrum.py - COMPLETE (Chunk 1)
 
 **Class:** `SpectrumData`  
 **Attributes:**
 - `source_file`: Path to original spectrum file
-- `rows`: Tuple of tuples (spectral data matrix)
+- `rows`: Tuple of tuples (spectral data matrix, frozen at creation)
 - `columns`: Tuple of column names
-- `axis_unit`: X-axis unit (e.g., "Hz")
-- `signal_unit`: Y-axis unit (e.g., "arbitrary units")
-- `signal_type`: Signal type (e.g., "NMR")
-- `warnings`: Empty tuple or tuple of warning messages
+- `axis_unit`: X-axis unit (e.g., "Hz", may be None)
+- `signal_unit`: Y-axis unit (e.g., "arbitrary units", may be None)
+- `signal_type`: Signal type (e.g., "NMR", may be None)
+- `warnings`: Empty tuple or tuple of warning messages from import
 
-### ⏳ Other Components - UNKNOWN
+### ⏳ visualization/spectra_plot.py - IN PROGRESS (Chunk 3)
 
-Need to check repository for remaining modules.
+**Location:** `ecas/visualization/spectra_plot.py`
+
+**Role:**
+- Receives normalized `SpectrumData`.
+- Uses PyQtGraph to display spectral coordinates.
+- Is intended to replace the previous plotted dataset when a new one loads.
+
+**Verification requirements:**
+- Axis labels use only available column names and explicitly supplied units.
+- Missing, non-numeric, and non-finite values are handled correctly.
+- Failed loads clear both visible and internal state.
+- The original measurement rows, columns, and metadata remain unchanged.
+- Automated tests verify actual plotted coordinates and failure behavior.
+- Application integration and manual verification are tracked separately.
+
+**Current limitation:** The plotting component exists, but its integration
+with the main application must be verified and completed before Chunk 3
+can be considered complete.
+
+### ⏳ Other Components - IN PROGRESS
+
+- **Main window UI:** Desktop shell, navigation, CSV import, and measurement table exist. The plotting widget must be integrated into the Spectral Data page and verified.
+- **Scientific comparison algorithm:** Not yet defined or implemented (future work)
+- **Online archive integration:** Chunk 4 deferred for later implementation
 
 ---
 
 ## Known Issues / TODOs
 
-1. **Round-trip tests**: Need comprehensive save/load integrity tests
-2. **Edge cases**: Handle very large spectra (test performance)
-3. **Transaction support**: Consider transactions for bulk operations
-4. **Index maintenance**: Index is created automatically on first insert
+### Persistence (Chunk 2):
+- Comprehensive change-history/provenance tracking remains a future design decision.
+
+### Visualization (Chunk 3)
+- [ ] Integrate the plotting widget with the main window and CSV import workflow.
+- [ ] Verify axis units, invalid-value filtering, and failed-load state handling.
+- [ ] Strengthen automated tests for plotted coordinates and data immutability.
+- [ ] Perform manual application verification.
+- [ ] Resolve the planned dataset-selection behavior.
 
 ---
 
-## Testing Strategy
+## Testing Summary
 
-See `tests/test_persistence.py` once created:
-- Basic save/load round-trip
-- Verify data integrity after storage/retrieval
-- Test edge cases (empty project, large spectra, warnings)
+**Previously reported passing tests:** 28 (historical result; rerun required)
+- Persistence: 20 tests (`tests/test_persistence.py`)  
+- Visualization: 8 tests (`tests/test_spectra_plot.py`)  
+
+**Test Environment:**
+- Python interpreter: Python 3.14.0  
+- Pytest version: pytest-9.1.1  
+- PyQtGraph: Installed and configured for visualization testing
 
 ---
 
 ## Next Steps
 
-1. ✅ Complete persistence.py (DONE)
-2. ⏳ Write unit tests for save/load operations
-3. ⏳ Create integration test scripts
-4. ⏳ Benchmark performance with large datasets
-5. ⏳ Document API for other modules to use
+1. Complete and verify the persistence layer (Chunk 2).
+2. Complete the plotting component and integrate it into the main window.
+3. Verify import, plotting, and table behavior together.
+4. Resolve dataset-selection requirements for Chunk 3.
+5. Run targeted and full automated tests.
+6. Complete manual verification and update the Chunk 3 checklist.
+7. Continue to later chunks only after the current completion criteria are met.
+
+---
+
+## Verification Note
+
+**Automated vs. Manual Verification:**
+- Automated tests verify core functionality independently of the GUI.
+- Manual verification requires running ECAS and inspecting the plot widget in action; this is separate from automated test results and will be documented once performed.

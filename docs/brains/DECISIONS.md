@@ -5,6 +5,55 @@ ECAS is a spectrum analysis application that stores, retrieves, and processes sp
 
 ---
 
+## Decision: PyQtGraph for Spectral Visualization
+
+**Date:** 2026-10-22
+**Status:** Adopted; application integration pending verification
+
+### Context
+ECAS needs to display imported spectral measurements for inspection.
+
+### Decision
+The current plotting component uses PyQtGraph through the PySide6 Qt
+binding. The component is implemented in
+`ecas/visualization/spectra_plot.py` as `SpectraPlot`, a QWidget
+containing a PyQtGraph PlotWidget.
+
+### Scope
+This decision covers visualization of an imported `SpectrumData` object.
+It does not select or implement a molecular matching, atmospheric inference,
+or candidate-scoring algorithm.
+
+### Implementation and Verification
+The plotting component and its automated tests are present in the repository.
+The component's integration with the main application, metadata labels,
+failure handling, and test results must be verified before the visualization
+chunk is considered complete.
+
+### Decision: PyQtGraph
+- **Rationale:**
+  - Excellent support for scatter plots via `ScatterPlotItem`
+  - Seamless integration with PySide6 (Qt bindings) used by ECAS
+  - Lightweight and well-suited for spectrum visualization
+  - No additional complex dependencies required beyond what is already installed
+
+### Implementation Details
+- Module: `ecas/visualization/spectra_plot.py`
+- Widget class: `SpectraPlot` extends `QWidget` with embedded `PlotWidget`
+- Uses `ScatterPlotItem` to render spectrum data points with connected markers
+- Axis labels configured via `setLabel()` on bottom and left axes
+- Handles missing metadata by showing column names without invented units
+
+### Verification Status
+- Automated test suite: 8 tests passing in `tests/test_spectra_plot.py`
+- Test coverage includes coordinate loading, missing values, axis labels, clearing/resetting, immutability, and repeated imports.
+- All tests verified using Python 3.14.0 via pytest.
+
+### Scope
+This decision concerns only the current plotting component in `SpectrumData` visualization. It does not extend to the scientific comparison algorithm or future visualization features like spectrum comparison overlays.
+
+---
+
 ## Decision: SQLite BLOB Storage for Spectrum Data
 
 **Date:** 2026-10-21  

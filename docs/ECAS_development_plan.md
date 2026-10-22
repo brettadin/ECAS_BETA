@@ -45,7 +45,7 @@ Give datasets a durable home.
 - [x] Validate project IDs, including path traversal and symlink escape cases.
 - [x] Verify persistence implementation: `python -m pytest tests/test_persistence.py -v` — **20 passed**.
 - [x] Confirm the completion criterion: saved spectrum data can be reloaded intact, verified by `test_round_trip_preserves_all_fields`.
-- [ ] Verify the final Git working-tree status and commit contents, if not already completed.
+- [x] Verify the final Git working-tree status and commit contents, if not already completed.
 
 **Data integrity and scope**
 - The source file path is tracked through `source_file`.
@@ -66,12 +66,43 @@ Give datasets a durable home.
 Chunk 3 — Spectral visualization
 
 Make imported data scientifically inspectable.
-- Plot real imported measurements.
-- Label axes and units only when known.
-- Support basic inspection and dataset selection.
-- Clearly distinguish missing metadata from measured values.
-Completion criterion: Users can inspect a real spectrum without changing its underlying data.
+- **Goal:** Plot real imported measurements for visual inspection.
+- **Completion criterion:** Users can inspect a real spectrum without changing its underlying data.
 
+**Progress checklist**
+
+Plotting component:
+- [x] Create the PyQtGraph-based plotting widget.
+- [x] Accept normalized `SpectrumData` rather than parsing CSV files in the plotting component.
+- [ ] Apply available axis and signal units from `SpectrumData`.
+- [ ] Filter missing, non-numeric, and non-finite coordinate pairs.
+- [ ] Reset visible and internal state after unsuccessful loads.
+- [ ] Verify plotted coordinates against the supplied measurements.
+- [ ] Verify source rows, columns, and metadata remain unchanged.
+
+Application integration:
+- [ ] Display the plotting widget on the existing Spectral Data page.
+- [ ] Update the plot and data table together after a successful import.
+- [ ] Replace the previous plot when a new spectrum is imported.
+- [ ] Ensure rejected imports do not leave a misleading previous dataset visible.
+- [ ] Verify missing metadata is not presented as measured information.
+
+Verification:
+- [ ] Run the targeted plotting tests and record the actual result.
+- [ ] Run the full test suite and investigate failures.
+- [ ] Manually verify plotting, table behavior, replacement, and rejected imports.
+
+Dataset selection:
+- [ ] Resolve whether selection among saved spectra is required in Chunk 3,
+      given that the current import workflow replaces the displayed dataset.
+- [ ] Implement and test the agreed selection behavior if it is required.
+
+Completion:
+- [ ] Confirm that users can inspect a real imported spectrum without changing
+      its underlying data.
+- [ ] Record which behaviors were verified automatically and manually.
+
+---
 
 
 

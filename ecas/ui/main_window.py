@@ -32,6 +32,9 @@ from ecas.ingestion.csv_importer import (
     import_spectrum_csv,
 )
 
+# The plotting widget receives normalized SpectrumData, not raw CSV files.
+from ecas.visualization.spectra_plot import SpectraPlot
+
 
 class ECASWindow(QMainWindow):
     """Main ECAS window and coordinator for its interface."""
@@ -42,9 +45,8 @@ class ECASWindow(QMainWindow):
 
         # Window identity and initial dimensions.
         # The minimum size prevents the interface from becoming too cramped.
-        self.setWindowTitle(
-            "Exoplanetary Characterization & Astrochemistry Suite (ECAS)"
-        )
+        # Start the title with ECAS to identify the application consistently.
+        self.setWindowTitle("ECAS — Exoplanetary Characterization & Astrochemistry Suite")
         self.resize(1200, 800)
         self.setMinimumSize(900, 600)
 
@@ -129,8 +131,11 @@ class ECASWindow(QMainWindow):
         # the spectral table, its status label, and the most recently imported
         # dataset.
         self.pages = QStackedWidget()
+        # These widgets and the dataset reference are populated by the
+        # Spectral Data page builder.
         self.spectrum_table = None
         self.spectrum_status = None
+        self.spectra_plot = None
         self.current_spectrum = None
 
         # Build each page before assembling the overall window layout.
@@ -227,8 +232,11 @@ class ECASWindow(QMainWindow):
         self.spectrum_status.setWordWrap(True)
 
         # The table presents validated values for inspection.
-        # Editing is disabled so users cannot accidentally alter the displayed
-        # data and mistake those edits for changes to the source file.
+        # Create the plot widget once and reuse it for subsequent imports.
+        # Each successful load replaces the previous plotted dataset.
+        self.spectra_plot = SpectraPlot()
+
+        # The table presents validated values without permitting edits.
         self.spectrum_table = QTableWidget()
         self.spectrum_table.setAlternatingRowColors(True)
         self.spectrum_table.setEditTriggers(
@@ -236,21 +244,87 @@ class ECASWindow(QMainWindow):
         )
         self.spectrum_table.setSortingEnabled(False)
 
-        # Add controls to the page in visual order.
-        # The table receives the remaining vertical space (stretch factor 1).
+        # Place the plot above the table so users can inspect the shape of
+        # the spectrum and then examine its underlying imported measurements.
         layout.addWidget(title)
         layout.addWidget(description)
         layout.addWidget(import_button, 0)
         layout.addWidget(self.spectrum_status)
+        layout.addWidget(self.spectra_plot, 2)
         layout.addWidget(self.spectrum_table, 1)
+
+    def _display_spectrum(self, spectrum):
+        """Display one normalized SpectrumData object in the plot and table."""
+
+        # Load the plot first. If the data cannot be plotted, do not leave
+        # the table showing a dataset that the plot failed to display.
+        if not self.spectra_plot.load_spectrum(spectrum):
+            self._clear_spectrum_display()
+            self.spectrum_status.setText(
+                "The imported spectrum has no valid plottable measurements."
+            )
+            self.statusBar().showMessage("Spectrum could not be plotted")
+            return
+
+        rows = spectrum.rows
+        columns = list(spectrum.columns)
+
+        # Replace the previous table contents without modifying SpectrumData.
+        self.spectrum_table.clearContents()
+        self.spectrum_table.setRowCount(0)
+        self.spectrum_table.setColumnCount(len(columns))
+        self.spectrum_table.setHorizontalHeaderLabels(columns)
+        self.spectrum_table.setRowCount(len(rows))
+
+        for row_index, row in enumerate(rows):
+            for column_index, column in enumerate(columns):
+                # Missing values remain blank rather than being changed to zero.
+                value = row[column]
+                item = QTableWidgetItem(
+                    "" if value is None else str(value)
+                )
+                self.spectrum_table.setItem(
+                    row_index, column_index, item
+                )
+
+        self.spectrum_table.resizeColumnsToContents()
+        self.current_spectrum = spectrum
+
+        # Report the imported dataset and any warnings supplied by the importer.
+        source_name = spectrum.source_file.name
+        self.spectrum_status.setText(
+            f"Loaded: {source_name} — {spectrum.row_count} rows"
+        )
+
+        status_message = (
+            f"Imported {spectrum.row_count} measurements."
+        )
+        if spectrum.warnings:
+            status_message += " " + ", ".join(spectrum.warnings)
+
+        self.statusBar().showMessage(status_message)
+
+    def _clear_spectrum_display(self):
+        """Clear the table, plot, and dataset reference together."""
+
+        # All three views must agree about whether a dataset is loaded.
+        if self.spectra_plot is not None:
+            self.spectra_plot.clear()
+
+        if self.spectrum_table is not None:
+            self.spectrum_table.clearContents()
+            self.spectrum_table.setRowCount(0)
+            self.spectrum_table.setColumnCount(0)
+
+        self.current_spectrum = None
+
+        if self.spectrum_status is not None:
+            self.spectrum_status.setText("No spectrum loaded.")
 
 
     def _import_csv(self):
-        """Import a CSV spectrum and display its validated measurements.
+        """Open a file dialog and import a CSV spectrum."""
 
-        Opens a file dialog via QFileDialog.getOpenFileName(). For testing,
-        use the private _import_csv_from_path() method instead.
-        """
         file_name, _ = QFileDialog.getOpenFileName(
             self,
             "Import Spectrum CSV",
@@ -258,12 +332,17 @@ class ECASWindow(QMainWindow):
             "CSV files (*.csv);;All files (*)",
         )
 
+        # Cancelling the dialog does not count as a failed import.
         if not file_name:
             return
 
         try:
             spectrum = import_spectrum_csv(file_name)
         except SpectrumImportError as exc:
+            # Remove the old display so it cannot be mistaken for the
+            # spectrum the user just attempted to import.
+            self._clear_spectrum_display()
+
             QMessageBox.warning(
                 self,
                 "Spectrum Import Failed",
@@ -272,42 +351,17 @@ class ECASWindow(QMainWindow):
             self.statusBar().showMessage("Import failed")
             return
 
-        # SpectrumData uses attributes instead of dictionary keys.
-        rows = spectrum.rows
-        columns = list(spectrum.columns)
-
-        self.spectrum_table.setRowCount(0)
-        self.spectrum_table.setColumnCount(len(columns))
-        self.spectrum_table.setHorizontalHeaderLabels(columns)
-        self.spectrum_table.setRowCount(len(rows))
-
-        for row_index, row in enumerate(rows):
-            for column_index, column in enumerate(columns):
-                # Display missing values as blank cells without changing stored data.
-                value = row[column]
-                item = QTableWidgetItem("" if value is None else str(value))
-                self.spectrum_table.setItem(
-                    row_index, column_index, item
-                )
-
-        self.spectrum_table.resizeColumnsToContents()
-        self.current_spectrum = spectrum
-
-        source_name = spectrum.source_file.name
-        self.spectrum_status.setText(
-            f"Loaded: {source_name} — {spectrum.row_count} rows"
-        )
-        status_message = (
-            f"Imported {spectrum.row_count} measurements. "
-            + (", ".join(spectrum.warnings) if spectrum.warnings else "")
-        )
-        self.statusBar().showMessage(status_message)
+        self._display_spectrum(spectrum)
 
     def _import_csv_from_path(self, path: str):
-        """Import a CSV from a specific path for testing purposes."""
+        """Import a CSV from a specified path, primarily for testing."""
+
         try:
             spectrum = import_spectrum_csv(path)
         except SpectrumImportError as exc:
+            # Keep failed-import behavior consistent with the file dialog.
+            self._clear_spectrum_display()
+
             QMessageBox.warning(
                 self,
                 "Spectrum Import Failed",
@@ -316,33 +370,4 @@ class ECASWindow(QMainWindow):
             self.statusBar().showMessage("Import failed")
             return
 
-        # SpectrumData uses attributes instead of dictionary keys.
-        rows = spectrum.rows
-        columns = list(spectrum.columns)
-
-        self.spectrum_table.setRowCount(0)
-        self.spectrum_table.setColumnCount(len(columns))
-        self.spectrum_table.setHorizontalHeaderLabels(columns)
-        self.spectrum_table.setRowCount(len(rows))
-
-        for row_index, row in enumerate(rows):
-            for column_index, column in enumerate(columns):
-                # Display missing values as blank cells without changing stored data.
-                value = row[column]
-                item = QTableWidgetItem("" if value is None else str(value))
-                self.spectrum_table.setItem(
-                    row_index, column_index, item
-                )
-
-        self.spectrum_table.resizeColumnsToContents()
-        self.current_spectrum = spectrum
-
-        source_name = spectrum.source_file.name
-        self.spectrum_status.setText(
-            f"Loaded: {source_name} — {spectrum.row_count} rows"
-        )
-        status_message = (
-            f"Imported {spectrum.row_count} measurements. "
-            + (", ".join(spectrum.warnings) if spectrum.warnings else "")
-        )
-        self.statusBar().showMessage(status_message)
+        self._display_spectrum(spectrum)

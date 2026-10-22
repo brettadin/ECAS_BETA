@@ -53,7 +53,7 @@ def test_preserves_additional_columns(tmp_path):
 def test_missing_required_column(tmp_path):
     path = tmp_path / "bad.csv"
     path.write_text(
-        "wavelength,intensity\n400,12\n",
+        "wavelength,observation\n400,12\n",
         encoding="utf-8",
     )
 
@@ -61,6 +61,7 @@ def test_missing_required_column(tmp_path):
         SpectrumImportError, match="Missing required columns"
     ):
         import_spectrum_csv(path)
+
 
 
 def test_rejects_non_numeric_signal(tmp_path):
