@@ -27,17 +27,38 @@ Completion criterion: Imported spectra become structured, validated objects rath
 
 
 
-Chunk 2 — Projects and persistence
+## Chunk 2 — Projects and persistence
 
-**Status: Complete (core persistence verified)** ⚠️ Change history tracking deferred to future design decision.
+**Status: Complete (core persistence verified)**  
+**Deferred:** Comprehensive change-history/provenance tracking remains a future design decision.
 
 Give datasets a durable home.
-- Create and open projects.
-- Save/import spectra with source_file, columns, units, signal_type, warnings preserved.
-- Reload from SQLite database; all 7 SpectrumData fields survive save/load cycle (verified by round-trip tests).
-- Source file path tracked via `source_file` field; import warnings preserved in JSON blob; original CSV files never modified. Comprehensive change-history/provenance tracking not implemented — deferred if explicitly required.
 
-Completion criterion: A saved project can be closed and reopened with its imported data intact. ✓ Verified by `test_round_trip_preserves_all_fields`.
+- [x] Create the SQLite persistence layer for spectrum data.
+- [x] Save imported spectra and preserve `source_file`, columns, units, `signal_type`, and warnings.
+- [x] Reload saved spectra from the SQLite database.
+- [x] Verify that all 7 `SpectrumData` fields survive the save/load round trip.
+- [x] Preserve column order and `None` values.
+- [x] Handle spectra without an uncertainty column.
+- [x] Support saving and loading multiple spectra and loading by index.
+- [x] Handle nonexistent projects and database-clearing operations.
+- [x] Validate project IDs, including path traversal and symlink escape cases.
+- [x] Verify persistence implementation: `python -m pytest tests/test_persistence.py -v` — **20 passed**.
+- [x] Confirm the completion criterion: saved spectrum data can be reloaded intact, verified by `test_round_trip_preserves_all_fields`.
+- [ ] Verify the final Git working-tree status and commit contents, if not already completed.
+
+**Data integrity and scope**
+- The source file path is tracked through `source_file`.
+- Import warnings are preserved in the stored JSON data.
+- Original CSV files are not modified by the persistence layer.
+- Comprehensive change-history/provenance tracking is not implemented and remains deferred unless explicitly required.
+
+**Verification note**
+- Persistence tests: **20 passed**.
+- Full test suite: **30 passed, 1 failed**.
+- The remaining failure is `test_main_window_has_expected_navigation`, which expects the window title to start with `ECAS`. The current title starts with `Exoplanetary Characterization`. Track this separately from Chunk 2; it does not invalidate the passing persistence tests.
+
+**Completion criterion:** A saved project can be closed and reopened with its imported spectrum data intact. **Verified by the passing persistence round-trip test.**
 
 
 
