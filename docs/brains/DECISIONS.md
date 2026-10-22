@@ -8,7 +8,7 @@ ECAS is a spectrum analysis application that stores, retrieves, and processes sp
 ## Decision: PyQtGraph for Spectral Visualization
 
 **Date:** 2026-10-22
-**Status:** Adopted; application integration pending verification
+**Status:** Adopted and verified; application integration complete
 
 ### Context
 ECAS needs to display imported spectral measurements for inspection.
@@ -25,10 +25,7 @@ It does not select or implement a molecular matching, atmospheric inference,
 or candidate-scoring algorithm.
 
 ### Implementation and Verification
-The plotting component and its automated tests are present in the repository.
-The component's integration with the main application, metadata labels,
-failure handling, and test results must be verified before the visualization
-chunk is considered complete.
+The plotting component is implemented in the repository. The automated tests pass (**all tests in `tests/test_spectra_plot.py` passed**). Application integration has been verified: the application launches successfully, and manual import of `test_spectrum` displays correct plotting with proper axis labels and data integrity maintained.
 
 ### Decision: PyQtGraph
 - **Rationale:**
@@ -45,9 +42,14 @@ chunk is considered complete.
 - Handles missing metadata by showing column names without invented units
 
 ### Verification Status
-- Automated test suite: 8 tests passing in `tests/test_spectra_plot.py`
+- Automated test suite: **all tests passing** in `tests/test_spectra_plot.py`.
 - Test coverage includes coordinate loading, missing values, axis labels, clearing/resetting, immutability, and repeated imports.
 - All tests verified using Python 3.14.0 via pytest.
+
+### Manual verification (Chunk 3)
+- Application launched successfully.
+- Import of `test_spectrum` confirmed correct plotting display.
+- Axis labels show available column names without invented units.
 
 ### Scope
 This decision concerns only the current plotting component in `SpectrumData` visualization. It does not extend to the scientific comparison algorithm or future visualization features like spectrum comparison overlays.

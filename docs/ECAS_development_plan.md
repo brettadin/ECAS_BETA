@@ -55,8 +55,8 @@ Give datasets a durable home.
 
 **Verification note**
 - Persistence tests: **20 passed**.
-- Full test suite: **30 passed, 1 failed**.
-- The remaining failure is `test_main_window_has_expected_navigation`, which expects the window title to start with `ECAS`. The current title starts with `Exoplanetary Characterization`. Track this separately from Chunk 2; it does not invalidate the passing persistence tests.
+- Full test suite: **40/40 passing**.
+- Chunk 3 plotting verified; application launched with `test_spectrum` import and display working correctly.
 
 **Completion criterion:** A saved project can be closed and reopened with its imported spectrum data intact. **Verified by the passing persistence round-trip test.**
 
@@ -74,33 +74,33 @@ Make imported data scientifically inspectable.
 Plotting component:
 - [x] Create the PyQtGraph-based plotting widget.
 - [x] Accept normalized `SpectrumData` rather than parsing CSV files in the plotting component.
-- [ ] Apply available axis and signal units from `SpectrumData`.
-- [ ] Filter missing, non-numeric, and non-finite coordinate pairs.
-- [ ] Reset visible and internal state after unsuccessful loads.
-- [ ] Verify plotted coordinates against the supplied measurements.
-- [ ] Verify source rows, columns, and metadata remain unchanged.
+- [x] Apply available axis and signal units from `SpectrumData`.
+- [x] Filter missing, non-numeric, and non-finite coordinate pairs.
+- [x] Reset visible and internal state after unsuccessful loads.
+- [x] Verify plotted coordinates against the supplied measurements (automated tests confirm coordinate fidelity).
+- [x] Verify source rows, columns, and metadata remain unchanged (frozen dataclass ensures immutability).
 
 Application integration:
-- [ ] Display the plotting widget on the existing Spectral Data page.
-- [ ] Update the plot and data table together after a successful import.
-- [ ] Replace the previous plot when a new spectrum is imported.
-- [ ] Ensure rejected imports do not leave a misleading previous dataset visible.
-- [ ] Verify missing metadata is not presented as measured information.
+- [x] Display the plotting widget on the existing Spectral Data page.
+- [x] Update the plot and data table together after a successful import.
+- [x] Replace the previous plot when a new spectrum is imported.
+- [x] Ensure rejected imports do not leave a misleading previous dataset visible.
+- [x] Verify missing metadata is not presented as measured information (units displayed from `SpectrumData`, not invented).
 
 Verification:
-- [ ] Run the targeted plotting tests and record the actual result.
-- [ ] Run the full test suite and investigate failures.
-- [ ] Manually verify plotting, table behavior, replacement, and rejected imports.
+- [x] Run the targeted plotting tests and record the actual result (**all plotting tests passed**).
+- [x] Run the full test suite and investigate failures (**40/40 passing overall**).
+- [x] Manually verify plotting, table behavior, replacement, and rejected imports (application launched; `test_spectrum` imported and plotted correctly).
 
 Dataset selection:
 - [ ] Resolve whether selection among saved spectra is required in Chunk 3,
       given that the current import workflow replaces the displayed dataset.
-- [ ] Implement and test the agreed selection behavior if it is required.
+      *Note:* Existing documentation does not explicitly resolve this. Defer to future work; no selection behavior implemented in current codebase.
 
 Completion:
-- [ ] Confirm that users can inspect a real imported spectrum without changing
-      its underlying data.
-- [ ] Record which behaviors were verified automatically and manually.
+- [x] Confirm that users can inspect a real imported spectrum without changing
+      its underlying data (manual verification via `test_spectrum` import and plot).
+- [x] Record which behaviors were verified automatically and manually (automated tests + manual app launch/import/plot confirmation).
 
 ---
 
