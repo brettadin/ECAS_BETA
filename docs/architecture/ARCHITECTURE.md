@@ -1,7 +1,7 @@
 # ECAS Architecture
 
 **Document status:** Draft for user review  
-**Project:** Exoplanet Characterization and Spectral Analysis (ECAS)  
+**Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS) 
 **Primary language:** Python  
 **Implementation status:** Not authorized by this document  
 **Authority:** Proposed detailed architecture consistent with `docs/ECAS.md` and *ECAS Architecture Specification — Draft 0.3*
@@ -501,7 +501,7 @@ Before approving this architecture for implementation, verify that:
 
 ## 18. Related Documents
 
-IMPLEMENTATION_PLAN.md — defines the proposed order for building the architecture described here.
+docs/ECAS_development_plan.md — defines the proposed order for building the architecture described here.
 
 DATA_FLOW.md — describes how data moves through the system.
 

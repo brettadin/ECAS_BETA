@@ -43,7 +43,7 @@ class ECASWindow(QMainWindow):
         # Window identity and initial dimensions.
         # The minimum size prevents the interface from becoming too cramped.
         self.setWindowTitle(
-            "ECAS — Exoplanetary Characterization & Astrochemistry Suite"
+            "Exoplanetary Characterization & Astrochemistry Suite (ECAS)"
         )
         self.resize(1200, 800)
         self.setMinimumSize(900, 600)

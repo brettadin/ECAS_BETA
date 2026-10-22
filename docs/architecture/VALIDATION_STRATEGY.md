@@ -1,7 +1,7 @@
 # ECAS Validation Strategy
 
 **Document status:** Draft for review  
-**Project:** Exoplanet Characterization and Spectral Analysis (ECAS)  
+**Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS)
 **Related documents:** `ECAS.md`, `ARCHITECTURE.md`, `DATA_FLOW.md`, `MODULE_RESPONSIBILITIES.md`, `DATA_MODELS.md`  
 **Implementation status:** This document does not authorize implementation.
 

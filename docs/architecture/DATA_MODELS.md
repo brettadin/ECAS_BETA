@@ -1,7 +1,7 @@
 # ECAS Data Models
 
 **Document status:** Draft for review  
-**Project:** Exoplanet Characterization and Spectral Analysis (ECAS)  
+**Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS)
 **Primary language:** Python  
 **Implementation status:** Not authorized by this document  
 **Authority:** Proposed data-model design consistent with `docs/ECAS.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/DATA_FLOW.md`, and the ECAS Architecture Specification — Draft 0.3.

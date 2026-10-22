@@ -1,7 +1,7 @@
 # ECAS Module Responsibilities
 
 **Document status:** Draft for review  
-**Project:** Exoplanet Characterization and Spectral Analysis (ECAS)  
+**Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS)
 **Primary language:** Python  
 **Related documents:** `ECAS.md`, `ARCHITECTURE.md`, `DATA_FLOW.md`  
 **Implementation status:** This document does not authorize implementation.

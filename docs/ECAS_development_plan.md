@@ -29,12 +29,15 @@ Completion criterion: Imported spectra become structured, validated objects rath
 
 Chunk 2 — Projects and persistence
 
+**Status: Complete (core persistence verified)** ⚠️ Change history tracking deferred to future design decision.
+
 Give datasets a durable home.
 - Create and open projects.
-- Save imported spectra and associated metadata.
-- Reopen a project after closing ECAS.
-- Track data sources and changes without silently overwriting originals.
-Completion criterion: A saved project can be closed and reopened with its imported data intact.
+- Save/import spectra with source_file, columns, units, signal_type, warnings preserved.
+- Reload from SQLite database; all 7 SpectrumData fields survive save/load cycle (verified by round-trip tests).
+- Source file path tracked via `source_file` field; import warnings preserved in JSON blob; original CSV files never modified. Comprehensive change-history/provenance tracking not implemented — deferred if explicitly required.
+
+Completion criterion: A saved project can be closed and reopened with its imported data intact. ✓ Verified by `test_round_trip_preserves_all_fields`.
 
 
 

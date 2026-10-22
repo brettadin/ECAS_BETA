@@ -31,3 +31,12 @@ Report:
 2. What changed.
 3. Tests actually run and their results.
 4. Any incomplete steps and the reason they could not be completed.
+
+## Official Project Name
+
+The official project name is **ECAS — Exoplanetary Characterization & Astrochemistry Suite**.
+
+- Use this exact name whenever the full project name is needed.
+- Use **ECAS** when the acronym alone is sufficient.
+- Do not invent alternate expansions or rename the project in UI titles, documentation, comments, or generated code.
+- Preserve the official name when creating or updating project files.

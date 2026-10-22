@@ -17,7 +17,7 @@ class ECASWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("ECAS — Exoplanetary Characterization & Astrochemistry Suite")
+        self.setWindowTitle("Exoplanetary Characterization & Astrochemistry Suite (ECAS)")
         self.resize(1200, 800)
         self.setMinimumSize(900, 600)
 

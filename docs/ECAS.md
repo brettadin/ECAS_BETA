@@ -1,4 +1,4 @@
-# Exoplanet Characterization and Spectral Analysis (ECAS)
+# Exoplanetary Characterization & Astrochemistry Suite (ECAS)
 ## Master Design Blueprint
 
 **Document type:** Overarching project blueprint and design philosophy  
