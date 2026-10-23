@@ -251,3 +251,116 @@ def test_valid_optional_signed_field(tmp_path):
 <br>
 
 # **CHATGPT REVIEW** #
+
+Not fully corrected yet. The column-order and duplicate-header fixes are correct, but the parametrized test has a defect that could make the tests fail for the wrong reason.
+
+- Column order: Correct. It preserves the original header order and appends the two canonical columns.
+- Duplicate headers: Correct. Duplicates are checked before converting headers to a set.
+- Optional signed-numeric tests: Not correct as written. The `product()` call pairs each field with a two-element tuple such as `("nan", "nan")`, so `value` is a tuple rather than a string. The test then attempts to write that tuple as a CSV cell, which is not the intended test input.
+- Test row construction: Also unnecessarily complicated and risks generating values that don't match the field classifications. Build a known-valid 21-field row and replace only the selected field with the non-finite value.
+
+Since you asked to proceed with implementation, don't start another full planning cycle. Send Cline this ACT prompt with the correction included. It should use the repository's actual files and documentation as the authority.
+
+# ECAS Chunk 4 — ACT: Implement NASA Archive CSV Support
+
+**Mode: ACT. Implement the approved Chunk 4 scope now. Do not produce another plan or edit planning documents.**
+
+## 1. Read the project context first
+
+Inspect the current repository and read the relevant existing documentation before editing. Search for and read all relevant Chunk 4 planning and reference material, including the plans through v19, Chunk 4 guidelines, implementation log, decisions, project state, and any other documents governing ingestion, CSV imports, spectrum data, testing, or project conventions.
+
+Planning documents are **reference only**. Do not edit, rename, delete, or regenerate any planning document. If two documents conflict, use the current code and established project decisions alongside the latest approved requirements to determine the implementation, and record any unresolved conflict in the appropriate non-plan documentation.
+
+Inspect these implementation assets before changing code:
+
+- `ecas/ingestion/csv_importer.py`
+- Existing tests for CSV/spectrum importing and related validation
+- The `SpectrumData` model and `CellValue` type definitions
+- `data/WASP-39b/table_WASP-39-b-Feinstein-et-al.-2023.csv`
+- Relevant `pyproject.toml`, test configuration, and documentation conventions
+
+Use actual repository paths if any listed path differs. Do not assume proposed code snippets in historical plans are production-ready.
+
+## 2. Implement the agreed behavior
+
+Implement archive CSV support in `ecas/ingestion/csv_importer.py`, preserving existing generic CSV behavior.
+
+### Schema selection
+
+- `archive_schema=None` must continue to use the existing generic importer without behavior changes.
+- Accept only the exact WASP-39 b mapping:
+  - `wavelength` → `centralwavelng`
+  - `signal` → `pl_transdep`
+- Any unsupported, malformed, or extra-key supplied schema must raise `SpectrumImportError("Unsupported archive schema.")`. Never fall back to generic import for an unsupported supplied schema.
+- Do not mutate or use global `COLUMN_ALIASES` for archive-specific header handling.
+
+### Archive headers and columns
+
+- Require exactly the 21 expected source fields established in the approved Chunk 4 requirements.
+- Reject empty, missing, extra, duplicate, or conflicting headers with `SpectrumImportError`. Detect duplicate headers before converting them to a set or mapping.
+- Preserve the CSV's original source-column order, then append canonical `wavelength` and `signal` columns. The result must have 23 columns.
+- Parse and preserve every source field; do not map `pl_ratror` or `pl_radj` to canonical fields.
+- Ensure parsed row dictionaries contain all 21 source fields plus `wavelength` and `signal`, with exactly 23 keys. Canonical values must equal `centralwavelng` and `pl_transdep`, respectively.
+
+### Field parsing
+
+Apply the previously approved field classifications:
+
+- Required finite numeric fields: `centralwavelng`, `pl_transdep`.
+- Optional numeric fields: blank becomes `None`.
+- Optional signed-numeric error fields: preserve finite positive or negative values and signs; blank becomes `None`.
+- Every nonblank numeric field must parse as a finite float. Reject malformed values, NaN, positive infinity, and negative infinity with `SpectrumImportError`, including optional signed-numeric fields.
+- Required fields must raise `SpectrumImportError` when blank, whitespace-only, malformed, or non-finite.
+- Author/metadata fields must be strings stripped of surrounding whitespace; blank becomes `""`.
+- Do not infer units or reinterpret values.
+- Use `SpectrumImportError` consistently for archive-mode validation and parsing failures.
+- Do not introduce unrelated refactoring.
+
+## 3. Implement complete, executable tests
+
+Follow the repository's existing testing conventions. Use `csv.writer` and complete, correctly sized 21-column fixtures. Avoid pseudocode, ellipses, and tests that fail before reaching the behavior they are intended to test.
+
+Include tests for:
+
+- Valid archive import, all 21 preserved source columns, 23 total columns, canonical aliases, source order, metadata trimming, signed-value preservation, and optional blank numeric fields.
+- Unsupported schemas: wrong mapping, missing key, extra key, and malformed schema type.
+- Empty, missing, extra, duplicate, and conflicting headers.
+- Required fields independently rejecting blank, whitespace-only, malformed, `nan`, `inf`, and `-inf` for both `centralwavelng` and `pl_transdep`.
+- Optional signed-numeric fields rejecting `nan`, `inf`, and `-inf`.
+- Malformed nonblank optional numeric values.
+- Empty files/data rows and incorrect row widths, where consistent with existing importer conventions.
+- Backward compatibility of generic imports when `archive_schema=None`, including existing generic-import tests.
+
+**Important test-fixture correction:** Do not copy the faulty parametrization in Plan v19. Its `product()` expression passes a tuple as the test value rather than a string. Use something equivalent to `@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])`, combined with the field parameter if desired. Build one complete, known-valid row, replace only the target field, and assert that the import fails specifically for that field. Confirm every generated row has exactly 21 values.
+
+Do not modify unrelated tests merely to make them pass. If an existing test exposes a genuine regression caused by this change, fix the regression within scope.
+
+## 4. Update appropriate non-plan documentation
+
+Inspect the repository's existing documentation conventions and update the relevant non-plan documents to record:
+
+- The implemented archive schema and field mapping
+- Header and numeric-validation behavior
+- Tests and actual test results
+- Any limitations, unresolved issues, or decisions that require follow-up
+
+Use the existing Chunk 4 guidelines, implementation log, or other appropriate non-plan documents as applicable. Do not create redundant documents if an existing document is the right place. **Do not edit planning documents**, even to mark them complete.
+
+Do not claim tests passed unless you actually ran them. Record any commands that could not be run and the reason.
+
+## 5. Verification and final report
+
+Run the focused new tests first, then relevant existing importer tests, then the broader test suite if practical.
+
+After implementation, report:
+
+1. Files created or changed, with a short reason for each.
+2. Test commands actually executed and their pass/fail results.
+3. Any unresolved failures, limitations, or decisions that need follow-up.
+4. Confirmation that planning documents were left untouched.
+
+If a concrete blocker prevents implementation or testing, do not silently change the design. Document the blocker in the appropriate non-plan document and explain it in the final report.
+
+Proceed with implementation now.
+
+When Cline finishes ACT, send me its implementation summary and test results. I'll review the actual changes and results rather than returning to another planning cycle.
