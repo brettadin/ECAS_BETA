@@ -132,7 +132,7 @@ No warnings are issued for blanks in optional archive fields unless explicitly d
 - This plan is ready for user review and subsequent ACT-mode implementation.
 
 
-## CHATGPT REVIEW ##
+# CHATGPT REVIEW #
 
 
 ## Review: Chunk 4 Plan v7

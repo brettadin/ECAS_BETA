@@ -303,7 +303,7 @@ def test_import_wasp_39_b_archive_schema(tmp_path):
 **Plan v10 is complete and ready for review.**
 
 
-## CHATGPT REVIEW ## 
+# CHATGPT REVIEW #
 
 
 ## Review: Chunk 4 Plan v10

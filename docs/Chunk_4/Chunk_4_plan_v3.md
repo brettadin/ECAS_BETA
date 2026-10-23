@@ -220,7 +220,7 @@ Please review this plan and authorize proceeding with Burst 1 implementation onc
 
 
 
-## CHATGPT REVIEW FOR v3 ##
+# CHATGPT REVIEW FOR v3 #
 
 
 

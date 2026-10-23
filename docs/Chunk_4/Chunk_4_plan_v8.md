@@ -281,7 +281,7 @@ for column_name in optional_blankable_columns:
 - This plan is ready for user review and subsequent ACT-mode implementation.
 
 
-## CHATGPT REVIEW ##
+# CHATGPT REVIEW #
 
 ## Review: Chunk 4 Plan v8
 

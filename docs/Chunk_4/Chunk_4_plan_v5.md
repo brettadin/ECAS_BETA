@@ -164,7 +164,7 @@ Please confirm whether you approve this first-burst plan, or if you'd like me to
 
 
 
-## CHATGPT REVIEW ##
+# CHATGPT REVIEW #
 
 
 ## Review: `chunk_4_plan_v5`
