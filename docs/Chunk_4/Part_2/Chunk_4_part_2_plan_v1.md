@@ -7,6 +7,60 @@ Then the next file `(Chunk_4_part_2_plan_v2.md)` will begin with the review of c
 
 ** 10-23-2026. Stopping work for today once I get the response from cline, so I can go do stuff irl. **
 
+
+<br>
+<br>
+
+# *CHATGPT PROMPT* #
+
+Yes. The likely cause is that the archive-specific importer works, but the app's normal CSV import button is still calling the generic importer without the WASP-39b schema.
+
+Here's why this fits what you've observed:
+
+- Direct import test: You explicitly supplied `archive_schema=WASP39B_SCHEMA`, and the file imported successfully with 331 rows.
+- Normal app import: The original archive CSV contains `centralwavelng` and `pl_trandep`, not the generic importer's required `wavelength` and `signal` headers.
+- Result: If the GUI calls `import_spectrum_csv(path)` without the archive schema, the generic importer rejects the file with the missing-columns error.
+
+The successful command-line test confirms the archive import path works. It does not, by itself, confirm that the GUI is connected to that path.
+
+## What to do next
+
+We should fix the GUI integration rather than change the CSV file or weaken the generic importer's validation.
+
+Give Cline this prompt in PLAN mode:
+
+Investigate the GUI import failure for the WASP-39b archive CSV in ECAS.
+
+**Observed behavior**
+
+- Direct import succeeds when calling `import_spectrum_csv(path, archive_schema=WASP39B_SCHEMA)`.
+- The real file imports 331 rows and preserves the source columns.
+- Importing the same file through the running application reports missing required columns `signal` and `wavelength`.
+
+**Task — PLAN ONLY; do not edit files.**
+
+1. Trace the GUI's CSV import flow from the file-selection action through the importer call and error handling.
+2. Inspect `ecas/ingestion/csv_importer.py`, the relevant GUI module, and existing tests.
+3. Determine whether the GUI calls `import_spectrum_csv()` without the required `archive_schema` argument.
+4. Recommend the smallest safe fix that lets the user import the supported WASP-39b archive CSV through the GUI.
+5. Preserve generic CSV import behavior. Do not weaken required-column validation, rename the original data file's headers, or introduce automatic archive detection without justification.
+6. Propose focused regression tests proving that both generic CSV imports and WASP-39b GUI imports work correctly.
+7. Identify any relevant documentation updates required by the existing project conventions.
+
+Return the findings, exact files to change, proposed implementation, and verification commands. Do not implement anything until the plan has been reviewed and approved.
+
+Once you share Cline's plan, I can review it before we proceed to ACT mode. The goal is to make the existing archive importer accessible through the application without breaking ordinary CSV imports.
+
+
+<br>
+<br>
+<br>
+
+
+# *CLINE RESPONSE* #
+
+
+
 Perfect! Now I have all the context needed. Let me present my comprehensive analysis and fix plan:
 
 ## 📋 **Issue Analysis Summary**
