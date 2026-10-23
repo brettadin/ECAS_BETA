@@ -1,7 +1,4 @@
-
----
-
-## CHUNK 4 PLAN V8 — FINALIZED DESIGN
+# **CHUNK 4 PLAN V8 — FINALIZED DESIGN** #
 
 ### 1. Source/Canonical Column Contract & Collision Behavior
 
@@ -280,6 +277,11 @@ for column_name in optional_blankable_columns:
 - No tests were run.
 - This plan is ready for user review and subsequent ACT-mode implementation.
 
+<br>
+<br>
+<br>
+<br>
+<br>
 
 # CHATGPT REVIEW #
 

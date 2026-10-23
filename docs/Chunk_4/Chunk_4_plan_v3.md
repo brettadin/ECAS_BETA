@@ -1,7 +1,4 @@
-
----
-
-## ECAS Chunk 4 — Retrieval Verification Before Implementation
+# **ECAS Chunk 4 — Retrieval Verification Before Implementation** #
 
 ### Summary of Findings
 
@@ -215,10 +212,11 @@ Until a live retrieval path is verified:
 
 Please review this plan and authorize proceeding with Burst 1 implementation once the retrieval path has been verified by downloading a real spectrum from the NASA Exoplanet Archive.
 
-
-
-
-
+<br>
+<br>
+<br>
+<br>
+<br>
 
 # CHATGPT REVIEW FOR v3 #
 

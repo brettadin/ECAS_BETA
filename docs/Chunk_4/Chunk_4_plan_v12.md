@@ -1,4 +1,4 @@
-# **Chunk 4 Plan v12 — Targeted Corrections Only**
+# **Chunk 4 Plan v12 — Targeted Corrections Only** #
 
 ## Scope: Only Plan Revision (No File Modifications or Test Execution)
 
@@ -431,6 +431,11 @@ def import_spectrum_csv(..., archive_schema=None):
 
 **Plan v12 is complete and ready for review.**
 
+<br>
+<br>
+<br>
+<br>
+<br>
 
 # CHATGPT REVIEW for v12 #
 

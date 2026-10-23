@@ -1,7 +1,4 @@
-
----
-
-## CHUNK 4 PLAN V7 — CORRECTED DESIGN SUMMARY
+# **CHUNK 4 PLAN V7 — CORRECTED DESIGN SUMMARY** #
 
 ### 1. Header-and-Row Storage Contract
 
@@ -131,6 +128,11 @@ No warnings are issued for blanks in optional archive fields unless explicitly d
 - No tests were run.
 - This plan is ready for user review and subsequent ACT-mode implementation.
 
+<br>
+<br>
+<br>
+<br>
+<br>
 
 # CHATGPT REVIEW #
 

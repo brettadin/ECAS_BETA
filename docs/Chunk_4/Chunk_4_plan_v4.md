@@ -1,7 +1,4 @@
-
----
-
-## **ECAS Chunk 4 — Plan v3 Review Report**
+# **ECAS Chunk 4 — Plan v3 Review Report** #
 
 ### **1. Repository Inspection**
 
@@ -380,9 +377,13 @@ Other
     Contributed Data Sets
     Interactive Tables Search and File Upload (for Planetary Systems and KOI Cumulative tables)
 
+<br>
+<br>
+<br>
+<br>
+<br>
 
 # RESPONSE FROM CHATGPT for plan_v4 #
-
 
 
 The new CSV materially improves the review: it contains 331 data rows and 21 columns, matching the archive search result’s reported 331 datapoints for WASP-39 b. This strongly supports treating it as a real numerical export of the selected spectrum, rather than merely a metadata listing.
