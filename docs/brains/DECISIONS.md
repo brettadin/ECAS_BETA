@@ -5,6 +5,40 @@ ECAS is a spectrum analysis application that stores, retrieves, and processes sp
 
 ---
 
+
+## Decision: WASP-39b Archive CSV Import Schema
+
+**Date:** 2026-10-23
+**Status:** Implemented and tested
+
+### Context
+Chunk 4 requires ECAS to ingest a real archive dataset whose CSV column names differ from the application's canonical spectrum coordinate and signal names.
+
+### Decision
+The CSV importer supports an explicit WASP-39b archive schema that maps source columns to canonical fields:
+
+- `centralwavelng` → `wavelength`
+- `pl_trandep` → `signal`
+
+The schema is defined in `ecas/ingestion/csv_importer.py`. Archive-specific behavior is enabled by explicitly supplying the supported archive schema.
+
+### Scope and Constraints
+- This implementation supports the identified WASP-39b CSV schema; it does not establish general compatibility with arbitrary astronomical archive CSV files.
+- When no archive schema is supplied, the existing generic CSV import behavior remains in effect.
+- An explicitly supplied unsupported archive schema raises `SpectrumImportError` rather than silently falling back to generic import behavior.
+- Source columns are retained, and the canonical `wavelength` and `signal` columns are appended to the imported dataset.
+- The implementation validates archive CSV headers, row widths, required numeric values, optional numeric values, and metadata according to the archive importer tests.
+
+### Verification
+- The real WASP-39b source file is `data/WASP-39b/table_WASP-39-b-Feinstein-et-al.-2023.csv`.
+- The dataset imports 331 rows.
+- The imported dataset contains 23 columns: the 21 original source columns followed by `wavelength` and `signal`.
+- Automated verification reported 105 passing tests in `tests/test_archive_csv_importer.py` and 145 passing tests in the full test suite.
+
+### Future Considerations
+Additional archive schemas and file formats, including research data supplied as TXT files, require separate implementation and verification. This decision does not establish support for online archive retrieval or general-purpose scientific unit conversion.
+
+
 ## Decision: PyQtGraph for Spectral Visualization
 
 **Date:** 2026-10-22

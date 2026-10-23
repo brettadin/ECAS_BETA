@@ -1,6 +1,6 @@
 # ECAS - Project State Document
 
-**Last Updated:** 2026-10-22  
+**Last Updated:** 2026-10-23
 **Version:** 1.0 (Beta)
 
 ---
@@ -91,16 +91,43 @@ ECAS_BETA/
 - Full application test suite: **40/40 passing**.
 - Manual verification: Application launched successfully; `test_spectrum` imported and displayed with correct plotting.
 
-**Current limitation (unchanged):** 
-- The current importer supports `.csv` format with standard units. Research files in `.txt` or custom-formatted `.csv` (e.g., different units/terminology) are not yet supported. Future versions will need flexible import handling or unit selection UI for varied data sources.
+Current limitation: The generic CSV importer and the explicitly supported WASP-39b archive schema cover the currently implemented CSV paths. Other custom-formatted CSV schemas and research files in TXT or other formats are not necessarily supported. Broader import flexibility and unit selection remain future work. 10-23-2026
 
 **Future work (unchanged):** 
-- Online reference-spectrum retrieval from archives (Chunk 4)
+- Additional archive ingestion and online reference-spectrum retrieval (Chunk 4; remaining scope) (10-23-26)
 - Spectrum comparison workflow and scientific analysis features (Chunks 5-7)
 
 ### ✅ models/spectrum.py - COMPLETE (Chunk 1)
 
 ---
+
+### ✅ ingestion/csv_importer.py — ARCHIVE CSV SUPPORT IMPLEMENTED (Chunk 4, current scope)
+
+**Location:** `ecas/ingestion/csv_importer.py`
+
+**Implemented capability:**
+- Supports the explicitly configured WASP-39b archive CSV schema.
+- Maps `centralwavelng` to canonical `wavelength`.
+- Maps `pl_trandep` to canonical `signal`.
+- Retains the original source columns and appends the two canonical columns.
+- Preserves existing generic CSV import behavior when no archive schema is supplied.
+- Rejects unsupported explicitly supplied archive schemas rather than silently using the generic importer.
+
+**Real-data verification:**
+- Source: `data/WASP-39b/table_WASP-39-b-Feinstein-et-al.-2023.csv`
+- Imported rows: 331
+- Imported columns: 23 (21 source columns plus 2 canonical columns)
+
+**Automated verification reported:**
+- Archive importer tests: 105 passed.
+- Full test suite: 145 passed.
+
+These results reflect the reported test run for the current implementation. Rerun tests after subsequent code changes.
+
+**Scope limitation:** This is support for one identified archive schema, not universal archive CSV compatibility. General online archive retrieval, additional archive schemas, TXT import, and broader unit-handling behavior are not established by this implementation.
+
+---
+
 
 ## Known Issues / TODOs
 
@@ -118,14 +145,18 @@ ECAS_BETA/
 
 ## Testing Summary
 
-**Previously reported passing tests:** 28 (historical result; rerun required)
-- Persistence: 20 tests (`tests/test_persistence.py`)  
-- Visualization: 8 tests (`tests/test_spectra_plot.py`)  
+**Latest reported full test suite:** 145 passed.
+
+- Archive CSV importer: 105 tests passed (`tests/test_archive_csv_importer.py`).
+- The full suite includes the existing persistence and visualization tests, as well as the new archive importer tests.
 
 **Test Environment:**
-- Python interpreter: Python 3.14.0  
-- Pytest version: pytest-9.1.1  
-- PyQtGraph: Installed and configured for visualization testing
+- Python interpreter: Python 3.14.0
+- Pytest version: pytest-9.1.1
+
+These results describe the reported run and should be refreshed after subsequent code changes.
+
+(10-23-2026)
 
 ---
 
