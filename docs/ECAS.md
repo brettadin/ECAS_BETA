@@ -704,6 +704,24 @@ The project blueprint defines the intended destination and the principles govern
 When implementation details change, the project may evolve. Its scientific purpose and governing principles should remain stable unless the user explicitly approves a change to them.
 
 # 19. Core Documentation
-- docs/architecture/IMPLEMENTATION_PLAN.md — implementation stages, task order, dependencies, and completion criteria.
+
+## 19.1 Architecture
+- docs/architecture/ECAS_Architecture_Specification.md — implementation stages, task order, dependencies, and completion criteria.
 	The implementation plan defines the proposed build sequence. It does not override approved architecture decisions or authorize implementation by itself.
-	
+
+- docs/architecture/ARCHITECTURE.md
+- docs/architecture/DATA_FLOW.md
+- docs/architecture/DATA_MODELS.md
+- docs/architecture/MODULE_RESPONSIBILITIES.md
+- docs/architecture/VALIDATION_STRATEGY.md
+
+## 19.2 Brains
+- docs/brains/DECISIONS.md
+- docs/brains/PROJECT_STATE.md
+
+## 19.3 ECAS development plan
+-docs/ECAS_development_plan.md
+
+## 19.4 Specific "Chunk" contextual folders containing planning development and review.
+- docs/Chunk_4/
+- 
