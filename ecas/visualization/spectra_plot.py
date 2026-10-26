@@ -50,11 +50,18 @@ class SpectraPlot(qtw.QWidget):
         self._axis_unit_label: Optional[str] = None
         self._signal_unit_label: Optional[str] = None
 
-    def load_spectrum(self, spectrum_data) -> bool:
+    def load_spectrum(self, spectrum_data, schema=None) -> bool:
         """Plot valid coordinate pairs from a normalized SpectrumData object.
 
         Returns True if at least one valid point is plotted. Returns False
         and clears the widget if the required columns or valid points are absent.
+        The 'schema' argument is used to override column name detection for
+        archive schemas like WASP-39 b, which use non-standard column names.
+
+        Args:
+            spectrum_data: The SpectrumData object containing normalized data.
+            schema: Optional schema dict mapping ECAS canonical names to source columns.
+                    If None, generic column name detection is used.
         """
 
         # Clear the previous plot before attempting a replacement. A failed
@@ -64,14 +71,21 @@ class SpectraPlot(qtw.QWidget):
         if spectrum_data is None:
             return False
 
-        # Identify the normalized columns used for the plotted coordinates.
+        # Determine wavelength and signal columns based on schema.
         available_columns = set(spectrum_data.columns)
-        self._wavelength_column = (
-            "wavelength" if "wavelength" in available_columns else None
-        )
-        self._signal_column = (
-            "signal" if "signal" in available_columns else None
-        )
+
+        if schema is not None and len(schema) == 2:
+            # Archive schema provides direct mapping from ECAS canonical names.
+            self._wavelength_column = schema.get("wavelength")
+            self._signal_column = schema.get("signal")
+        else:
+            # Generic mode uses simple heuristic for common column names.
+            self._wavelength_column = (
+                "wavelength" if "wavelength" in available_columns else None
+            )
+            self._signal_column = (
+                "signal" if "signal" in available_columns else None
+            )
 
         # Reject data without both required coordinate columns.
         if not (self._wavelength_column and self._signal_column):

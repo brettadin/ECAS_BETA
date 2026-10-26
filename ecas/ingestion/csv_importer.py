@@ -23,7 +23,7 @@ COLUMN_ALIASES = {
 
 
 # Supported archive schema. Keys are ECAS canonical names; values
-# are the corresponding source column names.
+# are the corresponding source column names from CSV.
 WASP39B_SCHEMA = {
     "wavelength": "centralwavelng",
     "signal": "pl_trandep",

@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 # SpectrumImportError represents an expected problem with the input file.
 from ecas.ingestion.csv_importer import (
     SpectrumImportError,
+    WASP39B_SCHEMA,
     import_spectrum_csv,
 )
 
@@ -226,6 +227,14 @@ class ECASWindow(QMainWindow):
         import_button = QPushButton("Import CSV")
         import_button.clicked.connect(self._import_csv)
 
+        # Schema selector for choosing how to interpret the CSV data.
+        schema_label = QLabel("CSV schema:")
+        schema_label.setObjectName("schemaLabel")
+
+        self.spectrum_schema_selector = QComboBox()
+        self.spectrum_schema_selector.addItems(["Generic / Unknown", "WASP-39 b Archive"])
+        self.spectrum_schema_selector.setCurrentIndex(0)  # Default: Generic/Unknown
+
         # This label reports whether a dataset is loaded and, if so, its
         # filename and number of imported rows.
         self.spectrum_status = QLabel("No spectrum loaded.")
@@ -253,12 +262,21 @@ class ECASWindow(QMainWindow):
         layout.addWidget(self.spectra_plot, 2)
         layout.addWidget(self.spectrum_table, 1)
 
-    def _display_spectrum(self, spectrum):
-        """Display one normalized SpectrumData object in the plot and table."""
+        # Add schema selector after the status label for easy access.
+        layout.addWidget(schema_label, 0)
+        layout.addWidget(self.spectrum_schema_selector, 1)
+
+    def _display_spectrum(self, spectrum, schema=None):
+        """Display one normalized SpectrumData object in the plot and table.
+
+        Args:
+            spectrum: The SpectrumData object to display.
+            schema: Optional schema dict for archive handling. Defaults to None (generic).
+        """
 
         # Load the plot first. If the data cannot be plotted, do not leave
         # the table showing a dataset that the plot failed to display.
-        if not self.spectra_plot.load_spectrum(spectrum):
+        if not self.spectra_plot.load_spectrum(spectrum, schema=schema):
             self._clear_spectrum_display()
             self.spectrum_status.setText(
                 "The imported spectrum has no valid plottable measurements."
@@ -336,8 +354,18 @@ class ECASWindow(QMainWindow):
         if not file_name:
             return
 
+        # Map the schema selector text to the appropriate schema dict.
+        selected_schema = (
+            WASP39B_SCHEMA
+            if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive"
+            else None
+        )
+
         try:
-            spectrum = import_spectrum_csv(file_name)
+            spectrum = import_spectrum_csv(
+                file_name,
+                schema=selected_schema,
+            )
         except SpectrumImportError as exc:
             # Remove the old display so it cannot be mistaken for the
             # spectrum the user just attempted to import.
@@ -351,13 +379,23 @@ class ECASWindow(QMainWindow):
             self.statusBar().showMessage("Import failed")
             return
 
-        self._display_spectrum(spectrum)
+        self._display_spectrum(spectrum, schema=selected_schema)
 
     def _import_csv_from_path(self, path: str):
         """Import a CSV from a specified path, primarily for testing."""
 
+        # Map the schema selector text to the appropriate schema dict.
+        selected_schema = (
+            WASP39B_SCHEMA
+            if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive"
+            else None
+        )
+
         try:
-            spectrum = import_spectrum_csv(path)
+            spectrum = import_spectrum_csv(
+                path,
+                schema=selected_schema,
+            )
         except SpectrumImportError as exc:
             # Keep failed-import behavior consistent with the file dialog.
             self._clear_spectrum_display()
@@ -370,4 +408,4 @@ class ECASWindow(QMainWindow):
             self.statusBar().showMessage("Import failed")
             return
 
-        self._display_spectrum(spectrum)
+        self._display_spectrum(spectrum, schema=selected_schema)
