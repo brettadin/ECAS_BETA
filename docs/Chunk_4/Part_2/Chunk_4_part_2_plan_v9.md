@@ -38,3 +38,17 @@ That should get you to a usable GitHub checkpoint without turning this into anot
 <br>
 
 # CLINE RESPONSE # 
+
+
+
+
+** note from me **
+
+I did a manual push of all the stuff to git hub
+got the agents.md
+the readme.md
+did updates to all the documentation, so revisions for most of our core documentation.
+
+i didnt let cline finish his work, because he was kinda looping on pushing. so im just going to write out what i did here.
+
+anyways, i also made `Handoff_prompt_for_Blake.md` which will serve as a way for him to pick up work and have full context for his agents. So im going to do that now.

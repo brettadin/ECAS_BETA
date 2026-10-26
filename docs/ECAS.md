@@ -1,727 +1,934 @@
-# Exoplanetary Characterization & Astrochemistry Suite (ECAS)
+# ECAS — Exoplanetary Characterization & Astrochemistry Suite
+
 ## Master Design Blueprint
 
-**Document type:** Overarching project blueprint and design philosophy  
+**Document type:** Master scientific vision, design principles, and long-term project blueprint  
 **Primary language:** Python  
-**Project status:** Ground-up development and architectural planning  
-**Authority:** Primary reference for project purpose, scientific principles, intended capabilities, and long-term direction
+**Project stage:** Incremental development toward a scientific research application  
+**Document authority:** Defines project purpose, scientific requirements, intended capabilities, and long-term direction. It does not independently establish implementation status.
 
 ---
 
-# 1. Project Vision
+## 1. Purpose and Scope
 
-ECAS is a Python-based scientific application for investigating exoplanet atmospheres through spectroscopy. Its purpose is to connect real, sourced scientific data with tools for spectral comparison, molecular identification, atmospheric analysis, and persistent research projects.
+ECAS (Exoplanetary Characterization & Astrochemistry Suite) is a scientific software project intended to support the investigation of exoplanet atmospheres through spectroscopy.
 
-The application will obtain molecular reference spectra and exoplanet observational data from established online scientific sources, maintain locally cached copies, and provide a framework for comparing observed spectra with candidate molecular signatures.
+The long-term objective is to provide an extensible research environment in which users can obtain real scientific data, organize observations, investigate candidate atmospheric constituents, compare spectra, evaluate evidence, and preserve their research history.
 
-The intended outcome is an extensible research tool that allows a user to select an exoplanet, organize its observational data, investigate possible atmospheric constituents, compare multiple observations, and preserve the complete analytical history of their work.
+ECAS is intended to connect three principal areas of work:
 
-ECAS should be designed as a scientific instrument rather than a demonstration of spectral matching. It must prioritize traceable data, reproducible analysis, transparent methodology, and appropriately qualified conclusions.
+1. **Scientific data management:** obtaining, validating, organizing, preserving, and tracing observational and molecular reference data.
+2. **Spectral investigation:** visualizing and comparing compatible datasets using documented, scientifically defensible methods.
+3. **Research continuity:** preserving the data, assumptions, configurations, results, and provenance needed to interpret and reproduce previous work.
 
-The program must be capable of growing from a reliable foundation into a comprehensive atmospheric characterization environment without requiring its core architecture to be replaced whenever a new data source, analytical method, or scientific capability is introduced.
+The application must be developed incrementally. Its long-term scientific objectives must guide architectural decisions, but documenting a future capability does not establish that the capability exists in the current implementation.
 
-# 2. Core Objectives
+ECAS must prioritize scientific integrity, traceability, transparency, and maintainability over superficial completeness or unsupported analytical claims.
 
-The project has six primary objectives.
+## 2. Project Objectives
 
-## 2.1. Build a reliable scientific data library
+### 2.1. Establish a reliable scientific data library
 
-Obtain molecular spectral reference data from established scientific databases and other appropriate sources.
+ECAS should support the acquisition and organization of molecular spectral reference data from appropriate scientific databases and other legitimate sources.
 
-The library should support:
+The intended library should accommodate, where available:
 
-- Molecular spectra associated with atmospheric constituents of interest.
-- Reference information about each molecule and its spectral transitions or features, where available.
-- Wavelength or wavenumber information, spectral intensity, units, and relevant measurement conditions.
-- Multiple datasets, spectral regions, temperatures, pressures, isotopologues, and data representations where available.
-- Source attribution, persistent identifiers, original URLs, licensing information, and retrieval metadata.
-- Local caching so previously acquired data can be reused without unnecessary downloads.
-- Verification of data integrity and clear identification of incomplete, outdated, or unavailable resources.
+- Molecular identities and relevant identifiers.
+- Spectral coordinates, including wavelength and wavenumber.
+- Spectral intensities and their associated units.
+- Relevant physical conditions, such as temperature and pressure.
+- Spectral resolution, isotopologue information, and other dataset-specific characteristics.
+- Source identifiers, original URLs, publications, licensing information, and retrieval metadata.
+- Multiple datasets and representations for the same molecule.
+- Local storage and reuse of previously acquired reference data.
+- Integrity checks and explicit reporting of incomplete, outdated, or unavailable resources.
 
-The reference library must use real scientific data. Synthetic or illustrative spectra must never be presented as measured reference data.
+Reference data must remain distinguishable by source, version, conditions, and representation. A molecular identity alone is not sufficient to establish that two reference datasets are interchangeable.
 
-## 2.2. Build an exoplanet observational data library
+The library must use real, attributable scientific data for scientific work. Synthetic or illustrative spectra may be used in explicitly identified development or educational contexts, but must never be mistaken for measured reference data.
 
-Obtain real exoplanet information and spectroscopic observations from appropriate scientific archives and databases.
+### 2.2. Establish an exoplanet observational data library
 
-This library should distinguish between general planet metadata and actual observational measurements.
+ECAS should support the acquisition and organization of exoplanet information and spectroscopic observations from appropriate scientific archives and databases.
 
-Potential data categories include:
+The intended data model should distinguish general planet metadata from individual observational datasets.
 
-- Exoplanet identifiers, aliases, host stars, and catalog metadata.
-- Published transit, transmission, emission, eclipse, and other relevant observations.
-- Observed spectra and their associated uncertainties.
-- Wavelength grids, spectral resolution, flux or transit-depth measurements, and measurement units.
-- Instrument, telescope, observing mode, data product, and processing information.
-- Published atmospheric retrieval results, when available, clearly distinguished from the program's own analysis.
-- Observation dates, publication details, data-release versions, and source references.
+Relevant information may include:
 
-The application should not assume that every exoplanet has a usable spectrum or that every available dataset supports atmospheric characterization.
+- Planet identifiers, aliases, host-star information, and catalog metadata.
+- Observational spectra and associated uncertainties.
+- Transit, transmission, emission, eclipse, and other relevant observation types.
+- Wavelength grids, flux or transit-depth measurements, spectral resolution, and units.
+- Telescope, instrument, observing mode, and data-product identifiers.
+- Observation dates, processing information, and data-release versions.
+- Publication references and source metadata.
+- Published atmospheric retrieval results, clearly distinguished from analyses performed by ECAS.
 
-## 2.3. Compare observations against molecular reference spectra
+The existence of planet metadata must not be interpreted as evidence that usable spectral observations are available. Likewise, the existence of an observation does not guarantee that it is suitable for every intended analytical method.
 
-Provide a scientifically defensible process for investigating which molecular species may explain features in an exoplanet's observed spectrum.
+### 2.3. Support scientifically defensible spectral investigation
 
-The user should be able to:
+ECAS should ultimately allow users to investigate whether observed spectral features are consistent with candidate molecular signatures.
 
-- Select an exoplanet and one or more observations.
-- Select candidate molecules from the local reference library.
-- Inspect reference spectra alongside observational data.
-- Identify regions where molecular features and observed spectral structures may correspond.
-- Compare multiple candidate molecules and evaluate overlapping features.
-- Examine how results change when different observations, wavelength ranges, or analytical settings are used.
-- Preserve the inputs, methods, parameters, and results associated with each analysis.
+The intended workflow includes:
 
-Spectral overlap is evidence to investigate, not automatic proof that a molecule exists in an atmosphere. The application must preserve that distinction throughout its interface and reporting.
+- Selecting an exoplanet and one or more observations.
+- Identifying relevant reference datasets.
+- Inspecting observational and reference spectra.
+- Evaluating spectral coverage and compatibility.
+- Comparing candidate molecular features with observed structures.
+- Examining overlapping features and alternative explanations.
+- Assessing the effects of uncertainties, instrument characteristics, and preprocessing.
+- Preserving the inputs, methods, settings, warnings, and outputs associated with an analysis.
 
-## 2.4. Support persistent research projects
+Spectral overlap is evidence to investigate, not proof of atmospheric composition. ECAS must not present a visual correspondence, correlation, or similarity score as a confirmed molecular detection unless a suitably validated method supports that conclusion.
 
-Users must be able to save, reopen, update, and organize their work around individual exoplanets.
+### 2.4. Support persistent research projects
 
-A project should preserve its scientific context rather than merely saving the latest graph.
+ECAS should eventually allow users to organize research around individual exoplanets and save, reopen, and extend their work.
 
-It should be possible to retain selected observations, candidate molecules, analysis configurations, generated results, annotations, comparison history, and source references.
+A research project should preserve its scientific context, not merely the most recent graph or imported file.
 
-A saved project must remain interpretable even when the underlying online database changes or a newer analysis method becomes available.
+Depending on the implemented capabilities, a project may contain:
 
-## 2.5. Compare multiple observations of the same planet
-
-The application must support longitudinal and cross-observation analysis.
-
-Users should be able to examine multiple readings of the same exoplanet, including observations from different dates, instruments, observing modes, or publications when appropriate.
-
-This capability should help users investigate:
-
-- Whether suspected molecular features recur across observations.
-- Whether apparent features depend on a particular instrument or data reduction.
-- Whether differences between readings exceed the associated measurement uncertainties.
-- Whether observations cover complementary wavelength regions.
-- Whether the available evidence is consistent across independent datasets.
-- Whether apparent changes are more plausibly associated with observational conditions, processing differences, or genuine variability.
-
-Observations must remain individually identifiable. Combining datasets must never silently erase their provenance, uncertainties, or instrumental differences.
-
-## 2.6. Preserve scientific provenance and reproducibility
-
-Every scientific dataset, comparison, and conclusion must be traceable to its origin.
-
-The application should provide direct access to original data sources, publications, and relevant documentation wherever available.
-
-It must also record enough information to reproduce or audit an analysis, including the dataset versions, processing steps, analysis method, configuration, and software version.
-
-# 3. Scientific Design Philosophy
-
-The following principles govern the entire project.
-
-## 3.1. Real data first
-
-Scientific data must originate from identifiable, legitimate sources.
-
-The application must not fabricate observational readings, molecular spectra, uncertainties, detection results, or source citations.
-
-If data are missing, unavailable, incomplete, or unsuitable, the program must communicate that limitation instead of filling the gap with invented values.
-
-Synthetic data may be introduced for explicitly labeled software-development or educational purposes only when that capability is deliberately authorized. It must remain clearly separated from real scientific datasets and must never enter real-data analyses unnoticed.
-
-## 3.2. Evidence must be distinguishable from interpretation
-
-ECAS should separate measured quantities from processed data, model predictions, candidate identifications, and final interpretations.
-
-A visual match between a reference spectrum and an observed feature should not automatically be reported as a molecular detection.
-
-Where possible, the application should distinguish among:
-
-- **Spectral correspondence:** A molecular reference contains features in regions that overlap the observed spectrum.
-- **Candidate identification:** The available observations provide evidence consistent with the presence of a molecular species.
-- **Statistical support:** A defined analytical method evaluates how strongly the data support a candidate relative to specified alternatives.
-- **Atmospheric constraint:** A validated atmospheric model estimates physical or chemical properties, with appropriate uncertainties and assumptions.
-- **Published result:** A conclusion obtained from an external publication, clearly attributed to its authors.
-
-These categories are not interchangeable. The interface must not imply a stronger conclusion than the underlying method supports.
-
-## 3.3. Uncertainty is part of the data
-
-Measurement uncertainties, calibration limitations, instrumental effects, model assumptions, and missing information must be retained whenever available.
-
-An analytical result should communicate its limitations, not simply present a match score or confidence label.
-
-If an input dataset lacks the information needed for a particular analysis, ECAS should identify that limitation and explain which conclusions cannot be supported.
-
-## 3.4. Comparisons must respect physical and observational conditions
-
-Molecular reference spectra can vary with temperature, pressure, spectral resolution, isotopic composition, and other physical conditions.
-
-Observed astronomical spectra are also affected by instrumental response, noise, calibration, data reduction, and the physical processes producing the signal.
-
-ECAS should therefore distinguish preliminary feature comparison from physically informed spectral modeling.
-
-The analytical framework should evolve toward accounting for these differences through appropriate preprocessing, instrumental treatment, uncertainty propagation, and forward modeling.
-
-The application must not compare incompatible quantities as if they were directly equivalent.
-
-## 3.5. Preserve the original data
-
-Original downloaded datasets must remain distinguishable from processed versions.
-
-Data cleaning, unit conversion, interpolation, normalization, binning, masking, and other transformations must be documented.
-
-The program should favor reproducible processing pipelines over irreversible modification of source data.
-
-## 3.6. Scientific transparency over artificial certainty
-
-The application must be able to report that the evidence is inconclusive.
-
-It should support competing explanations, overlapping molecular signatures, insufficient wavelength coverage, and conflicting observations.
-
-A failed identification is a valid analytical outcome.
-
-The program's purpose is to help investigate atmospheric composition, not to guarantee a molecular detection for every selected planet.
-
-# 4. Data Sources and Acquisition
-
-ECAS will use a modular data-acquisition architecture so that sources can be added, updated, or replaced without rewriting the entire application.
-
-Candidate sources include the following. Their suitability, current interfaces, available data products, and access conditions must be verified during planning and implementation.
-
-## 4.1. Molecular reference data
-
-- **HITRAN:** Molecular spectroscopic parameters and related resources. https://hitran.org/
-- **ExoMol:** Molecular line lists and data products relevant to exoplanet and other high-temperature atmospheres. https://www.exomol.com/
-- **NIST Chemistry WebBook:** Molecular and chemical reference information, including applicable spectroscopic resources. https://webbook.nist.gov/chemistry/
-- Other authoritative spectral repositories, laboratory datasets, or published supplementary datasets where they provide relevant and adequately documented information.
-
-These sources are complementary, not interchangeable. The application must account for differences in data representation, units, physical assumptions, completeness, and intended use.
-
-Line lists, measured laboratory spectra, calculated spectra, and experimentally derived cross-sections must be identified as different data types.
-
-## 4.2. Exoplanet and observational data
-
-- **NASA Exoplanet Archive:** Exoplanet catalog information and supported observational or publication-related datasets. https://exoplanetarchive.ipac.caltech.edu/
-- **MAST:** Astronomical observations and associated data products, including relevant space telescope archives. https://archive.stsci.edu/
-- **ESA Gaia Archive:** Stellar and astrometric information that may support contextual analysis. https://gea.esac.esa.int/archive/
-- Instrument-specific archives and peer-reviewed publications when appropriate.
-
-The application should prioritize sources that provide accessible, documented scientific data and stable identifiers.
-
-Not every source will offer the same level of machine-readable access. Data connectors should accommodate documented APIs, archive interfaces, and permitted direct downloads without assuming that all providers behave identically.
-
-## 4.3. Data acquisition requirements
-
-Each source integration should have a clearly defined responsibility.
-
-It should handle, as applicable:
-
-- Searching and identifying available datasets.
-- Retrieving records and associated files.
-- Parsing the provider's data format.
-- Validating required fields and units.
-- Preserving original files or source records.
-- Recording provenance and retrieval metadata.
-- Reporting download, parsing, and validation errors.
-- Detecting existing cached copies.
-- Checking whether updated versions are available.
-- Respecting licensing, attribution, access restrictions, and provider usage policies.
-
-A source connector must not silently substitute unrelated data when a requested dataset cannot be obtained.
-
-## 4.4. Source attribution
-
-Every imported dataset must have a persistent source record.
-
-Attribution should include, where available:
-
-- Provider or institution.
-- Dataset title and identifier.
-- Original URL or stable landing page.
-- DOI, accession number, or other persistent identifier.
-- Associated publication and authors.
-- Retrieval date.
-- Release or version information.
-- License or usage terms.
-- Relevant documentation.
-- Whether the data are observed, experimentally measured, calculated, simulated, or derived from another dataset.
-
-The application should expose these details through dataset information views and include relevant citations in exported reports.
-
-Source attribution is a core data requirement, not an optional cosmetic feature.
-
-# 5. Local Data Library and Caching
-
-ECAS should maintain a local scientific data library to reduce repeated downloads and provide reliable access to previously acquired datasets.
-
-The storage architecture must distinguish between the following concepts:
-
-1. **Source catalog:** Information about external providers and the datasets they offer.
-2. **Local data cache:** Downloaded source files and reusable parsed or normalized representations.
-3. **Scientific metadata:** Descriptions, identifiers, units, versions, provenance, and relationships among datasets.
-4. **User projects:** Saved research selections, analysis configurations, results, annotations, and project-specific history.
-
-These components may use different storage mechanisms when appropriate. They should not be collapsed into a single undifferentiated collection of files.
-
-The caching system should support:
-
-- Reuse of previously retrieved datasets.
-- Integrity checks and duplicate detection.
-- Dataset version tracking.
-- Explicit refresh or update operations.
-- Identification of stale or incomplete records.
-- Recovery from interrupted downloads.
-- Clear separation of source files from derived data.
-- Offline access to cached material when possible.
-- Transparent handling of missing or inaccessible external resources.
-
-Cache invalidation and dataset replacement must be deliberate. Updating an external dataset must not silently change the historical inputs of a saved analysis.
-
-The application should also distinguish between data that have been downloaded, data that have been parsed successfully, and data that are actually suitable for a particular analysis.
-
-# 6. Spectral Analysis and Molecular Identification
-
-The spectral analysis subsystem is the central scientific component of ECAS.
-
-Its design should allow different analytical methods to be introduced and evaluated independently, rather than embedding the entire scientific workflow in one monolithic function.
-
-## 6.1. Data preparation
-
-Before comparing spectra, the program should establish what each dataset represents and determine whether the inputs are compatible.
-
-Potential operations include:
-
-- Wavelength and wavenumber conversion.
-- Unit validation and conversion.
-- Sorting and validating spectral coordinates.
-- Handling missing or invalid measurements.
-- Identifying duplicate coordinates and gaps.
-- Evaluating measurement uncertainties.
-- Accounting for spectral resolution and sampling.
-- Applying appropriate, documented preprocessing.
-- Recording masks, excluded regions, and processing parameters.
-
-No preprocessing step should be applied indiscriminately to every dataset. Each operation must be appropriate for the data type and scientific question.
-
-## 6.2. Reference spectrum preparation
-
-Molecular reference data may be provided as transition line lists, absorption cross-sections, transmission measurements, or other representations.
-
-ECAS should retain the distinction between these representations and support appropriate methods for making them comparable with observations.
-
-Depending on the source and analytical method, preparation may require:
-
-- Temperature- and pressure-dependent treatment.
-- Line broadening or spectral convolution.
-- Instrumental resolution matching.
-- Wavelength-grid alignment.
-- Conversion to a compatible physical quantity.
-- Identification of relevant spectral bands or transitions.
-- Treatment of isotopologues and overlapping features.
-
-A raw molecular line list should not be treated as if it were a directly measured, instrumentally broadened planetary spectrum.
-
-## 6.3. Initial comparison capabilities
-
-The initial scientific comparison framework should be deliberately limited to methods that can be implemented and validated reliably.
-
-Potential approaches include:
-
-- Visual comparison of observed and reference spectra.
-- Identification of overlapping spectral features.
-- Comparison across selected wavelength regions.
-- Residual and difference analysis where physically meaningful.
-- Quantitative comparison methods that account for uncertainties and the properties of the input data.
-- Evaluation of alternative molecular candidates.
-- Documentation of which features support or weaken each candidate.
-
-Each method must have a documented scientific interpretation, known limitations, and defined requirements for valid inputs.
-
-A simple similarity score may be useful for exploratory screening, but it must not be represented as a statistically valid detection probability unless its methodology supports that interpretation.
-
-## 6.4. Atmospheric modeling and retrieval
-
-Longer-term development should support increasingly rigorous atmospheric characterization.
-
-Potential capabilities include:
-
-- Molecular absorption and emission modeling.
-- Atmospheric transmission or emission calculations.
-- Forward modeling of candidate atmospheric compositions.
-- Comparison of predicted spectra with observed data.
-- Evaluation of alternative atmospheric models.
-- Parameter estimation and uncertainty analysis.
-- Bayesian or other statistically justified retrieval techniques.
-- Comparison with published atmospheric retrieval results.
-
-These capabilities may require specialist scientific libraries, radiative-transfer models, or integration with external tools.
-
-They should be introduced as distinct, validated analytical capabilities rather than assumed to exist merely because basic spectral comparison has been implemented.
-
-The program must distinguish between identifying potentially relevant molecular features and estimating an atmosphere's composition, temperature, pressure, or molecular abundances.
-
-# 7. Exoplanet Research Projects
-
-ECAS should organize work through persistent, user-managed projects.
-
-An individual project will normally focus on one exoplanet, while allowing that planet to be investigated through multiple observations, datasets, and analytical approaches.
-
-## 7.1. Project identity and metadata
-
-A project should preserve:
-
-- A stable internal project identifier.
-- The planet's primary catalog identifier and known aliases.
-- Host-star information where relevant.
-- Project name and description.
-- Creation and modification timestamps.
-- Relevant scientific notes.
-- Links to associated datasets and source records.
-- Project-specific analysis settings.
-
-Names alone should not be used as the sole means of identifying astronomical objects because aliases and naming conventions may vary across catalogs.
-
-## 7.2. Project contents
-
-A project should be capable of organizing:
-
-- Selected observational datasets.
+- Selected planets and observational datasets.
 - Molecular reference datasets.
-- Candidate molecular species.
-- Individual analyses and their configurations.
-- Results and comparison visualizations.
-- Annotations and research notes.
-- Cross-observation comparisons.
-- Relevant published findings.
-- Source citations and data versions.
-- A history of analytical changes.
+- Source references and provenance information.
+- Analysis configurations and preprocessing choices.
+- Comparison results and validation outcomes.
+- User annotations and research notes.
+- Historical results and the configurations that produced them.
+- Software and dataset versions needed to interpret prior analyses.
 
-Projects should reference shared cached datasets where practical rather than creating unnecessary duplicate copies of large files.
+A saved project should remain interpretable even when external sources change or new analysis methods become available. Where exact reproduction is impossible, ECAS should make the missing dependencies or changed inputs explicit.
 
-However, the project must preserve the exact dataset identity and version required to interpret a result.
+### 2.5. Enable comparisons across multiple observations
 
-## 7.3. Project lifecycle
+ECAS should support comparisons among observations of the same planet where the data and scientific question justify them.
 
-Users should be able to create, save, reopen, rename, duplicate, archive, and export projects.
+Potential investigations include:
 
-The system should protect against accidental loss of work and handle incomplete or incompatible project files in a controlled manner.
+- Whether candidate features recur across observations.
+- Whether apparent features depend on an instrument or reduction pipeline.
+- Whether differences are meaningful relative to measurement uncertainties.
+- Whether observations provide complementary spectral coverage.
+- Whether independent datasets support consistent interpretations.
+- Whether apparent variation could be explained by observational conditions or processing differences.
 
-Project formats and migrations should be designed so that changes to the application's internal architecture do not unnecessarily destroy older research projects.
+Observations must remain individually identifiable. Combining or aligning datasets must not silently discard provenance, uncertainties, units, instrumental characteristics, or other relevant metadata.
 
-## 7.4. Reproducibility
+### 2.6. Preserve provenance and reproducibility
 
-A saved analysis should preserve the relationship between its inputs, method, parameters, and outputs.
+Every scientific dataset and analytical result should be traceable to its origin.
 
-Where practical, the user should be able to reopen a prior analysis and reproduce its results using the same data versions and configuration.
+ECAS should preserve sufficient information to understand how a result was produced, including, where applicable:
 
-If an analysis cannot be reproduced because a dependency, data version, or required resource is missing, the application should explain the limitation.
+- Original data sources and persistent identifiers.
+- Dataset versions and retrieval information.
+- Input observations and molecular references.
+- Preprocessing and transformation steps.
+- Analytical methods and parameters.
+- Software versions and relevant dependencies.
+- Validation results, warnings, and known limitations.
+- Output values, uncertainties, and interpretation.
 
-# 8. Multiple Observations and Comparative Research
+Reproducibility is a system requirement, not a label that can be applied merely because a result has been saved.
 
-A major intended capability is investigating the same planet across multiple readings.
+---
 
-ECAS should treat an observation as a distinct scientific record rather than merely another file attached to a planet.
+## 3. Scientific Principles
 
-Each observation should retain its own identity, provenance, instrument information, uncertainties, wavelength coverage, and processing history.
+These principles govern scientific data handling, analysis, interface design, and reporting throughout ECAS development.
 
-The comparison interface should eventually allow users to:
+### 3.1. Real data and attributable sources
 
-- View individual observations independently.
-- Overlay selected observations where scientifically appropriate.
-- Compare observations across wavelength regions.
-- Inspect recurring and inconsistent spectral features.
-- Compare the same molecular candidate against several readings.
-- Identify which datasets contribute to a candidate identification.
-- Compare results obtained under different analysis configurations.
-- Examine differences between instruments and publications.
-- Track how interpretations change as new observations become available.
+Scientific datasets must originate from identifiable, legitimate sources.
 
-When observations are combined, the program must account for compatibility, calibration, uncertainty, and any relevant differences in observing conditions.
+ECAS must not fabricate observational measurements, molecular reference spectra, uncertainties, detection results, or source citations.
 
-A feature appearing in several datasets is not automatically independent confirmation. Shared calibration errors, common processing methods, or overlapping source data may affect the strength of the evidence.
+When information is missing, unavailable, incomplete, or unsuitable, the application must report the limitation rather than silently inventing or substituting values.
 
-ECAS should preserve enough information for users to understand both the similarities and the differences among observations.
+Synthetic data may be used for software tests or demonstrations when appropriately authorized and clearly identified. It must remain distinguishable from real scientific data and must not enter a real-data workflow unnoticed.
 
-# 9. User Interface and Research Workflow
+### 3.2. Separate measurements from interpretations
 
-The application should provide a coherent scientific workflow, with a clear distinction between browsing data, preparing analyses, inspecting results, and managing projects.
+ECAS must distinguish source data, transformed data, model outputs, analytical findings, and scientific interpretations.
 
-The eventual interface should support the following conceptual areas.
+The application should preserve the difference between:
 
-## 9.1. Exoplanet discovery and selection
+- **Observed data:** measurements supplied by an identified source.
+- **Processed data:** values transformed through documented operations.
+- **Reference data:** molecular spectra or other scientific reference information.
+- **Spectral correspondence:** overlapping or similar structures between datasets.
+- **Candidate identification:** an interpretation supported by a defined body of evidence.
+- **Statistical support:** quantitative evidence evaluated by a documented method.
+- **Atmospheric characterization:** estimates or constraints derived from an appropriate atmospheric model.
+- **Published conclusions:** findings reported by external researchers under their stated assumptions.
 
-Users should be able to search for known exoplanets, inspect available metadata, and determine which observational datasets are available.
+These categories are not interchangeable. The interface and reports must not imply a stronger conclusion than the underlying evidence and method support.
 
-The interface should clearly distinguish planets with catalog information from planets for which usable spectroscopic observations are available.
+### 3.3. Preserve uncertainty
 
-## 9.2. Data library
+Measurement uncertainties, calibration limitations, instrumental effects, data-quality indicators, and relevant model assumptions must be retained wherever available.
 
-Users should be able to browse cached molecular reference data and observational datasets.
+Analysis results should communicate uncertainty and limitations rather than presenting an isolated score or categorical confidence label.
 
-Useful filters may include molecule, spectral region, source, data type, physical conditions, instrument, and retrieval status.
+If an input lacks information required for a particular method, ECAS should identify the limitation and avoid unsupported conclusions.
 
-Dataset information should expose provenance, units, version, and suitability limitations.
+Missing uncertainty information must not be interpreted as zero uncertainty.
 
-## 9.3. Analysis workspace
+### 3.4. Respect physical and observational conditions
 
-Users should be able to select observations, choose candidate molecules, configure a supported analytical method, and inspect the resulting comparisons.
+Molecular reference spectra may depend on temperature, pressure, isotopic composition, spectral resolution, and other conditions.
 
-The workspace should make inputs and processing choices visible so that users can understand how the result was obtained.
+Astronomical observations may also be affected by instrumental response, calibration, noise, data reduction, spectral coverage, and measurement geometry.
 
-## 9.4. Results and interpretation
+Before comparison, ECAS should assess whether datasets are compatible for the intended operation. When transformation or approximation is required, the method and its assumptions must be documented.
 
-Results should include useful visualizations, relevant numerical information, uncertainty information, and links to supporting evidence.
+The ability to display two datasets on the same graph does not establish that they are scientifically comparable.
 
-The interface should communicate the difference between measured data, processed data, reference predictions, candidate matches, and atmospheric model outputs.
+### 3.5. Preserve original data
 
-Users should be able to inspect the evidence behind an interpretation rather than being presented with an unexplained final label.
+Original source data should remain identifiable and recoverable wherever the application has access to them.
 
-## 9.5. Project dashboard
+Normalization, resampling, unit conversion, filtering, interpolation, and other transformations must not silently overwrite the original measurements.
 
-The project view should provide access to its observations, molecular candidates, previous analyses, research notes, and citations.
+Derived data should be distinguishable from source data, with the transformations and relevant parameters recorded where practical.
 
-It should be possible to resume work without manually reconstructing the previous session.
+Any operation that intentionally changes or replaces source data must be explicit and appropriately controlled.
 
-## 9.6. Scientific visualization
+### 3.6. Prefer transparency over artificial certainty
 
-Spectral visualizations should prioritize scientific readability and accuracy.
+ECAS must communicate what was checked, what was found, what assumptions were made, and what remains uncertain.
 
-Where appropriate, graphs should include:
+A completed computation is not necessarily a valid scientific analysis. A successful import does not establish scientific suitability. A passing software test does not prove that an analytical method is scientifically valid.
 
-- Clearly labeled axes and physical units.
-- Legible legends.
-- Distinguishable observations and reference spectra.
-- Explicit uncertainty representations.
-- Identifiable wavelength regions and spectral features.
-- Source or dataset identification.
-- Appropriate handling of gaps and missing values.
+Reports and interface elements must distinguish technical success from scientific validity.
 
-Visual styling should support the scientific purpose rather than obscure it. A consistent application-wide design should be maintained without making scientific results dependent on decorative presentation.
+### 3.7. Keep scientific rules explicit
 
-# 10. Reporting and Export
+Scientific assumptions, acceptance criteria, thresholds, and comparison rules must be documented and justified.
 
-ECAS should eventually support the production of research-oriented outputs.
+Arbitrary numerical thresholds must not be introduced merely to produce a definitive-looking result.
 
-Potential export formats include CSV for tabular data, JSON for structured records, and publication-oriented figures and reports.
+Where evidence is insufficient to establish a defensible rule, the uncertainty should remain explicit and the decision should be deferred until appropriate evidence or requirements are available.
 
-Exports should preserve the distinction between original measurements, processed values, model outputs, and interpretations.
+---
 
-A report should identify:
+## 4. Data Sources and Acquisition
 
-- The exoplanet and observations analyzed.
-- The molecular reference datasets used.
-- The sources and versions of relevant data.
-- The analysis methods and parameters.
-- The processing operations performed.
-- The results and uncertainty information.
-- The limitations of the analysis.
-- The evidence supporting candidate identifications.
-- Relevant publications and citations.
+### 4.1. Molecular reference data
 
-The program should make it possible to share analytical results without losing the information required to trace them back to their sources.
+Potential reference sources include established molecular spectroscopy databases and other scientifically appropriate repositories.
 
-# 11. Software Architecture Philosophy
+Selection of a source must consider:
 
-ECAS should be developed as a modular Python application.
+- Scientific suitability for the intended analysis.
+- Availability and quality of metadata.
+- Units, coordinate systems, and physical conditions.
+- Data provenance and versioning.
+- Licensing and permitted use.
+- Retrieval mechanisms and access limitations.
+- The distinction between measured, calculated, and model-derived data.
 
-Its architecture should separate scientific responsibilities so that individual components can evolve without unnecessarily destabilizing unrelated parts of the program.
+Specific providers and retrieval mechanisms must be selected through documented technical decisions. The existence of this requirement does not imply that any particular provider is currently integrated.
 
-The exact folder structure, modules, interfaces, dependencies, and implementation details will be established in a separate architectural planning process. This blueprint defines the intended responsibilities, not the final file layout.
+### 4.2. Exoplanet and observational data
 
-The eventual architecture should account for the following conceptual subsystems:
+Potential sources include established exoplanet catalogs, telescope archives, published datasets, and other appropriate scientific repositories.
 
-| Subsystem | Responsibility |
-|---|---|
-| Data-source integrations | Communicate with scientific archives and databases. |
-| Data ingestion | Retrieve, parse, validate, and classify incoming data. |
-| Local data library | Cache source data and maintain reusable scientific records. |
-| Metadata and provenance | Preserve identifiers, citations, versions, and relationships. |
-| Spectral data processing | Validate, transform, and prepare compatible spectral representations. |
-| Molecular reference library | Organize and retrieve molecular reference spectra and associated information. |
-| Exoplanet data management | Organize planet records and their observational datasets. |
-| Analysis engine | Perform spectral comparisons and supported scientific calculations. |
-| Atmospheric modeling | Support more advanced physical modeling and retrieval as these capabilities are developed. |
-| Project management | Create, save, reopen, and organize research projects. |
-| Visualization | Display observations, references, comparisons, and results. |
-| Reporting and export | Produce traceable figures, tables, and research outputs. |
-| Application interface | Present the available functionality to the user. |
-| Logging and diagnostics | Record operational issues, failures, and relevant processing information. |
+Acquisition workflows should distinguish:
 
-These are conceptual responsibilities, not a requirement that each subsystem must immediately become a separate package or module.
+- Planet and host-star metadata.
+- Individual observations.
+- Processed or calibrated data products.
+- Published atmospheric retrievals.
+- Results generated by ECAS itself.
 
-The design should avoid both extremes: an undifferentiated application in which unrelated responsibilities are tightly coupled, and an unnecessarily elaborate architecture that creates complexity before the corresponding functionality exists.
+Source metadata must be retained sufficiently to identify the data product and its scientific context.
 
-# 12. Python Ecosystem and Tooling Direction
+Archive access must not be assumed to be universal. Different providers may use different interfaces, schemas, units, access conditions, and release conventions.
 
-Python is the primary and intended implementation language.
+### 4.3. Acquisition requirements
 
-The eventual dependency selection should be based on verified scientific requirements, current documentation, compatibility, and maintenance status.
+Future acquisition capabilities should address:
 
-Potential tools include:
+1. Source identification and dataset selection.
+2. Retrieval errors, timeouts, and unavailable resources.
+3. Input format and schema validation.
+4. Data integrity and completeness checks.
+5. Metadata extraction and preservation.
+6. Version identification and duplicate handling.
+7. Licensing and attribution.
+8. Local storage and offline reuse.
+9. Clear reporting of rejected, incomplete, or unsupported data.
 
-- **NumPy:** Numerical arrays and mathematical operations.
-- **SciPy:** Scientific algorithms, numerical methods, optimization, and signal-processing functionality where appropriate.
-- **Astropy:** Astronomical data structures, units, coordinates, and related astronomy utilities.
-- **Pandas:** Tabular data manipulation where useful.
-- **Matplotlib:** Scientific plotting and figure generation.
-- **Astroquery:** Access to supported astronomical archives and services.
-- **Requests or HTTPX:** HTTP communication with data providers.
-- **Astrodata and format-specific parsers:** Appropriate readers for supported astronomical data formats, including FITS where relevant.
-- **SQLite and a suitable Python database interface:** Structured local metadata and project records.
-- **A documented serialization format:** Project configuration and other structured records.
-- **A suitable Python interface framework:** To be selected after the intended application interaction model is established.
-- **Pytest:** Automated tests for implemented and connected functionality.
-- **A dependency and environment manager:** To be selected for reproducible development and installation.
+Acquisition must not silently convert an unsupported input into a scientifically meaningful dataset.
 
-This list is a candidate toolset, not a finalized dependency manifest. A tool should only be adopted when its role is understood and justified.
+### 4.4. Source attribution
 
-The architecture should favor established scientific libraries over unnecessary reimplementation of standard scientific functionality.
+Where available, records should preserve:
 
-More advanced atmospheric modeling may require additional specialized dependencies or external scientific software. Such additions must be evaluated on their actual scientific and technical merits.
+- Source organization or provider.
+- Dataset identifier and original filename.
+- Original URL or persistent identifier.
+- Publication and authorship information.
+- Retrieval date and relevant data-release version.
+- Licensing or usage conditions.
+- Processing history and transformations performed by ECAS.
 
-# 13. Data Integrity, Reliability, and Security
+Provenance requirements should be implemented alongside the relevant ingestion and storage capabilities, rather than postponed until after scientific analysis has been added.
 
-The application must be reliable enough to protect scientific work and make failures understandable.
+---
 
-Relevant design goals include:
+## 5. Data Library, Storage, and Caching
 
-- Validation of downloaded and imported data.
-- Explicit handling of missing or malformed values.
-- Protection against accidental overwriting of original data.
-- Safe and predictable project saving.
-- Recovery from interrupted operations.
-- Clear error messages for network, parsing, storage, and analytical failures.
-- Detection of incompatible data formats and unsupported analysis configurations.
-- Appropriate validation of external files and imported project contents.
-- Protection of local project files and application configuration.
-- Controlled management of dependencies and updates.
+### 5.1. Intended design
 
-External scientific data should be treated as data, not as executable instructions.
+ECAS should provide a reliable local data library that supports repeatable access to observational and reference datasets.
 
-The application should not silently discard invalid records, hide failed operations, or substitute placeholder results for genuine analytical outputs.
+The intended design should distinguish scientific data from the metadata that identifies, describes, and contextualizes it.
 
-# 14. Extensibility and Future Development
+The library should support, as appropriate:
 
-The design should anticipate new scientific capabilities without requiring every possible feature to be implemented at the outset.
+- Dataset identification and metadata.
+- Original source information.
+- Local copies of retrieved data.
+- Integrity checks.
+- Dataset version tracking.
+- Explicit relationships between source and derived data.
+- Safe reuse of previously retrieved resources.
+- Detection of incomplete or outdated local resources.
 
-Potential future extensions include:
+The precise storage architecture remains governed by the approved architecture and implementation decisions. This blueprint does not prescribe an unapproved database or file-storage redesign.
 
-- Additional molecular reference databases.
-- Additional astronomical archives and telescope instruments.
-- Broader wavelength coverage, including ultraviolet, visible, infrared, and other relevant spectral regions.
-- Additional molecules and isotopologues.
-- More sophisticated spectral comparison methods.
-- Instrument-aware forward models.
-- Atmospheric retrieval and parameter estimation.
-- Comparative analysis across multiple planets.
-- Cross-validation against published scientific results.
-- More advanced visualization and reporting.
-- Optional integrations with external scientific modeling software.
-- Improved management of large datasets and analysis histories.
+### 5.2. Caching requirements
 
-Future features should build on established interfaces and scientific data models where practical.
+Caching should reduce unnecessary retrieval while preserving source identity and data integrity.
 
-The architecture should make extensions possible without requiring speculative abstractions for capabilities that have not yet been justified.
+A future cache should distinguish between:
 
-# 15. Development Philosophy and Scope
+- The source's current remote state, when known.
+- The locally stored copy.
+- The time and conditions of retrieval.
+- The version or release represented by the local copy.
+- Whether the resource has been checked for integrity.
+- Whether newer source data may be available.
 
-ECAS is a long-term scientific software project. Its development should proceed through deliberate planning and validated increments.
+A cached dataset must not automatically be treated as the newest version or as scientifically validated.
 
-The program's final scope is ambitious, but the initial implementation should not attempt to deliver every capability described in this document simultaneously.
+### 5.3. Offline behavior
 
-A sensible long-term progression is:
+ECAS should be designed to support meaningful offline work with previously acquired local data.
 
-1. Establish a coherent architectural foundation and documented responsibilities.
-2. Establish dependable local storage, project identity, and data provenance.
-3. Integrate and validate selected molecular reference sources.
-4. Integrate and validate selected exoplanet observational sources.
-5. Implement an initial, scientifically defensible spectral comparison workflow.
-6. Connect the workflow to persistent research projects.
-7. Support comparisons across multiple observations of the same planet.
-8. Improve analytical rigor, uncertainty treatment, and instrument-aware modeling.
-9. Introduce more advanced atmospheric characterization and retrieval.
-10. Expand data-source coverage, reporting, and research functionality as justified.
+Offline capabilities depend on what has already been downloaded and stored. The application must not imply that an unavailable online resource can be retrieved or refreshed without a connection.
 
-This sequence is a planning direction, not an authorization to begin any particular implementation phase without the appropriate planning and approval.
+When online access is unavailable, ECAS should distinguish between usable local data, unavailable resources, and operations that require connectivity.
 
-Dependencies between capabilities should be identified before implementation. A feature that depends on an unimplemented subsystem should be documented as a planned dependency, not represented as working functionality.
+### 5.4. Storage integrity
 
-The application should grow through verified scientific and engineering progress rather than the accumulation of unintegrated files or speculative features.
+Storage operations must preserve the relationship between data and its metadata.
 
-# 16. Project Knowledge and Institutional Memory
+Future storage requirements include:
 
-ECAS must maintain an organized, persistent record of its design decisions, current state, implementation history, and unresolved questions.
+- Safe handling of invalid or incomplete records.
+- Appropriate transaction and error-handling behavior.
+- Consistent identification of datasets and projects.
+- Detection and reporting of corrupt or missing resources.
+- Preservation of source data during updates.
+- Clear separation between current storage behavior and proposed artifact-storage designs.
 
-The `brains` directory is intended to serve as the project's working knowledge base.
+Storage migrations and architectural changes must be supported by explicit decisions, tests, and appropriate recovery procedures.
 
-It should contain agent-authored records that preserve the reasoning and context needed by subsequent agents, together with an overarching project blueprint and any more detailed governing instructions established separately.
+---
 
-The knowledge system should make it possible to understand:
+## 6. Spectral Preparation and Analysis
 
-- Why the project is structured as it is.
-- What each subsystem is intended to accomplish.
-- What has been planned, implemented, validated, or deferred.
-- Which decisions have been made and why.
-- Which assumptions remain unverified.
-- Which dependencies or interfaces are still missing.
-- What work remains outstanding.
-- Where the authoritative instructions for a task can be found.
+### 6.1. Input characterization
 
-Individual agent contributions should be independently identifiable and should not silently replace the overarching blueprint.
+Before an analytical operation, ECAS should establish what the input represents and whether the available information is sufficient for the requested operation.
 
-The knowledge base should preserve the distinction between an approved design decision, a proposed change, an experiment, and a confirmed implementation result.
+Relevant properties may include:
 
-The detailed procedures governing agent behavior, file organization, planning, approval, implementation, and change documentation will be defined in a separate instruction document.
+- Spectral coordinate values and units.
+- Signal or measured quantity and units.
+- Column meanings and data types.
+- Missing, malformed, or non-finite values.
+- Spectral coverage and sampling.
+- Measurement uncertainties.
+- Instrument and observation metadata.
+- Source provenance and data-processing history.
 
-# 17. Definition of Success
+Parsing a file and assigning canonical column names does not establish that the values have the correct physical interpretation.
 
-ECAS will have achieved its intended purpose when it can function as a dependable research environment for investigating exoplanet atmospheres using real, traceable scientific data.
+### 6.2. Data preparation
 
-The long-term application should be able to:
+Potential preparation operations include unit conversion, filtering, normalization, interpolation, resampling, and other transformations justified by the intended analysis.
 
-- Acquire and cache real molecular reference spectra from documented sources.
-- Acquire and cache real exoplanet observational data.
-- Preserve data integrity, versions, metadata, and citations.
-- Let users create and maintain persistent projects for individual exoplanets.
-- Compare selected molecular references against compatible observations.
-- Clearly communicate the evidence and limitations associated with candidate molecular identifications.
-- Compare multiple observations of the same planet.
-- Preserve analysis configurations and results for reproducibility.
-- Support increasingly rigorous atmospheric modeling and characterization.
-- Export useful research outputs with appropriate scientific attribution.
+Each operation must:
 
-Success is not measured by the number of files created, the number of features claimed, or the apparent sophistication of the interface.
+- Be appropriate for the data and scientific question.
+- Preserve the original source measurements.
+- Record relevant parameters and assumptions.
+- Handle invalid or missing values explicitly.
+- Avoid introducing unsupported physical interpretations.
+- Communicate limitations and information loss.
 
-It is measured by whether the application produces useful, reproducible, scientifically interpretable work from real data, and whether its architecture can support continued development without compromising those standards.
+Not every dataset requires the same preparation. ECAS must not apply transformations automatically merely because they are available.
 
-# 18. Governing Principle
+### 6.3. Reference spectrum preparation
 
-**ECAS exists to investigate exoplanetary atmospheres through traceable scientific evidence.**
+Reference spectra must be characterized before being compared with observational data.
 
-Every architectural decision, data integration, analytical method, and interface feature should serve that purpose.
+Relevant considerations include:
 
-The application must prioritize scientific integrity, explicit provenance, reproducibility, modularity, and transparent uncertainty.
+- Coordinate system and units.
+- Intensity definition and units.
+- Temperature and pressure.
+- Isotopologue and molecular identity.
+- Spectral resolution and sampling.
+- Source type and generation method.
+- Applicable uncertainty information.
+- Instrumental or physical conditions relevant to comparison.
 
-It must distinguish what the data show from what an analytical method infers, and what remains unknown from what has been established.
+Where differences require broadening, resampling, conversion, or other processing, the transformation must be appropriate to the scientific context and recorded.
 
-The project blueprint defines the intended destination and the principles governing the journey. More detailed architectural documents and agent instructions should translate these principles into specific responsibilities and procedures while remaining consistent with this document.
+### 6.4. Initial comparison capabilities
 
-When implementation details change, the project may evolve. Its scientific purpose and governing principles should remain stable unless the user explicitly approves a change to them.
+The intended comparison framework should support progressively more rigorous analysis.
 
-# 19. Core Documentation
+Possible stages include:
 
-## 19.1 Architecture
-- docs/architecture/ECAS_Architecture_Specification.md — implementation stages, task order, dependencies, and completion criteria.
-	The implementation plan defines the proposed build sequence. It does not override approved architecture decisions or authorize implementation by itself.
+1. Visual inspection of observational and reference spectra.
+2. Identification of overlapping spectral regions.
+3. Assessment of data compatibility.
+4. Quantitative comparison using a defined method.
+5. Evaluation of uncertainty and alternative explanations.
+6. Comparison among candidate molecules or reference datasets.
+7. Recording and interpretation of results.
 
-- docs/architecture/ARCHITECTURE.md
-- docs/architecture/DATA_FLOW.md
-- docs/architecture/DATA_MODELS.md
-- docs/architecture/MODULE_RESPONSIBILITIES.md
-- docs/architecture/VALIDATION_STRATEGY.md
+Each stage requires its own acceptance criteria and limitations. A result from an early exploratory stage must not be presented as equivalent to a validated atmospheric detection.
 
-## 19.2 Brains
-- docs/brains/DECISIONS.md
-- docs/brains/PROJECT_STATE.md
+The methods used for quantitative comparison must be justified for the data and question. No universal matching algorithm or scoring threshold is assumed by this blueprint.
 
-## 19.3 ECAS development plan
--docs/ECAS_development_plan.md
+### 6.5. Atmospheric modeling and retrieval
 
-## 19.4 Specific "Chunk" contextual folders containing planning development and review.
-- docs/Chunk_4/
-- 
+Atmospheric modeling and retrieval are longer-term scientific capabilities that may be introduced when their requirements, dependencies, and validation evidence are established.
+
+Such methods may require additional physical models, priors, uncertainty treatment, model assumptions, and specialized dependencies.
+
+ECAS must distinguish its own computed results from externally published retrievals and must preserve the assumptions and limitations associated with each.
+
+No atmospheric retrieval capability should be considered implemented solely because it appears in this blueprint or in an architecture proposal.
+
+---
+
+## 7. Research Projects and Analysis Records
+
+### 7.1. Project identity
+
+A research project should have a stable identity and sufficient metadata to distinguish it from other projects.
+
+Potential metadata include:
+
+- Project name and identifier.
+- Selected exoplanet and related identifiers.
+- Creation and modification information.
+- Research notes and purpose.
+- Associated datasets and source references.
+- Analysis history and relevant software versions.
+
+The specific project schema must follow the approved data-model and persistence decisions.
+
+### 7.2. Project contents
+
+A project should preserve the information necessary to understand its scientific work.
+
+Depending on implemented capabilities, this may include:
+
+- Observational datasets and references.
+- Molecular reference datasets.
+- Source metadata and provenance.
+- Selected spectral regions and candidate molecules.
+- Analysis configurations and processing parameters.
+- Validation outcomes and warnings.
+- Comparison outputs and annotations.
+- Links between derived results and their input datasets.
+
+The project model must not imply that a result is reproducible if required inputs or processing details were not retained.
+
+### 7.3. Project lifecycle
+
+The intended project lifecycle includes creating, saving, reopening, updating, and exporting research work.
+
+Project operations must handle missing, invalid, or incompatible data explicitly. Updating a project must not silently discard information or replace an existing result without appropriate safeguards.
+
+Where project formats or storage schemas evolve, migration behavior should be documented and tested.
+
+### 7.4. Analysis history
+
+When analysis capabilities are introduced, ECAS should preserve enough information to distinguish one analysis from another.
+
+Relevant records may include:
+
+- Input dataset identifiers and versions.
+- Processing operations and parameters.
+- Method and software version.
+- Configuration and acceptance criteria.
+- Warnings and validation results.
+- Outputs and uncertainty information.
+- Date of execution and other relevant context.
+
+A new analysis should not silently overwrite the historical record of a previous result.
+
+---
+
+## 8. Multiple Observations and Comparative Research
+
+Comparing multiple observations is an important long-term objective, but it requires more than placing multiple curves on a graph.
+
+ECAS should preserve the identity and context of each observation, including relevant differences in:
+
+- Observation date and observing conditions.
+- Telescope and instrument.
+- Data-release version and processing pipeline.
+- Spectral coverage and resolution.
+- Units, normalization, and calibration.
+- Measurement uncertainties and data quality.
+- Source publications and provenance.
+
+Before combining observations, the application should assess whether the operation is scientifically justified.
+
+Potential workflows include comparing observations independently, aligning compatible datasets, examining repeated features, evaluating consistency across instruments, and investigating differences over time.
+
+Any combined result must retain traceable links to the contributing observations and transformations.
+
+Differences between observations must not automatically be interpreted as atmospheric variability. Instrumental, observational, calibration, and processing effects may provide alternative explanations.
+
+---
+
+## 9. User Interface and Research Workflow
+
+### 9.1. Design objective
+
+The intended interface should provide a coherent path from data selection to inspection, analysis, interpretation, and preservation of results.
+
+The interface must expose relevant scientific context and limitations without requiring users to infer hidden assumptions from a graph or numerical score.
+
+The current application uses PySide6 for its desktop interface and PyQtGraph for spectral visualization, as recorded in the supplied project documentation. These are current implementation details, not a claim that the complete intended research interface already exists.
+
+### 9.2. Intended workflow
+
+The long-term interface may provide the following functional areas:
+
+- **Planet and observation selection:** identify targets and their available datasets.
+- **Data library:** browse local observational and reference data, with source and metadata information.
+- **Analysis workspace:** inspect spectra, choose compatible inputs, and configure supported methods.
+- **Results and interpretation:** display outputs alongside assumptions, uncertainty, warnings, and provenance.
+- **Project management:** save, reopen, and organize research work.
+- **Reporting and export:** preserve and communicate selected data and results.
+
+These areas describe intended workflow responsibilities. Their presence in this document does not establish that they are implemented as separate screens, modules, or complete features.
+
+### 9.3. Scientific visualization
+
+Visualization should help users inspect data without implying unsupported conclusions.
+
+Plots should present appropriate axis labels and units when known, preserve the distinction between observational and reference datasets, and communicate relevant uncertainty or quality information when available.
+
+Missing metadata must not be replaced with invented units or physical interpretations.
+
+Where multiple datasets are displayed together, the interface should make their identities and relevant differences clear.
+
+### 9.4. Error and status communication
+
+The interface should distinguish among successful operations, validation failures, warnings, incomplete operations, and inconclusive outcomes.
+
+Messages should identify the affected data or operation and explain what can be done next when practical.
+
+An operation that completes without an exception must not automatically be described as scientifically valid.
+
+---
+
+## 10. Reporting and Export
+
+ECAS should eventually support exporting scientific data and analysis records in forms suitable for inspection, sharing, and further research.
+
+The precise export formats and scope should be selected according to implemented capabilities and user requirements.
+
+Where applicable, exports should preserve:
+
+- Dataset identity and source attribution.
+- Relevant units and metadata.
+- Processing and transformation history.
+- Analysis methods and configuration.
+- Results and uncertainty information.
+- Validation outcomes and warnings.
+- Known limitations and interpretation boundaries.
+- Software and dataset versions.
+
+Plots and reports should distinguish source measurements from processed data, model outputs, and interpretations.
+
+A report must not omit qualifications that materially affect the meaning of a result. Exported findings should remain interpretable without relying on undocumented assumptions from the application session.
+
+---
+
+## 11. Software Architecture Philosophy
+
+### 11.1. Incremental and evidence-based development
+
+ECAS should be developed in small, verifiable increments.
+
+Each change should have a defined objective, controlled scope, acceptance criteria, and proportionate verification. Existing behavior should be preserved unless an approved change requires otherwise.
+
+Architectural proposals should guide development without being confused with completed implementation.
+
+### 11.2. Separation of responsibilities
+
+The intended architecture should separate user-interface behavior, scientific data models, ingestion, persistence, visualization, validation, and analytical methods where doing so improves clarity and maintainability.
+
+These boundaries should reduce unnecessary coupling and allow scientific methods to be tested independently of the GUI.
+
+The exact module structure must follow verified code and approved architecture decisions. This blueprint does not establish that every proposed responsibility already has a dedicated implementation module.
+
+### 11.3. Scientific logic and interface independence
+
+Scientific calculations and validation rules should not depend unnecessarily on GUI behavior.
+
+Where practical, data processing and analysis should be testable independently, with clear inputs, outputs, errors, and assumptions.
+
+The interface should communicate scientific outcomes rather than silently determine them through presentation logic.
+
+### 11.4. Data and metadata consistency
+
+Data models should represent the scientific meaning of their contents without inventing information that the source does not provide.
+
+Required and optional metadata should be explicit. Unit conversion, schema mapping, and data transformations should be traceable and tested.
+
+A technically valid representation is not necessarily scientifically complete.
+
+### 11.5. Controlled extensibility
+
+New data sources, formats, analytical methods, and storage capabilities should be introduced through documented requirements and decisions.
+
+Extensibility must not become an excuse for unnecessary abstractions, speculative infrastructure, or unverified compatibility claims.
+
+Changes should solve an established need while preserving a clear path for future development.
+
+### 11.6. Architecture and implementation status
+
+The architecture documents describe system boundaries, requirements, and proposed designs in greater detail.
+
+`docs/brains/PROJECT_STATE.md` is the primary record of verified implementation status, and `docs/brains/DECISIONS.md` records approved technical decisions and their implementation status.
+
+When this blueprint and the code differ, use the current implementation and authoritative project records to establish what exists. Revise the blueprint when a meaningful change to the intended design is approved.
+
+---
+
+## 12. Technology and Tooling Direction
+
+ECAS is a Python project.
+
+The supplied repository documentation identifies the following technologies in the current implementation:
+
+- **Python:** primary implementation language.
+- **PySide6:** desktop application interface.
+- **PyQtGraph:** spectral visualization.
+- **SQLite:** persistence for the currently implemented spectrum-storage workflow.
+- **JSON serialization:** representation of spectrum data in the current SQLite storage implementation.
+- **pytest:** automated test framework.
+
+These technologies describe the documented implementation snapshot. They do not establish that all long-term capabilities have been completed or that the current architecture cannot evolve through an explicit decision.
+
+Future dependencies should be introduced only when justified by a defined requirement.
+
+Dependency selection should consider scientific suitability, maintainability, compatibility, licensing, platform support, testability, and the cost of long-term maintenance.
+
+The project must not introduce a new framework, database, or scientific library merely because it might be useful later. Proposed changes should identify the concrete requirement, alternatives, consequences, and verification strategy.
+
+---
+
+## 13. Data Integrity, Reliability, and Security
+
+### 13.1. Input integrity
+
+Imported data must be checked against the requirements of the supported input path.
+
+Validation may include file readability, schema recognition, column selection, numeric conversion, missing values, malformed records, and other format-specific constraints.
+
+An importer must not silently reinterpret an unsupported file as a scientifically valid dataset.
+
+Successful parsing does not establish that the data have the correct physical meaning or are suitable for analysis.
+
+### 13.2. Persistence integrity
+
+Persistence operations must preserve the intended relationship between stored data and metadata.
+
+Database errors, invalid identifiers, malformed records, and incomplete operations should be handled explicitly.
+
+Operations that replace or remove data require appropriate safeguards and clear behavior. The actual transaction and connection-management patterns must be documented according to the current implementation and approved decisions.
+
+### 13.3. Provenance integrity
+
+Source identifiers, metadata, and processing history must remain associated with the datasets and results they describe.
+
+A derived dataset must not be presented as an untouched original. Where provenance cannot be established, that limitation must be communicated.
+
+### 13.4. Reproducibility and recovery
+
+Data should be stored and updated in ways that support verification and recovery where practical.
+
+Future requirements may include integrity checks, version-aware updates, backup and recovery procedures, and detection of missing or corrupted resources.
+
+Such capabilities must be implemented and tested before they are described as available.
+
+### 13.5. Security and filesystem safety
+
+File paths, project identifiers, imported content, and external resources must be handled defensively.
+
+The application should avoid unintended path traversal, unsafe file operations, accidental data loss, and uncontrolled execution of imported content.
+
+External data must be treated as data, not as trusted instructions or executable behavior.
+
+Security controls should be proportionate to the actual application and its supported workflows.
+
+---
+
+## 14. Extensibility and Future Development
+
+ECAS should be capable of expanding toward its scientific objectives without repeatedly replacing its core architecture.
+
+Potential future areas include:
+
+- Additional scientific data sources and archive schemas.
+- Broader support for observational file formats, including applicable text-based formats.
+- Molecular reference retrieval and local caching.
+- Improved dataset metadata and provenance.
+- Project-level research organization.
+- Compatibility assessment and data preparation.
+- Quantitative spectral comparison.
+- Uncertainty-aware analysis.
+- Multi-observation comparison.
+- Reporting and export.
+- Atmospheric modeling or retrieval where justified.
+
+These are development directions, not statements of current functionality.
+
+Each capability should be introduced through a bounded plan that identifies requirements, dependencies, data assumptions, acceptance criteria, and tests.
+
+A new capability should not be considered complete merely because a module exists or a demonstration succeeds. Completion requires verification appropriate to its intended use.
+
+---
+
+## 15. Development and Change Philosophy
+
+### 15.1. Small, controlled increments
+
+Development should proceed in manageable steps, each with a clear objective and explicit completion criteria.
+
+A task should avoid combining unrelated features or expanding into speculative redesign.
+
+Existing tests, decisions, and implementation constraints should be inspected before proposing changes.
+
+### 15.2. Evidence-based verification
+
+Implementation claims must be supported by actual evidence.
+
+Verification should distinguish among:
+
+- Requirements that have been documented.
+- Plans that have been approved.
+- Code that has been implemented.
+- Tests that have been written.
+- Tests that have actually run.
+- Behavior that has been manually verified.
+- Scientific methods that have been evaluated.
+
+A planned test is not an executed test. A passing test is evidence only for the behavior it exercises.
+
+### 15.3. Documentation as part of development
+
+Documentation must remain consistent with the code and approved decisions.
+
+When a change affects the implementation, update the appropriate project-state record, decision record, architecture document, or development history.
+
+Historical plans should retain their historical meaning. They must not be rewritten to imply that a later implementation or decision existed earlier.
+
+Prefer targeted updates to existing documents rather than creating duplicate sources of truth.
+
+### 15.4. Scientific conservatism
+
+When a scientific requirement is unclear, do not fill the gap with arbitrary thresholds, guessed units, fabricated metadata, or unsupported assumptions.
+
+Identify the uncertainty, establish what evidence is available, and determine what additional decision or data is needed.
+
+Where the evidence does not support a conclusion, preserve that limitation rather than forcing a definitive result.
+
+### 15.5. Long-term maintainability
+
+Code and documentation should be understandable to future contributors, including contributors using different development tools or AI agents.
+
+Technical decisions should have a clear rationale. Important non-obvious behavior should be documented where the code is maintained.
+
+Maintainability must not be pursued through unnecessary abstraction or broad refactoring unrelated to the task at hand.
+
+---
+
+## 16. Project Knowledge and Documentation Authority
+
+ECAS uses multiple documents because scientific direction, architecture, implementation status, technical decisions, and development history answer different questions.
+
+They should remain consistent without duplicating one another unnecessarily.
+
+### 16.1. Master design blueprint
+
+**`docs/ECAS.md` — this document**
+
+Defines:
+
+- Project purpose and scientific vision.
+- Long-term objectives.
+- Scientific principles and constraints.
+- Intended data and analysis capabilities.
+- Design philosophy and future direction.
+
+It is not the authoritative record of whether a feature is currently implemented.
+
+### 16.2. Repository entry point
+
+**`README.md`**
+
+Provides the practical introduction to ECAS, its current application, repository navigation, setup, testing, contribution workflow, and known limitations.
+
+The README should help a person understand how to approach the repository without repeating the complete scientific blueprint.
+
+### 16.3. AI agent operating instructions
+
+**`AGENTS.md`**
+
+Defines cross-tool instructions for AI agents working on ECAS, including context loading, scope control, code changes, verification, documentation updates, reporting, and handoffs.
+
+Agent instructions govern how work is performed. They do not override approved scientific requirements or establish implementation facts.
+
+### 16.4. Project state
+
+**`docs/brains/PROJECT_STATE.md`**
+
+Records verified implementation status, completed work, current limitations, outstanding tasks, and relevant repository structure.
+
+It must distinguish completed behavior from reported, planned, or unverified work. It should be updated when meaningful implementation status changes.
+
+### 16.5. Technical decisions
+
+**`docs/brains/DECISIONS.md`**
+
+Records approved technical and architectural decisions, their rationale, scope, consequences, and implementation status.
+
+A proposed design must not be treated as an approved decision unless the project records establish that status.
+
+### 16.6. Architecture documentation
+
+The documents under `docs/architecture/` provide more detailed architectural requirements and design descriptions.
+
+Their responsibilities include:
+
+- **`ARCHITECTURE.md`:** overall system structure, architectural principles, and boundaries.
+- **`DATA_FLOW.md`:** current and intended movement of data through the application.
+- **`DATA_MODELS.md`:** domain entities, data representations, and relationships.
+- **`ECAS_Architecture_Specification.md`:** broader architecture requirements and design specification.
+- **`MODULE_RESPONSIBILITIES.md`:** module roles, boundaries, and dependencies.
+- **`VALIDATION_STRATEGY.md`:** software and scientific validation requirements, evaluation methods, and evidence.
+
+These documents may describe target designs or provisional requirements. Their contents must not be interpreted as proof that the corresponding functionality exists.
+
+### 16.7. Development plans and historical records
+
+Chunk plans, implementation logs, and related development records preserve the reasoning, scope, and progress of individual work periods.
+
+They are valuable historical context, but they do not automatically override current code, approved decisions, or verified project-state records.
+
+The current repository determines which planning files and folder organization are authoritative. Contributors should not create duplicate histories or move records without a clear reason.
+
+### 16.8. Resolving discrepancies
+
+When project documents disagree:
+
+1. Identify the specific claim or decision in conflict.
+2. Inspect the current code and relevant tests when implementation behavior is at issue.
+3. Consult the appropriate authoritative document for the question.
+4. Distinguish verified facts, approved decisions, proposed designs, and unresolved questions.
+5. Resolve the discrepancy explicitly in the appropriate document.
+
+No single document should be used as a substitute for verifying evidence that belongs to another authority.
+
+---
+
+## 17. Definition of Project Success
+
+ECAS will progress toward its intended purpose as it establishes the following capabilities and qualities.
+
+### 17.1. Reliable data handling
+
+Supported scientific data can be imported, validated, stored, retrieved, and identified without silently losing relevant information or provenance.
+
+Unsupported inputs and incomplete metadata are handled transparently.
+
+### 17.2. Traceable scientific evidence
+
+Datasets, references, transformations, and results can be traced to their origins and relevant versions.
+
+The application distinguishes source information from processed values and interpretations.
+
+### 17.3. Defensible analysis
+
+Spectral comparisons use methods appropriate to the data and scientific question.
+
+Assumptions, uncertainties, compatibility limitations, and alternative explanations are communicated rather than hidden behind an apparently definitive score.
+
+### 17.4. Reproducible research
+
+The system preserves sufficient context to understand and, where dependencies permit, reproduce previous analyses.
+
+Changes to data, methods, or configurations can be distinguished from earlier work.
+
+### 17.5. Maintainable software
+
+The architecture supports incremental development, independent verification of scientific logic, clear module responsibilities, and controlled extension.
+
+Changes are documented and tested in proportion to their impact.
+
+### 17.6. Honest capability reporting
+
+The project accurately distinguishes current functionality from planned capabilities.
+
+Tests and verification records describe what was actually executed and what their results establish.
+
+Scientific claims remain limited to the evidence provided by the data and methods.
+
+---
+
+## 18. Governing Principle
+
+**ECAS must be developed as a reliable scientific research tool, not merely as software that runs or produces visually convincing comparisons.**
+
+Its value depends on the integrity of its data, the traceability of its methods, the transparency of its assumptions, the defensibility of its conclusions, and the ability to understand and verify its behavior.
+
+Every new capability should advance the scientific objectives without weakening those principles.
+
+When convenience, implementation speed, or presentation conflicts with scientific integrity, scientific integrity takes precedence.
+
+---
+
+## 19. Revision Policy
+
+Revise this blueprint when approved changes materially affect the project's scientific objectives, core principles, intended capabilities, or long-term design direction.
+
+Implementation progress alone does not require rewriting the scientific vision. Record ordinary implementation changes in `PROJECT_STATE.md`, technical decisions in `DECISIONS.md`, and detailed architectural changes in the relevant architecture documents.
+
+When a previously intended capability becomes implemented, update the appropriate implementation and architecture records first. Revise this blueprint only when its requirements, direction, or description of intended capabilities needs to change.
+
+Changes to this document should preserve the distinction between scientific requirements, proposed capabilities, approved decisions, and verified implementation.
+
+---
+
+**End of master design blueprint.**
