@@ -1,628 +1,513 @@
 # ECAS Validation Strategy
 
-**Document status:** Draft for review  
-**Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS)
-**Related documents:** `ECAS.md`, `ARCHITECTURE.md`, `DATA_FLOW.md`, `MODULE_RESPONSIBILITIES.md`, `DATA_MODELS.md`  
-**Implementation status:** This document does not authorize implementation.
-
----
-
 ## 1. Purpose
 
-This document defines how ECAS will evaluate the scientific usefulness, reliability, and limitations of its spectral comparison methods.
+This document defines the strategy for validating data, software behavior, and scientific analysis within **ECAS — Exoplanetary Characterization & Astrochemistry Suite**.
 
-The initial application will compare exoplanet transmission-spectrum observations with molecular reference data and produce candidate scores and supporting diagnostics. Validation must establish what those results mean, under which conditions they are useful, and what conclusions the available evidence does not support.
+Validation must establish that:
 
-This document defines the validation framework. It does not select the first comparison algorithm, designate specific benchmark datasets, or establish numerical thresholds. Those choices require investigation of accessible scientific data and published evidence.
+- Imported data are structurally valid and retain their scientific meaning and provenance.
+- Stored data remain consistent and can be retrieved without unintended changes.
+- Analysis procedures operate within their documented assumptions and limitations.
+- Scientific comparisons are reproducible, interpretable, and supported by traceable evidence.
+- Results do not overstate what the available observations or analysis methods establish.
 
-### 1.1 Primary objectives
+Validation is an ongoing process throughout development. Passing software tests does not, by itself, establish scientific validity.
 
-The validation process must:
+## 2. Scope
 
-1. Identify suitable published detections, non-detections, and control cases.
-2. Determine whether the selected method can distinguish relevant spectral correspondence from misleading matches.
-3. Evaluate candidate ranking and scoring behavior against documented evidence.
-4. assess the effects of data quality, uncertainty, spectral coverage, resolution, and reference selection.
-5. Establish defensible decision thresholds only when sufficient evidence supports them.
-6. Distinguish development and tuning from evaluation intended to estimate performance.
-7. Record the limits of the conclusions supported by the evaluation.
-8. Provide a repeatable procedure for evaluating future comparison methods.
+This strategy covers five areas:
 
-### 1.2 Scope
+1. **Data validation:** checking the structure, values, metadata, units, and provenance of imported data.
+2. **Persistence validation:** checking data integrity during storage, retrieval, update, and deletion.
+3. **Software validation:** checking that application components behave as specified.
+4. **Scientific validation:** checking that analysis methods and interpretations are appropriate for the available evidence.
+5. **Reproducibility and traceability:** preserving enough information to understand and repeat an analysis.
 
-The initial validation effort concerns **spectral comparison and candidate scoring**, not quantitative atmospheric abundance estimation or full atmospheric retrieval.
+The strategy applies to currently implemented functionality and provides requirements for future capabilities.
 
-A successful benchmark evaluation does not automatically establish that ECAS can confirm atmospheric detections. Any detection-related interpretation must be justified by the evidence, method, and validation procedure actually used.
+The presence of a requirement in this document does not establish that the corresponding feature, automated check, or scientific evaluation has already been implemented.
 
----
+## 3. Validation Principles
 
-## 2. Governing Principles
+### 3.1 Scientific integrity
 
-### 2.1 Real scientific evidence
+ECAS must distinguish between measured observations, processed observations, theoretical molecular reference data, and synthesized or simulated spectra.
 
-Scientific validation must be grounded in real, traceable observations and documented scientific conclusions.
+These data types must not be treated as interchangeable. Their origin and intended use must remain identifiable throughout the workflow.
 
-Synthetic data may be used for specific software tests or controlled diagnostic experiments, provided they are clearly labeled. Synthetic data must not be represented as real astronomical observations or used as a substitute for independent scientific benchmark evidence.
+Spectral similarity or overlap is evidence for further investigation, not proof of a molecule's presence in an exoplanet atmosphere.
 
-### 2.2 Published conclusions are evidence, not infallible labels
+Scientific conclusions must reflect the limitations of the data, analysis method, uncertainties, and available supporting evidence.
 
-Published detections and non-detections provide starting points for benchmark construction. They must not be treated as unquestionable ground truth without reviewing the original study, its methods, uncertainty, and subsequent context where relevant.
+### 3.2 Traceability
 
-A publication may report tentative evidence, conflicting interpretations, or a result that depends on a particular dataset or analysis method. The benchmark record must preserve those distinctions.
+Validation outcomes must be traceable to the data, software behavior, or scientific procedure being evaluated.
 
-### 2.3 Validation must match the intended claim
+Where applicable, records should identify:
 
-A method that ranks spectra by similarity is not necessarily capable of estimating detection probability or establishing atmospheric presence.
+- The source file, archive record, publication, or reference dataset.
+- The relevant observation, instrument, or data product.
+- The validation rules applied.
+- The software and analysis configuration used.
+- Any transformations, exclusions, or corrections applied.
+- The outcome of the validation and any unresolved limitations.
 
-Validation claims must match the task evaluated:
+Information that is unavailable must not be invented or silently inferred.
 
-- **Similarity:** Does the method quantify correspondence between the selected inputs?
-- **Ranking:** Does the method rank supported candidates usefully against competing candidates?
-- **Discrimination:** Can the method distinguish relevant benchmark cases from suitable non-detections or controls?
-- **Calibration:** If a method outputs probabilities, do those probabilities agree with observed outcome frequencies under an appropriate evaluation?
-- **Detection support:** Does the combined evidence justify a detection-related interpretation for the defined task?
+### 3.3 Reproducibility
 
-These are different evaluation questions. Success at one does not establish success at the others.
+A validation result should be reproducible from the retained inputs, configuration, and documented procedure, subject to the availability of the original sources and software dependencies.
 
-### 2.4 Preserve uncertainty and limitations
+Changes to data, validation rules, reference datasets, or analysis methods must not silently overwrite the context needed to understand earlier results.
 
-Validation records must preserve known uncertainty, missing metadata, ambiguous scientific conclusions, and limitations affecting interpretation.
+### 3.4 Explicit uncertainty
 
-Unknown information must not be silently replaced with assumptions. Where uncertainty prevents a defensible evaluation, the case may be excluded from a particular metric while remaining documented in the benchmark inventory.
+Missing, ambiguous, or insufficient information must be represented explicitly.
 
-### 2.5 No arbitrary thresholds
+ECAS must not silently assign units, axis meanings, instrument properties, uncertainties, or scientific classifications when the available evidence does not support them.
 
-Thresholds must not be selected merely because they produce attractive scores or reproduce a desired result.
+### 3.5 Proportionate validation
 
-Threshold selection must consider benchmark performance, uncertainty in the evaluation metrics, the consequences of false positives and false negatives, and the intended use of ECAS.
+Validation depth must reflect the risk and purpose of the operation.
 
-### 2.6 Reproducibility
+Basic file parsing requires different checks from a scientific comparison intended to support an atmospheric interpretation. Neither level should be treated as a substitute for the other.
 
-Each evaluation must identify the exact benchmark inputs, reference datasets, preparation operations, comparison method, configuration, software versions, and evaluation procedure used.
+## 4. Validation Layers
 
-A change to a method or its preparation pipeline must be traceable to a new evaluation configuration.
+Validation should be organized into distinct layers so that a successful check at one level is not mistaken for proof of correctness at another.
 
----
+### 4.1 Structural validation
 
-## 3. Validation Questions
+Structural validation checks whether data can be read and represented in the expected form.
 
-The following questions define the initial validation program. They do not require all answers to be available before the first implementation begins.
+Depending on the input format, checks may include:
 
-| Question | What must be established |
-|---|---|
-| Data suitability | Can the method accept the selected observation and reference without violating its scientific requirements? |
-| Candidate correspondence | Does the method produce interpretable outputs when a candidate reference is compared with an observation? |
-| Competing candidates | Can the method distinguish the intended candidate from plausible alternatives? |
-| Negative cases | Does the method avoid treating suitable non-detections or controls as strong positive evidence? |
-| Robustness | How sensitive are results to noise, coverage, resolution, processing, and reference choice? |
-| Uncertainty | How do measurement uncertainty and incomplete metadata affect the outputs and their interpretation? |
-| Reproducibility | Can the same recorded inputs and configuration reproduce or explain the reported result? |
-| Generalization | Do results remain useful on evaluation cases that were not used to develop or tune the method? |
-| Interpretation | Which conclusions are supported by the observed performance, and which remain unsupported? |
+- File readability and supported format.
+- Expected columns, fields, headers, or schema.
+- Numeric conversion and handling of missing values.
+- Detection of malformed rows and inconsistent field counts.
+- Verification that required fields are present.
+- Detection of empty or unusable datasets.
+- Validation of array lengths and other structural relationships.
 
-The first benchmark investigation should prioritize questions that can be answered using accessible, well-documented data.
+A structurally valid file may still contain scientifically unsuitable or incorrectly labelled data.
 
----
+### 4.2 Semantic and metadata validation
 
-## 4. Benchmark Case Design
+Semantic validation checks whether values and metadata are interpretable within the declared data model.
 
-ECAS should build a curated benchmark collection from published observations and their associated scientific context.
+Checks should include, where applicable:
 
-A benchmark case is an evaluation record with a documented purpose, source evidence, required data, and an explicitly defined expected interpretation. It may contain one or more observations, candidate references, and supporting records.
+- Whether spectral axes and intensity values have identifiable meanings.
+- Whether units are supplied and recognized.
+- Whether wavelength, frequency, wavenumber, or other axis conventions are correctly identified.
+- Whether metadata are consistent with the selected input schema.
+- Whether instrument, observation, processing, and source identifiers are preserved.
+- Whether required metadata are missing or ambiguous.
 
-### 4.1 Benchmark categories
+ECAS must not convert or compare values across incompatible representations without an explicit, documented conversion or compatibility procedure.
 
-The initial benchmark inventory should consider the following categories.
+When metadata are insufficient to determine how data should be interpreted, the system should report the limitation and avoid making unsupported assumptions.
 
-**A. Published detection cases**
+### 4.3 Scientific suitability validation
 
-Cases in which a study reports evidence for a molecular species in an exoplanet atmosphere.
+Scientific suitability validation determines whether data are appropriate for a particular analysis.
 
-These cases test whether ECAS produces useful correspondence or candidate-ranking results under the conditions represented by the selected observations.
+Potential checks include:
 
-Inclusion does not mean ECAS is expected to reproduce the published conclusion automatically. Differences in data products, reference data, spectral coverage, and analysis methods may explain differences in outcome.
+- Whether the data represent the type of observation or reference spectrum required by the analysis.
+- Whether relevant units and axis conventions are compatible.
+- Whether the spectral coverage is sufficient for the intended comparison.
+- Whether resolution, uncertainty, processing history, and instrumental characteristics are known or adequately addressed.
+- Whether the proposed comparison method is applicable to the available data.
+- Whether the source and provenance are sufficiently documented for the intended use.
 
-**B. Published non-detection cases**
+A dataset can pass structural and semantic validation while remaining unsuitable for a particular scientific analysis.
 
-Cases in which an appropriate study reports that a molecular species was not detected or that the available observations did not support a detection under the study's stated conditions.
+## 5. Input and Import Validation
 
-These cases help assess whether the method produces misleadingly strong candidate results in situations where the published evidence does not support the same claim.
+Import validation must be specific to the supported format or schema rather than assuming all CSV or text files have the same structure.
 
-A non-detection is not proof that the molecule is absent. Its meaning depends on the observation, sensitivity, wavelength coverage, analysis assumptions, and strength of the published constraint.
+### 5.1 Input handling
 
-**C. Negative or comparison controls**
+For each supported input type, validation should address the relevant cases:
 
-Cases chosen to investigate misleading correspondence, background structure, or alternative explanations for a candidate match.
+- Valid input with expected structure.
+- Missing required columns or fields.
+- Empty files and files containing only headers.
+- Malformed rows and inconsistent delimiters.
+- Non-numeric values in fields expected to be numeric.
+- Missing, infinite, or otherwise invalid numeric values.
+- Unexpected units or ambiguous axis labels.
+- Duplicate records or repeated spectral coordinates where relevant.
+- Unsupported formats and unrecognized schemas.
 
-Potential controls may include plausible competing molecular references or observations that do not support the target interpretation. The suitability of each control must be scientifically justified; arbitrary unrelated spectra are not sufficient evidence of meaningful discrimination.
+A failed import must provide a useful explanation and must not leave partially imported data presented as a successful result.
 
-**D. Ambiguous or disputed cases**
+### 5.2 Preservation of source information
 
-Cases where the published evidence is tentative, conflicting, or dependent on interpretation.
+The original source file should remain unchanged by ordinary import and analysis operations.
 
-These cases should initially be kept separate from the clearest evaluation cases. They may be useful for examining limitations and uncertainty but should not be assigned a definitive positive or negative label without justification.
+Where supported, ECAS should retain the source location or identifier and record any transformations applied during import.
 
-**E. Technical and synthetic test cases**
+Parsing and normalization must not silently erase meaningful distinctions in the source data.
 
-Controlled inputs used to verify parsing, numerical behavior, known transformations, error handling, or specific algorithm properties.
+### 5.3 Format support boundaries
 
-These cases belong primarily to software and method diagnostics. Their results must be distinguished from evaluation on real astronomical benchmark observations.
+Passing tests for one CSV schema does not establish general CSV compatibility, and passing CSV tests does not establish support for arbitrary TXT, FTIR, UV-Vis, or other instrument-specific formats.
 
-### 4.2 Benchmark inclusion criteria
+Each supported format must have documented expectations and appropriate test coverage.
 
-Each proposed scientific benchmark should be assessed against the following criteria:
+Where representative real-world files are unavailable, clearly identified test fixtures may be used. Results from synthetic fixtures must not be presented as proof of compatibility with real scientific datasets.
 
-- The source publication or authoritative scientific record is identifiable.
-- The relevant scientific conclusion and its scope are documented.
-- The underlying observation or a suitable documented data product is accessible.
-- The data have sufficient metadata to understand their spectral quantity, units, coverage, and processing state, or the missing information is explicitly recorded.
-- The relationship between the observation, target molecule, and selected reference can be evaluated.
-- The case is relevant to the intended comparison task.
-- The case does not require unsupported assumptions merely to make it usable.
-- The case can be evaluated without violating applicable source access or usage restrictions.
+## 6. Data Integrity and SQLite Persistence
 
-A case that fails one criterion need not be discarded from all research. It may be retained as contextual evidence while excluded from a particular metric or benchmark subset.
+Persistence validation must establish that stored information remains internally consistent and is retrieved as intended.
 
-### 4.3 Benchmark prioritization
+### 6.1 Integrity requirements
 
-The initial shortlist should favor cases with:
+Tests should verify the relevant behavior of the existing persistence layer, including:
 
-1. Accessible and traceable observations.
-2. Clear published conclusions and relevant citations.
-3. Sufficient metadata for meaningful comparison.
-4. Suitable molecular references.
-5. A range of observation and reference characteristics relevant to the initial method.
-6. Manageable data acquisition and preparation requirements.
+- Successful storage and retrieval of valid records.
+- Preservation of values and supported metadata across a round trip.
+- Correct handling of missing, invalid, and duplicate data according to documented rules.
+- Enforcement of applicable schema constraints and relationships.
+- Appropriate handling of failed writes and database errors.
+- Consistent behavior when updating or deleting records.
+- Prevention of unintended partial or duplicate records.
+- Safe handling of database initialization and existing database files.
 
-The goal is a small, defensible initial benchmark set rather than a large collection of poorly characterized cases.
+The exact checks must reflect the actual schema and supported operations. Validation must not assume that transaction, rollback, bulk-write, or connection-reuse behavior exists unless it has been implemented and verified.
 
-The actual cases and their supporting publications remain to be researched and selected.
+### 6.2 Database cleanliness
 
----
+Database cleanliness requires more than confirming that a write operation succeeded.
 
-## 5. Benchmark Records and Evidence
+Where applicable, validation should detect:
 
-Every benchmark case must have a structured record. The final fields will be aligned with `DATA_MODELS.md`.
+- Records missing required identifying information.
+- Invalid references between related records.
+- Duplicate records that violate defined uniqueness rules.
+- Values that violate declared field constraints.
+- Records whose source or provenance links are inconsistent.
+- Orphaned records where relationships are expected.
+- Conflicting metadata for records that are expected to represent the same entity.
 
-### 5.1 Required information
+Checks must distinguish genuine integrity violations from valid cases, such as multiple observations of the same planet or multiple spectra from different instruments.
 
-A benchmark record should include, where applicable:
+A shared planet identifier must not be treated as sufficient grounds for deduplicating observations.
 
-- Stable benchmark identifier.
-- Target planet and relevant aliases or catalog identifiers.
-- Observation identifiers and source versions.
-- Source archive, publication, and persistent identifiers such as a DOI where available.
-- Target molecule or candidate set.
-- Molecular reference identities and representation types.
-- Published result and its original terminology.
-- Evidence supporting the benchmark interpretation.
-- Observation and reference limitations.
-- Relevant wavelength coverage, resolution, uncertainty, and processing information.
-- Intended benchmark role: development, tuning, evaluation, control, or diagnostic.
-- Inclusion decision and rationale.
-- Known ambiguity, disagreement, or missing information.
-- Date and version of the benchmark record.
+### 6.3 Failure handling
 
-### 5.2 Evidence categories
+When a persistence operation fails, ECAS must not report success without evidence that the intended operation completed.
 
-ECAS should distinguish the following states rather than forcing every case into a simple positive/negative label:
+Where transactions are used, tests should verify that failures produce the documented rollback or recovery behavior. Where transactions are not used, the limitations of the current behavior must be documented and tested appropriately.
 
-- **Supported detection:** The cited evidence supports the stated detection claim within its documented scope.
-- **Reported non-detection:** The cited study reports no supported detection under its stated conditions.
-- **Ambiguous:** The evidence does not justify a confident binary interpretation for the intended evaluation.
-- **Conflicting evidence:** Relevant sources reach materially different conclusions.
-- **Insufficient information:** Available records do not permit a defensible interpretation.
+Validation must not assume that a database error automatically leaves the database unchanged.
 
-These are proposed benchmark-evidence categories, not final application detection labels.
+## 7. Software Testing Strategy
 
-The original published wording and conclusion must remain available even if ECAS uses a simplified internal category for a particular evaluation.
+Software validation establishes whether implementation behavior matches the defined requirements.
 
-### 5.3 Conflicting publications and revised results
+### 7.1 Unit tests
 
-When publications disagree or later analyses materially revise an earlier interpretation, ECAS must record the disagreement and relevant chronology.
+Unit tests should cover individual functions and components, including:
 
-A newer publication should not silently overwrite an earlier benchmark record. The benchmark curator must document which evidence is being used for a particular evaluation and why.
+- Input parsing and validation.
+- Data model behavior.
+- Persistence operations.
+- Data transformation functions.
+- Scientific calculation functions when implemented.
+- Error handling and boundary conditions.
 
-If the disagreement cannot be resolved adequately for the intended task, the case should be excluded from evaluations that require a clear reference outcome or analyzed separately.
+Tests should be focused enough to identify the component responsible for a failure.
 
----
+### 7.2 Integration tests
 
-## 6. Development, Tuning, and Evaluation Separation
+Integration tests should verify interactions between components, including relevant workflows such as:
 
-Validation must reduce the risk of reporting overly optimistic performance because the same evidence was used to design and evaluate the method.
+- Importing data and passing it to the application model.
+- Persisting and retrieving imported data.
+- Displaying imported data in the interface.
+- Passing valid data to visualization components.
+- Supplying validated inputs to analysis procedures as those procedures are introduced.
 
-### 6.1 Distinct roles
+Tests must reflect the actual application workflow and must not assume proposed components already exist.
 
-Benchmark cases should be assigned explicit roles:
+### 7.3 Interface and workflow tests
 
-- **Development:** Used to understand the data, investigate algorithm behavior, and identify implementation requirements.
-- **Tuning:** Used to select method settings, preprocessing choices, ranking rules, or decision thresholds.
-- **Evaluation:** Reserved for assessing performance after relevant method choices have been fixed.
-- **Diagnostic:** Used to investigate specific failure modes or technical behavior without necessarily contributing to a performance estimate.
+Where appropriate, tests should verify that the interface:
 
-A case may be used for more than one exploratory purpose, but that reuse must be recorded. Results from reused cases must not be presented as independent evaluation.
+- Reports successful and failed operations accurately.
+- Presents validation errors in an understandable form.
+- Prevents invalid inputs from being treated as valid results.
+- Displays the data associated with the selected record.
+- Does not silently substitute, omit, or misrepresent data.
 
-### 6.2 Preferred separation
+If GUI behavior cannot be adequately verified through automated tests, record the necessary manual verification steps and their actual outcomes.
 
-Where the number and diversity of available cases permit, evaluation cases should be separated from development and tuning cases.
+### 7.4 Regression testing
 
-The separation strategy must consider dependencies between cases. For example, multiple observations of the same planet or closely related data products may not provide independent evidence if split across development and evaluation groups.
+Changes must not unintentionally break previously verified behavior.
 
-The final grouping strategy depends on the size and structure of the benchmark collection. A very small benchmark set may not support a reliable independent performance estimate; ECAS must state this limitation rather than imply otherwise.
+Run focused tests for the affected component first, followed by broader regression tests when appropriate.
 
-### 6.3 Threshold selection
+A test should only be reported as passing when it has actually executed successfully. Test discovery failures, environment errors, dependency problems, and ambiguous terminal output must be distinguished from genuine test success.
 
-If a method requires a decision threshold, the threshold-selection procedure must be defined before reporting final evaluation performance.
+## 8. Scientific Validation and Reference Evidence
 
-Thresholds should be selected using development or tuning evidence, based on the intended task and the relative consequences of errors. Evaluation cases must not be repeatedly used to adjust the threshold and then reported as independent confirmation of its performance.
+Scientific validation evaluates whether an analysis method and its interpretation are defensible for the intended use.
 
-If a defensible threshold cannot be established from available evidence, ECAS should report continuous scores or rankings without assigning a validated binary decision.
+### 8.1 Reference data
 
-### 6.4 Changes after evaluation
+Reference spectra and other scientific datasets must have identifiable sources and appropriate descriptive metadata.
 
-If a method, threshold, reference set, or preparation procedure changes materially after evaluation, the change must be recorded.
+Where available, retain:
 
-Previous results remain part of the evaluation history. A revised method may require a new evaluation, and any reuse of previous benchmark cases must be disclosed.
+- Source organization, archive, or publication.
+- Dataset or record identifier.
+- Data type and physical meaning.
+- Units and spectral coordinate convention.
+- Instrument or measurement conditions.
+- Processing history and relevant limitations.
+- Version or retrieval information where needed for reproducibility.
 
----
+The provenance and limitations of theoretical, synthesized, simulated, and measured data must remain distinguishable.
 
-## 7. Evaluation Metrics
+### 8.2 Method validation
 
-The first comparison method has not been selected, so the final metrics must remain open. Metrics should be chosen only after the intended output and benchmark structure are understood.
+Scientific methods should be evaluated against documented expectations and, where possible, independently established reference cases.
 
-Different metrics answer different questions and should not be treated as interchangeable.
+Validation may examine:
 
-### 7.1 Candidate-ranking metrics
+- Whether the method produces expected results for controlled inputs.
+- Whether results are stable under reasonable changes to input data or configuration.
+- Whether known limitations and assumptions are handled correctly.
+- Whether outputs can be reproduced from the recorded inputs and settings.
+- Whether uncertainty and compatibility limitations are appropriately represented.
 
-If the intended output ranks candidate molecules, evaluation should determine whether the ranking places relevant supported candidates ahead of plausible alternatives.
+The method and the evidence supporting its suitability must be documented separately from the code tests that verify its implementation.
 
-Potential metrics to investigate include:
+### 8.3 Interpretation limits
 
-- Rank of a benchmark-supported candidate.
-- Mean or median rank across eligible cases.
-- Top-\(k\) retrieval performance, where a defined number of leading candidates is relevant.
-- Pairwise ranking performance when benchmark cases support a defensible comparison.
+A successful numerical comparison does not establish a scientific detection.
 
-These are candidate metrics for investigation, not approved requirements. Their suitability depends on how benchmark outcomes and competing candidates are defined.
+Interpretation must account for relevant alternative explanations, data quality, uncertainties, instrumental effects, and methodological assumptions.
 
-### 7.2 Classification metrics
+Where the evidence is insufficient, the output should be described as inconclusive or suitable for further investigation rather than presented as a confirmed finding.
 
-If the method eventually produces a validated binary classification for a clearly defined task, potential metrics include:
+## 9. Benchmark and Test Dataset Design
 
-- **Sensitivity / recall:** Fraction of reference-positive cases classified as positive.
-- **Specificity:** Fraction of reference-negative cases classified as negative.
-- **Precision:** Fraction of predicted-positive cases that are reference-positive under the benchmark definition.
-- **False-positive rate:** Fraction of reference-negative cases incorrectly classified as positive.
-- **False-negative rate:** Fraction of reference-positive cases incorrectly classified as negative.
-- **Balanced accuracy:** A summary that weights sensitivity and specificity equally.
+Validation datasets must be selected and documented according to the behavior or scientific question they are intended to test.
 
-These metrics require defensible case labels and an explicitly defined unit of evaluation. They must not be calculated by treating every reported non-detection as proof of molecular absence.
+### 9.1 Dataset categories
 
-Precision and other prevalence-dependent metrics also depend on the composition of the benchmark collection. Results from a curated benchmark must not automatically be interpreted as real-world predictive performance.
+Where applicable, the test collection should distinguish:
 
-### 7.3 Score discrimination
+- **Synthetic fixtures:** constructed inputs used to test known structural or numerical behavior.
+- **Real observational data:** measurements or processed observations obtained from identifiable sources.
+- **Reference data:** theoretical, laboratory, or other reference spectra used for comparison.
+- **Benchmark cases:** datasets selected because their expected behavior or published interpretation provides a basis for evaluating a method.
+- **Invalid or adversarial inputs:** data designed to exercise failure handling and boundary conditions.
 
-If the method returns continuous scores, ECAS should investigate whether the scores meaningfully distinguish relevant benchmark categories or candidate comparisons.
+These categories serve different purposes and must not be treated as interchangeable evidence.
 
-The selected evaluation must account for score direction and meaning. A larger value may represent a better match, a larger residual, or a different quantity depending on the method.
+### 9.2 Expected outcomes
 
-Raw scores from different comparison methods must not be pooled or compared as though they shared a common scale.
+Each benchmark case should define the expected behavior and the basis for that expectation.
 
-### 7.4 Calibration
+Depending on the case, this may include:
 
-Calibration evaluation is relevant only if the method produces probabilities or another output intended to represent a calibrated level of confidence.
+- Whether import or validation should succeed.
+- Which metadata or values should be retained.
+- Which error or warning should be produced.
+- Whether an analysis result falls within a documented tolerance.
+- Which limitations prevent a stronger scientific conclusion.
 
-A similarity score or arbitrary ranking value must not be called a probability.
+Expected outcomes must be grounded in the test design, source evidence, mathematical properties, or an independently justified reference. They must not be invented merely to make a test pass.
 
-If calibration is investigated, the procedure must evaluate whether reported probabilities agree with observed outcomes on suitable data, account for the limited size and representativeness of the benchmark, and disclose uncertainty. Calibration must not be claimed from a handful of cases without adequate supporting evidence.
+### 9.3 Benchmark provenance
 
-### 7.5 Robustness and sensitivity
+Each real-data benchmark should retain sufficient provenance to locate and identify its source and understand its limitations.
 
-Where the benchmark supports it, evaluate how results change with:
+Where published results are used as reference evidence, record the publication or dataset identifier and clarify what the reference actually establishes.
 
-- Measurement noise and reported uncertainty.
-- Wavelength coverage and missing spectral regions.
-- Spectral resolution and sampling.
-- Reference dataset selection.
-- Documented normalization or other preparation choices.
-- Data-quality flags and masking.
-- Observation selection or variation between observations of the same planet.
-- Reasonable changes to method settings.
+A publication-reported detection, for example, is evidence about the published interpretation under its stated assumptions. It is not automatically independent ground truth for every later analysis.
 
-Robustness tests must distinguish scientifically justified variations from arbitrary manipulations. Any transformed or synthetic diagnostic input must be labeled as such.
+### 9.4 Separation of development and evaluation data
 
-### 7.6 Metric uncertainty
+Where a method is tuned against labelled or benchmark data, the evaluation procedure must account for information leakage.
 
-Metric values should not be presented without considering the amount and independence of supporting evidence.
+If observations from the same planet, publication, instrument, or underlying data product are highly related, splitting them across development and evaluation sets may produce misleadingly optimistic results.
 
-Where appropriate and feasible, report confidence intervals or other defensible uncertainty summaries. The choice of procedure depends on the metric, sample size, and benchmark structure.
+The grouping strategy should be selected according to the scientific question and the dependencies in the dataset. Any exclusions, partitions, and tuning decisions should be recorded.
 
-If the benchmark is too small to support a reliable uncertainty estimate, state that limitation explicitly. A numerical metric alone does not establish precise or generalizable performance.
+This requirement applies when such evaluation procedures are used; it does not imply that ECAS currently has a machine-learning pipeline or a formal benchmark collection.
 
----
+## 10. Quantitative Metrics and Acceptance Criteria
 
-## 8. Threshold Derivation and Decision Rules
+Metrics must be selected according to the task being evaluated. No single metric establishes overall scientific validity.
 
-Thresholds are method- and task-specific. ECAS must not define one universal score cutoff for all molecules, observations, or comparison methods.
+### 10.1 Software and data metrics
 
-### 8.1 Required considerations
+Depending on the component, useful measures include:
 
-A proposed threshold or decision rule must account for:
+- Test pass and failure counts.
+- Import success and rejection behavior for defined test cases.
+- Preservation of values and metadata across persistence round trips.
+- Counts of detected integrity violations.
+- Agreement with known expected outputs.
+- Reproducibility of a result under the same documented inputs and configuration.
 
-1. The meaning and direction of the method output.
-2. Performance on development and tuning cases.
-3. Evidence from suitable negative and control cases.
-4. Uncertainty in the estimated performance.
-5. The consequences of false-positive and false-negative interpretations.
-6. The intended use and limitations of ECAS.
-7. The quality, diversity, and representativeness of the benchmark.
-8. Any relevant assumptions about reference data or preparation.
+These measures evaluate specific properties and must be interpreted within their test coverage.
 
-### 8.2 Decision outcomes
+### 10.2 Scientific metrics
 
-The initial result presentation should allow the method to report a score or ranking without forcing every candidate into a positive/negative category.
+For future spectral comparison or characterization methods, candidate measures may include:
 
-Where supported by the selected method and validation evidence, an evaluation may establish decision regions such as:
+- Residual error or deviation from a defined reference.
+- Agreement within documented numerical tolerances.
+- Sensitivity to noise and uncertainty.
+- Robustness to changes in resolution, sampling, or preprocessing.
+- Precision, recall, or related measures where suitable labelled evaluation data exist.
+- Calibration and uncertainty assessment where the method produces probabilistic estimates.
 
-- A region meeting a documented criterion for further investigation.
-- A region that does not meet that criterion.
-- An indeterminate region where the evidence is insufficient.
+Not every metric is appropriate for every method. The choice, definition, and interpretation of a metric must be justified for the scientific task.
 
-These are conceptual possibilities, not preselected categories or thresholds. Their definitions must be justified by the method and benchmark evidence.
+### 10.3 Acceptance criteria
 
-### 8.3 Limits of interpretation
+Acceptance criteria must be defined before evaluating the results they govern, where practical.
 
-Even a well-performing comparison method may only support a statement that a candidate's reference is comparatively consistent with the observed spectral data under specified assumptions.
+Each criterion should state:
 
-It does not automatically establish that the molecule is present in the atmosphere, that alternative explanations have been excluded, or that a particular abundance has been measured.
+1. The behavior or property being assessed.
+2. The evidence or test used.
+3. The expected outcome or tolerance.
+4. The rationale for the criterion.
+5. The handling of failures, uncertainty, and exceptions.
 
-Any stronger claim requires additional scientific evidence and a validation procedure appropriate to that claim.
+Numerical thresholds must not be introduced without justification. A threshold selected for one dataset, instrument, or analysis method must not be assumed universally valid.
 
----
+If a defensible threshold has not yet been established, document that limitation rather than inventing one.
 
-## 9. Reference Data and Comparability Effects
+## 11. Validation of Scientific Comparability
 
-Validation must evaluate the method together with the input conditions it requires. A method cannot be judged independently of its observations, reference data, and preparation pipeline.
+Before comparing spectra, ECAS should establish whether the relevant data are sufficiently compatible for the intended operation.
 
-### 9.1 Reference representation
+Depending on the method, comparability assessment may consider:
 
-ECAS must retain distinctions among:
+- Physical quantity and units.
+- Spectral coordinate system and conversion requirements.
+- Spectral coverage and sampling.
+- Spectral resolution and instrumental response.
+- Data processing and normalization.
+- Uncertainty information and data quality.
+- Observation conditions and relevant metadata.
+- Differences between measured and theoretical or synthesized spectra.
 
-- Measured or experimentally derived spectra.
-- Theoretical spectroscopic line lists.
-- Spectra synthesized from line lists or other model inputs.
+A comparison should not proceed as if these differences are irrelevant merely because the data can be plotted together.
 
-These representations have different assumptions and limitations. Results obtained with one reference type must not automatically be generalized to another.
+If compatibility cannot be established, the limitation should be reported. Any permitted comparison must make the assumptions and unresolved differences explicit.
 
-### 9.2 Physical and instrumental differences
+This section defines a validation requirement; it does not claim that a complete comparability assessment is currently implemented.
 
-For each benchmark, document relevant differences between the observation and the molecular reference, including coverage, units, resolution, sampling, physical conditions, and processing state where known.
+## 12. Reproducibility and Analysis Records
 
-If the comparison requires transformations, their assumptions and effects must be documented. Validation should investigate whether the selected preparation procedure introduces limitations or changes the interpretation of the result.
+Where ECAS supports scientific analysis, an analysis record should preserve enough information to understand how the result was produced.
 
-### 9.3 Incompatible or incomplete inputs
+As applicable, this includes:
 
-An observation-reference pair that fails the selected method's comparability requirements must not be scored as though it were a valid comparison.
+- Identifiers for the input observations and reference datasets.
+- Source provenance and data versions.
+- Analysis method and relevant software version.
+- Configuration parameters and thresholds.
+- Preprocessing and transformation steps.
+- Validation outcomes and warnings.
+- Output values, uncertainty information, and interpretation limitations.
 
-If a benchmark cannot be evaluated because required information or transformations are unavailable, record the reason. Do not silently substitute a different observation, reference, or processing method.
+If an input or reference dataset changes, the system should make it possible to distinguish results based on different versions or configurations.
 
----
+Reproducibility claims must reflect what has actually been retained. If a source becomes unavailable or a required dependency cannot be recovered, that limitation should be documented.
 
-## 10. Validation Procedure
+## 13. Error Reporting and Validation Outcomes
 
-The following sequence defines the intended validation workflow.
+Validation outcomes should communicate what was checked and what the result means.
 
-1. **Define the evaluation question.** Specify the behavior being tested and the scientific claim the evaluation is intended to support.
-2. **Select candidate benchmark cases.** Identify published detections, non-detections, controls, or diagnostic cases relevant to that question.
-3. **Review the evidence.** Verify the source records, scientific conclusions, data accessibility, metadata, and limitations.
-4. **Assign benchmark roles.** Mark cases as development, tuning, evaluation, or diagnostic and document dependencies between cases.
-5. **Acquire and register the inputs.** Preserve source identity, provenance, versions, and associated publications.
-6. **Validate the data.** Check structural integrity and metadata before scientific use.
-7. **Assess comparability.** Determine whether each observation-reference pair satisfies the selected method's requirements.
-8. **Prepare inputs.** Apply only justified, documented transformations and preserve their history.
-9. **Freeze the evaluation configuration.** Record the method, version, settings, preparation choices, benchmark subset, and metrics before evaluating reserved cases.
-10. **Execute the method.** Preserve outputs, failures, diagnostics, and warnings.
-11. **Calculate appropriate metrics.** Use only cases eligible for each metric and record exclusions and their reasons.
-12. **Assess uncertainty and limitations.** Determine whether the benchmark supports the intended interpretation and how broadly the results can be generalized.
-13. **Document conclusions.** Report observed performance, uncertainty, failure modes, limitations, and unsupported claims.
-14. **Persist the validation record.** Save the exact inputs, method configuration, evaluation procedure, results, and relevant citations.
+Where appropriate, distinguish:
 
-If a stage cannot be completed, ECAS must record the failure or limitation rather than present the evaluation as complete.
+- **Pass:** the defined checks completed and met their acceptance criteria.
+- **Fail:** one or more required checks did not meet their criteria.
+- **Warning:** a limitation or concern exists but does not necessarily prevent the operation.
+- **Inconclusive:** available information is insufficient to determine whether the relevant criterion is satisfied.
+- **Not evaluated:** the check was not performed.
 
----
+These labels describe validation status, not scientific certainty.
 
-## 11. Failure Analysis
+An operation must not be reported as fully validated merely because it completed without raising an exception.
 
-Validation must examine not only aggregate metrics but also cases where the method behaves unexpectedly.
+Errors and warnings should identify the affected data or operation and provide enough information to support investigation without exposing misleading or unsupported conclusions.
 
-Examples include:
+## 14. Validation Evidence and Reporting
 
-- A supported candidate ranks poorly.
-- A reported non-detection receives a strong candidate score.
-- A plausible competing reference ranks above the intended candidate.
-- A result changes substantially with small, justified preparation changes.
-- Missing uncertainty or metadata prevents interpretation.
-- Different observations of the same target produce materially different outcomes.
-- The method fails on particular coverage or resolution conditions.
-- A result depends on one reference dataset or a narrow spectral region.
+Validation evidence should be proportionate to the importance of the claim being made.
 
-Each significant failure should be recorded with the benchmark identity, method configuration, relevant diagnostics, plausible explanations, and whether the case changes the interpretation of the overall evaluation.
+For software changes, retain relevant test commands, actual outcomes, and unresolved failures in the project's established development records.
 
-Failure analysis may motivate method changes. Once those changes are made, their evaluation must be distinguished from the original evaluation, especially when the same case influenced the change.
+For scientific methods, retain the applicable test cases, benchmark provenance, evaluation procedure, metrics, acceptance criteria, and limitations.
 
----
+Reports must distinguish among:
 
-## 12. Validation Reporting
+- Requirements that have been defined.
+- Tests that have been written.
+- Tests that have actually been executed.
+- Results that have passed their stated criteria.
+- Scientific methods that have been evaluated.
+- Capabilities or conclusions that remain unverified.
 
-Each completed evaluation should produce a report that can be understood without reconstructing the process from informal notes.
+The existence of a test does not establish that it passed. Passing implementation tests does not establish that a scientific method is valid.
 
-### 12.1 Required report contents
+## 15. Current Implementation and Future Work
 
-The report should contain:
+The validation strategy must remain aligned with the actual application.
 
-- Evaluation identifier and date.
-- Purpose and scope.
-- Comparison method, version, and configuration.
-- Benchmark cases and their assigned roles.
-- Sources, publications, and data versions.
-- Reference datasets and representation types.
-- Preparation operations and relevant assumptions.
-- Inclusion and exclusion criteria.
-- Metrics and their definitions.
-- Results and uncertainty summaries where justified.
-- Failures, ambiguous cases, and sensitivity findings.
-- Limitations of the benchmark and evaluation procedure.
-- Conclusions supported by the evidence.
-- Conclusions that are not supported.
-- Recommendations for additional investigation.
+Currently verified behavior, planned capabilities, and unresolved requirements must be documented separately. The implementation status recorded elsewhere in the project should be consulted before making claims about supported formats, automated scientific checks, benchmark datasets, or analysis methods.
 
-### 12.2 Reporting language
+Future validation work should be introduced alongside the corresponding functionality rather than treated as completed merely because its requirements are documented.
 
-Reports must distinguish observed results from interpretations and recommendations.
+When a new capability is proposed, its implementation plan should identify the validation evidence required to demonstrate that it works as intended.
 
-Avoid statements such as "the method detects this molecule reliably" unless the benchmark design and evidence justify that specific claim.
+## 16. Limitations and Open Questions
 
-Prefer scoped statements that identify the evaluated data, task, and limitations. For example, a result may support the conclusion that a method ranked a benchmark-supported candidate above selected alternatives in a defined evaluation set. That does not establish universal detection capability.
+The following matters require evidence or design decisions before stronger requirements can be established:
 
-### 12.3 Versioning
+- Which real observational and reference datasets will be maintained as formal benchmarks.
+- Which scientific methods will require quantitative acceptance thresholds.
+- How uncertainty will be represented and propagated by each analysis method.
+- Which metadata are mandatory for particular analysis workflows.
+- Which compatibility differences can be corrected, accommodated, or must prevent comparison.
+- How benchmark versions and evaluation partitions will be maintained as the project evolves.
+- Which validation results will be stored persistently and which will remain test or development evidence.
 
-Each validation report must identify the exact method and benchmark configuration it evaluates.
+These questions should be resolved when the relevant workflows and methods are sufficiently defined. They should not be answered by introducing arbitrary universal thresholds or unsupported assumptions.
 
-A revised benchmark, changed reference, modified preprocessing procedure, or updated comparison method may affect the conclusions. New evaluations must not silently replace historical reports.
+## 17. Related Documents
 
----
+- `docs/ECAS.md` — Project purpose, scientific principles, and long-term objectives.
+- `docs/architecture/ARCHITECTURE.md` — System structure and architectural boundaries.
+- `docs/architecture/DATA_FLOW.md` — Current and intended data flows.
+- `docs/architecture/DATA_MODELS.md` — Domain entities and data representations.
+- `docs/architecture/ECAS_Architecture_Specification.md` — Broader architecture requirements and design.
+- `docs/architecture/MODULE_RESPONSIBILITIES.md` — Module responsibilities and boundaries.
+- `docs/brains/DECISIONS.md` — Approved technical and architectural decisions.
+- `docs/brains/PROJECT_STATE.md` — Verified implementation status and outstanding work.
 
-## 13. Software Testing Versus Scientific Validation
+Paths and document contents should be checked against the current repository. Related documents must distinguish implemented behavior from proposed design.
 
-ECAS must maintain a clear distinction between software correctness and scientific performance.
+## 18. Revision Policy
 
-| Test category | Primary question | Example |
-|---|---|---|
-| Unit testing | Does an individual operation behave as specified? | A transformation converts units correctly. |
-| Integration testing | Do application components exchange data correctly? | An imported spectrum passes through validation and registration. |
-| Regression testing | Did a code change alter previously characterized behavior? | A known input produces an unexpected numerical change. |
-| Scientific benchmark evaluation | Does the method behave usefully on documented scientific cases? | Candidate rankings are assessed against curated observations and controls. |
-| Robustness evaluation | How sensitive is the result to relevant data conditions? | Results are compared across suitable coverage or resolution conditions. |
+Revise this strategy when significant changes affect data formats, persistence behavior, scientific methods, validation criteria, or the evidence required to support scientific conclusions.
 
-Passing software tests does not establish scientific validity. Passing a limited benchmark does not establish that every code path is correct.
+Changes to validation requirements should be justified and traceable. New acceptance criteria should state their rationale, scope, and limitations.
 
-Synthetic fixtures may support unit and integration tests. Their role and limitations must remain explicit.
-
----
-
-## 14. Initial Work Plan
-
-The next scientific work should proceed in this order:
-
-### Phase A — Benchmark research
-
-- Identify accessible publications and data products describing relevant exoplanet transmission-spectrum detections and non-detections.
-- Identify potentially useful control cases.
-- Record source accessibility, scientific conclusions, data availability, and major limitations.
-- Produce a shortlist of cases rather than committing immediately to a large benchmark collection.
-
-### Phase B — Data feasibility assessment
-
-- Determine whether the shortlisted observations can be acquired or imported.
-- Identify the available spectral quantities, units, coverage, resolution, uncertainty information, and processing state.
-- Identify suitable molecular reference representations.
-- Record gaps that would prevent meaningful comparison.
-
-### Phase C — Method selection
-
-- Compare candidate comparison approaches against the actual benchmark characteristics and intended task.
-- Identify each method's input requirements, outputs, assumptions, computational dependencies, and limitations.
-- Select the first method only after this assessment.
-
-### Phase D — Evaluation design
-
-- Select metrics that correspond to the chosen method and intended task.
-- Define development, tuning, and evaluation roles for the available cases.
-- Establish a defensible procedure for uncertainty estimation and threshold selection, if thresholds are justified.
-- Record criteria before using reserved evaluation cases.
-
-### Phase E — Validation and revision
-
-- Run the defined evaluation.
-- Analyze errors, ambiguity, and sensitivity.
-- Document what the evidence supports and what remains unresolved.
-- Revise the method or scope if the results do not support the intended use.
-
-These phases define the planned research sequence. They do not authorize implementation or establish that any phase has already been completed.
-
----
-
-## 15. Open Decisions
-
-The following decisions remain unresolved:
-
-1. Which published detections, non-detections, and controls should form the initial benchmark shortlist?
-2. Which observations and associated data products are accessible and suitable?
-3. Which molecular reference sources and representation types are suitable for the initial cases?
-4. What is the first comparison method, based on the benchmark evidence?
-5. Which metrics are appropriate for that method's actual outputs?
-6. How should benchmark cases be grouped to reduce dependence between development and evaluation?
-7. Does the available evidence support any decision threshold?
-8. What uncertainty estimation procedures are justified by the benchmark size and structure?
-9. How should ambiguous or conflicting publications be represented in each evaluation?
-10. What robustness tests are feasible and scientifically meaningful for the initial release?
-11. What minimum evidence is required before ECAS can use stronger detection-related language?
-12. How should validation reports and benchmark versions be stored in the finalized data model?
-
-These decisions should be resolved through the benchmark research and method-selection process rather than through arbitrary defaults.
-
----
-
-## 16. Acceptance Criteria
-
-The validation strategy is ready to guide implementation planning when:
-
-- [ ] Benchmark inclusion criteria are defined.
-- [ ] Published detections, non-detections, controls, and ambiguous cases are distinguished appropriately.
-- [ ] Every benchmark case retains traceable evidence and provenance.
-- [ ] Development, tuning, and evaluation roles are recorded.
-- [ ] Metrics are tied to an explicitly defined evaluation question.
-- [ ] Thresholds are not assumed before supporting evidence is available.
-- [ ] Uncertainty and benchmark limitations are addressed in reporting.
-- [ ] Failures and excluded cases remain documented.
-- [ ] Method-specific score meanings are preserved.
-- [ ] Scientific validation is distinct from software testing.
-- [ ] The report format captures inputs, method settings, outcomes, limitations, and citations.
-- [ ] The strategy remains compatible with the architecture and data-model documents.
-
-Completion of this document does not mean that ECAS has been scientifically validated. Validation is an empirical process that can only be completed after appropriate data, methods, and evaluation procedures have been selected and examined.
-
----
-
-## 17. Relationship to Other Documents
-
-This document defines how ECAS evaluates the scientific performance and limitations of its comparison methods.
-
-It should be used alongside:
-
-- `ECAS.md` — project purpose and governing scientific principles.
-- `ARCHITECTURE.md` — system structure and scientific component boundaries.
-- `DATA_FLOW.md` — acquisition, validation, preparation, comparison, and persistence workflows.
-- `MODULE_RESPONSIBILITIES.md` — module ownership and scientific validation interfaces.
-- `DATA_MODELS.md` — benchmark, analysis, result, provenance, and validation record concepts.
-- `DECISIONS.md` — approved decisions and their rationale.
-- `PROJECT_STATE.md` — verified project status and outstanding work.
-
-## 18. Related Documents
-ECAS.md — defines the scientific goals and initial scope.
-
-ARCHITECTURE.md — defines the comparison and validation components.
-
-DATA_FLOW.md — describes how observations and references reach comparison.
-
-DATA_MODELS.md — defines how analyses, benchmark cases, and validation results are represented.
-
-MODULE_RESPONSIBILITIES.md — defines ownership of comparison, scoring, and validation responsibilities.
-
-IMPLEMENTATION_PLAN.md — schedules benchmark research and method selection before the first comparison method is finalized.
-
-If a conflict arises between documents, identify and review it rather than resolving it through an unrecorded assumption.
-
----
-
-**Draft conclusion:** ECAS should evaluate comparison methods using curated, traceable scientific benchmark cases and metrics matched to the task being evaluated. Published detections, non-detections, and controls provide complementary evidence, but none should be reduced to simplistic ground-truth labels without examining its scientific context. Performance claims and decision thresholds must be supported by the benchmark evidence, with uncertainty and limitations made explicit. This document defines the intended strategy; it does not establish empirical performance or authorize implementation.
+Historical validation evidence must not be rewritten to imply that a newer requirement or method was used in an earlier evaluation.

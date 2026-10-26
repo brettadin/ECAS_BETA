@@ -3,7 +3,7 @@
 **Document status:** Draft for user review  
 **Project:** Exoplanetary Characterization & Astrochemistry Suite (ECAS) 
 **Primary language:** Python  
-**Implementation status:** Not authorized by this document  
+**Implementation status:** Architecture proposal; implementation status is tracked separately in `docs/brains/PROJECT_STATE.md`
 **Authority:** Proposed detailed architecture consistent with `docs/ECAS.md` and *ECAS Architecture Specification — Draft 0.3*
 
 ---
@@ -64,26 +64,58 @@ Unless separately approved, the initial architecture does not require:
 
 The architecture should permit justified future extensions without implementing speculative abstractions now.
 
-## 3. Confirmed requirements and decisions
+## 3. Requirements, decisions, and verification
 
-| Area | Current decision or requirement |
-|---|---|
-| Application form | Native-style Python desktop window |
-| Launch | One-click desktop shortcut or equivalent launcher |
-| UI framework | Recommend after reviewing requirements and dependencies; not yet selected |
-| Initial observations | Exoplanet transmission spectra |
-| Observation input | Online archives and local-file import |
-| Molecular references | Measured/experimentally derived spectra and theoretical line lists, handled distinctly |
-| Analysis capability | Spectral comparison and candidate scoring |
-| Comparison design | Pluggable methods; choose the first method after benchmark investigation |
-| Validation | Published detections and suitable non-detections or controls |
-| Thresholds | Derive from benchmark evidence, metric uncertainty, and intended use |
-| Projects | One project per planet, with multiple observations and analyses |
-| Persistence | SQLite for structured records; files for larger datasets and artifacts |
-| Offline behavior | Saved projects and cached inputs work offline; new retrieval and refresh generally require connectivity |
-| Packaging | Defer until the workflow stabilizes |
-| Scientific integrity | Preserve provenance, uncertainties, processing history, and limitations |
-| Implementation authorization | This draft does not authorize implementation or changes to the project workspace |
+This section connects ECAS's requirements to the mechanisms needed to satisfy them and the evidence needed to verify them. A requirement is not considered implemented merely because its intended mechanism is documented.
+
+The table distinguishes established project requirements from proposed architectural mechanisms. Detailed implementation choices must be recorded in `docs/brains/DECISIONS.md` when approved. Verified implementation status belongs in `docs/brains/PROJECT_STATE.md`.
+
+### 3.1 Requirements and verification criteria
+
+| Area | Requirement | Mechanisms to specify or implement | Verification criteria |
+|---|---|---|---|
+| Scientific integrity | Scientific data and conclusions must retain their meaning and limitations. | Preserve provenance, distinguish measured, experimentally derived, theoretical, synthesized, and processed data, and prevent unsupported interpretations of comparison scores. | Tests verify data-category distinctions and provenance retention; scientific claims are evaluated separately against suitable evidence. |
+| Data provenance | Every imported or retrieved dataset must be traceable to its source. | Record available source identifiers, citations, retrieval or import details, versions, and processing history. Preserve original inputs where permitted. | A stored dataset can be traced to its recorded source; derived data can be traced to its inputs and transformations. |
+| Input integrity | Malformed or ambiguous input must not silently become trusted scientific data. | Apply format-specific parsing, structural validation, explicit missing-value handling, unit and metadata checks, and clear error reporting. | Tests cover malformed input, missing fields, non-finite values, inconsistent array lengths, and unsupported formats where applicable. |
+| Data identity | Distinct observations and dataset versions must remain distinguishable. | Use stable identifiers and, where appropriate, content hashes and source-version metadata. Do not use filenames alone as identity. | Distinct observations remain separately identifiable; changed datasets do not silently replace historical analysis inputs. |
+| Persistence integrity | Stored records and artifacts must remain internally consistent. | Validate records before saving, use appropriate database constraints, define transaction boundaries, and handle failed writes and artifact operations explicitly. | Tests cover invalid records, failed writes, retrieval, and consistency between stored records and referenced artifacts. |
+| Reproducibility | An analysis must identify the inputs and configuration that produced its result. | Record input identities or versions, processing steps, method and version, settings, relevant software version, outputs, status, and limitations. | A saved analysis exposes its required inputs and settings; reruns can identify missing or changed dependencies rather than silently substituting data. |
+| Scientific comparability | Structural validity must not be mistaken for scientific compatibility. | Assess relevant units, spectral quantities, wavelength or frequency coverage, resolution, uncertainty, normalization, and other method-specific requirements before comparison. | Tests distinguish structurally invalid data from valid but incompatible data; warnings and rejection reasons are explicit. |
+| Comparison and scoring | Comparison outputs must not imply stronger scientific conclusions than their methods support. | Preserve method-specific score definitions, diagnostics, uncertainty information where justified, and limitations. Keep scoring separate from scientific validation. | Tests verify output interpretation and failure handling; benchmark evaluation supports any claimed performance or threshold. |
+| Thresholds and validation | Numerical thresholds must have a defensible basis. | Define the intended decision, select suitable benchmark cases, document metric behavior and uncertainty, and separate threshold selection from independent evaluation where feasible. | Thresholds have documented rationale and supporting evidence; limitations of the benchmark and resulting claims are reported. |
+| Persistence and offline work | Saved research should remain usable without unnecessary dependence on live services. | Separate persistent project records from external retrieval; identify local dependencies and report unavailable inputs or services. | Offline tests demonstrate the explicitly supported workflows using locally available inputs and dependencies. |
+| User interface | The interface must present scientific information without owning scientific logic. | Keep scientific operations and data-provider parsing outside UI code; display source information, units, warnings, and limitations clearly. | Scientific logic can be tested independently of the UI; critical user workflows report failures without presenting them as successful results. |
+| UI technology | The current application uses PySide6 for its desktop interface and PyQtGraph for spectral plotting.	| Keep UI code separate from scientific processing and persistence. Record any future framework change as an explicit decision.	| Confirm the documented frameworks match the implementation and test critical UI and plotting workflows. |
+| Scope control | Implementation must follow approved priorities rather than the entire long-term vision. | Define feature-specific scope, acceptance criteria, dependencies, and verification before implementation. Record unresolved decisions explicitly. | Each task is reviewed against its approved scope and acceptance criteria before being declared complete. |
+
+### 3.2 Current implementation versus target architecture
+
+The requirements above describe the intended system, not a claim that every mechanism already exists.
+
+The supplied project snapshot establishes a narrower current application, including a Python desktop interface, spectral visualization, SQLite-backed persistence, and CSV ingestion with support for a specific WASP-39 b archive schema. The exact current state must be confirmed against the working repository and its latest verification results.
+
+The following remain architectural goals unless separately verified:
+
+- General-purpose support for multiple scientific file formats.
+- Online archive and molecular-reference retrieval.
+- A complete provenance and dataset-versioning system.
+- Generalized persistence and artifact-integrity safeguards.
+- Comprehensive comparability assessment and spectral preparation.
+- A selected, scientifically validated comparison method and defensible candidate thresholds.
+- Reproducible analysis records and complete offline reruns.
+
+### 3.3 Decision authority
+
+This document defines architectural requirements and proposed mechanisms. It does not independently authorize implementation or establish that a particular mechanism has been approved.
+
+- `docs/brains/DECISIONS.md` records approved decisions and their rationale.
+- `docs/brains/PROJECT_STATE.md` records verified implementation status and outstanding work.
+- `docs/architecture/DATA_MODELS.md` defines conceptual data entities, identity, relationships, and persistence constraints.
+- `docs/architecture/DATA_FLOW.md` describes how data moves through the workflow and where validation and provenance controls apply.
+- `docs/architecture/VALIDATION_STRATEGY.md` defines benchmark methodology, evaluation metrics, threshold derivation, and scientific-claim limitations.
+
+When a mechanism remains unresolved, identify the decision needed rather than presenting an unapproved design as settled.
+
 
 ## 4. Architectural principles
 
@@ -324,34 +356,139 @@ The relationship model, mandatory fields, stable identity rules, and serializati
 
 ## 9. Persistence, cache, and offline behavior
 
+ECAS must preserve research data and analysis history in a way that supports integrity, traceability, recovery, and explicitly defined offline workflows.
+
+These are target architectural requirements. The mechanisms below describe the design that must be specified and verified; they do not assert that every mechanism is already implemented.
+
 ### 9.1 Storage responsibilities
 
-Use SQLite for structured records and relationships. Use files for large source datasets and scientific artifacts. The cache, central reference library, and user projects are separate concepts even if they share a storage root.
+Storage design must distinguish three responsibilities:
 
-Each stored file should be associated with metadata that makes its role clear: original source, parsed cache, prepared spectrum, synthesized reference, plot, or exported report.
+1. **Structured project records:** identities, metadata, relationships, analysis configurations, results, statuses, and references to scientific data.
+2. **Scientific data and artifacts:** original source files, parsed or prepared datasets, synthesized references, plots, and exports where applicable.
+3. **Cache and shared reference data:** locally available copies of external datasets that can be reused without confusing cached availability with source authority.
 
-### 9.2 Dataset identity and integrity
+SQLite is the current persistence technology in the supplied project snapshot. The existing implementation stores spectral data as JSON text in SQLite. A future architecture using separate files for large datasets or artifacts is a proposed design, not a description of the current storage implementation.
 
-Where practical, use stable source identifiers and content hashes to detect duplicate or changed files. Record retrieval timestamps and source version information where available. Do not rely on a filename or retrieval date alone as proof that two datasets are identical.
+Before expanding the storage architecture, specify which data belongs in each storage location, how records refer to artifacts, and how consistency is maintained across those locations. Avoid adding a separate artifact store or cache abstraction unless the approved workflow requires it.
 
-Updates should be explicit. New versions can be added without silently changing prior analysis records.
+### 9.2 Input validation and persisted-data integrity
 
-### 9.3 Offline behavior
+Data must not become trusted merely because it can be written to the database.
 
-When all required inputs are present locally, users should be able to:
+The persistence workflow should define the following controls:
 
-- Open and inspect a project.
-- View saved observations, plots, results, and citations.
-- Review analysis configurations and diagnostics.
-- Rerun supported analyses using cached inputs and available dependencies.
-- Import local data.
-- Run validation using locally cached benchmark inputs.
+1. Validate the structure and required metadata of an input before accepting it as a valid scientific record.
+2. Validate serialized representations before saving and check that retrieved data can be decoded into the expected representation.
+3. Use appropriate database constraints for requirements the database can enforce, such as required fields, uniqueness, and relationships where applicable.
+4. Define transaction boundaries for related changes so that a failed operation does not leave a partially updated logical record.
+5. Define how database errors, malformed stored data, incompatible records, and failed retrievals are reported.
+6. Preserve enough identity and provenance information to distinguish original inputs, derived data, and different dataset versions.
 
-Online search, first-time downloads, and remote refresh generally require connectivity. If a required input is absent, the application should explain what is missing and which operation cannot continue. It must not silently substitute an unrelated or newer dataset.
+Database constraints and serialization checks are necessary but insufficient for scientific validity. Domain-specific validation must also establish whether values, units, metadata, and relationships make sense for the intended scientific operation.
 
-### 9.4 Transactions and recovery
+The detailed schema, constraints, and validation rules belong in `DATA_MODELS.md` and the relevant approved persistence decisions. This architecture does not prescribe a final schema before those requirements are resolved.
 
-Project updates and database writes should avoid leaving half-written logical records. Large file operations should use safe write/replace patterns where appropriate, with database references committed only when the corresponding artifact is available and verified. Exact transaction and recovery procedures will be specified with the data models and persistence design.
+### 9.3 Dataset identity, versions, and artifact integrity
+
+A dataset must be identifiable independently of its display name or filesystem path.
+
+Where appropriate and technically feasible, the design should use:
+
+- Stable source or dataset identifiers.
+- Content hashes to detect byte-identical files and verify file integrity.
+- Source-provided version identifiers or equivalent metadata where available.
+- Import or retrieval timestamps as provenance, not as proof of dataset identity.
+- Explicit relationships between original inputs, derived datasets, and analysis runs.
+
+A content hash establishes identity for particular file contents; it does not prove scientific correctness, authenticity, or equivalence between differently encoded datasets.
+
+When an external source changes or a dataset is refreshed, the system must not silently replace the input associated with a historical analysis. A new version or record should be created when needed, with the relationship to earlier versions made explicit.
+
+If an expected artifact is missing or fails integrity checks, ECAS must report the problem. It must not silently treat a different file as the original artifact.
+
+### 9.4 Transaction and artifact-write behavior
+
+The persistence design must define what happens when a logical operation involves multiple database records or both database records and files.
+
+For database-only changes, use transactions where multiple writes must succeed or fail together.
+
+For operations involving files and database references, define an ordering and recovery policy that avoids committed references to artifacts that were never successfully written. Where appropriate, use temporary files, verify completed writes, and replace final files safely before recording the completed artifact state.
+
+The design must also define how interrupted operations are detected and how incomplete artifacts or stale references are handled during recovery.
+
+These are requirements for the target persistence design. The exact implementation must be selected based on the actual storage workflow; filesystem and database operations should not be described as one atomic transaction unless the implementation genuinely provides that guarantee.
+
+### 9.5 Cache policy and source authority
+
+A cache is a local availability mechanism, not an independent scientific authority.
+
+For every cached data category, the design should define:
+
+- What is cached and why.
+- How the cached item is associated with its original source and dataset identity.
+- Which metadata identifies the source version or retrieval state.
+- When a cached item may be reused.
+- How refreshes, changed remote data, invalid cached content, and unavailable sources are handled.
+- Whether cached data may be retained indefinitely or requires a documented refresh or expiration policy.
+
+Cache invalidation and refresh rules remain open design decisions until the supported data sources and workflows are selected.
+
+A refresh must not silently change the inputs of a saved analysis. Cached content that differs from the expected dataset must be treated as a different version or investigated according to an explicit policy.
+
+### 9.6 Offline behavior
+
+Offline capabilities must be specified per operation rather than described as a blanket guarantee.
+
+When all required inputs, saved records, and software dependencies are available locally, the target architecture should support:
+
+- Opening and inspecting saved projects.
+- Viewing locally stored observations, results, plots, and citations.
+- Reviewing saved analysis configurations and diagnostics.
+- Importing supported local files.
+- Rerunning a supported analysis when its required inputs and dependencies are available locally.
+- Running supported validation workflows when their required benchmark inputs are available locally.
+
+Online search, first-time downloads, and remote refresh generally require connectivity.
+
+When a required input or dependency is unavailable, ECAS must identify what is missing and explain which operation cannot proceed. It must not silently substitute a newer, unrelated, or scientifically incompatible dataset.
+
+Offline support should be verified through tests that disable or isolate network access and exercise each claimed workflow. The absence of a network request in a unit test is not, by itself, evidence that the full workflow operates offline.
+
+### 9.7 Failure handling and recovery
+
+The persistence design must define expected behavior for:
+
+- A database that cannot be opened or written.
+- Malformed or incompatible stored records.
+- Missing, incomplete, or corrupted artifacts.
+- Failed downloads or interrupted file writes.
+- Missing cached inputs during an offline operation.
+- Failed project updates or migrations.
+- A saved analysis whose original inputs are no longer available.
+
+Failures must remain distinguishable from successful operations. An incomplete analysis must not be represented as a completed result, and a failed save must not be reported as successful.
+
+Recovery mechanisms, backup policy, schema migrations, and cache retention should be designed to match the initial supported workflow. They should not be claimed as implemented until their behavior has been tested.
+
+### 9.8 Verification requirements
+
+Before a persistence or offline capability is declared complete, its verification should cover the relevant requirements above.
+
+At minimum, the applicable test plan should consider:
+
+- Round-trip storage and retrieval of supported data.
+- Rejection or explicit handling of invalid records.
+- Failed-write and transaction behavior.
+- Dataset identity and preservation of historical inputs.
+- Artifact existence and integrity checks where separate files are used.
+- Cache reuse and refresh behavior where caching is implemented.
+- Offline access to saved projects and results.
+- Clear failure behavior when an input or dependency is missing.
+- Recovery or migration behavior for the failure cases the application claims to support.
+
+Software tests establish that the implemented controls behave as intended under tested conditions. They do not independently establish the scientific validity of the underlying data or analysis.
+
 
 ## 10. Scientific integrity and result interpretation
 
@@ -412,7 +549,7 @@ Tests must not quietly substitute fabricated scientific data for real benchmark 
 
 ## 13. UI framework and dependency selection
 
-The desktop UI framework remains unresolved. The recommendation should consider:
+The current implementation uses PySide6 for the desktop UI and PyQtGraph for spectral plotting. These are established implementation choices, not unresolved initial framework selections. Any future replacement or substantial change should be justified against workflow requirements, scientific plotting needs, maintainability, licensing, and dependency complexity.
 
 - A practical native-style Windows desktop experience.
 - Scientific plotting integration and interactive performance.
