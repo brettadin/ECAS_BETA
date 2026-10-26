@@ -61,3 +61,68 @@ Once you send me Cline's revised plan, I'll review it against the Part 1 history
 <br>
 <br>
 
+## VERIFIED FINDINGS & ANALYSIS COMPLETE
+
+I've read:
+- All three Part 1 plans (`Chunk_4_plan_v8.md`, `Chunk_4_plan_v9.md`, `Chunk_4_plan_v10.md`)
+- Current implementation of [`csv_importer.py`](c:\Users\brett\AIProjects\ECAS_BETA\ecas\ingestion\csv_importer.py) (truncated but key functions visible)
+- Current GUI implementation in [`main_window.py`](c:\Users\brett\AIProjects\ECAS_BETA\ecas\ui\main_window.py)
+
+### KEY FINDINGS:
+
+1. **Root Cause Confirmed**: In `_import_csv()` (lines 325-354), `import_spectrum_csv(file_name)` is called with a single argument. The importer's `WASP39B_SCHEMA` dict exists but is never passed to the import function, causing the GUI to reject WASP-39b files.
+
+2. **Importer API Signature**: Currently:
+   ```python
+   def import_spectrum_csv(file_path: str | Path, archive_schema: dict[str, str] = None) -> SpectrumData
+   ```
+   
+3. **Current Column Aliases** (line 15-22):
+   - Generic: `{"wavelength": "wavelength", "lambda": "wavelength", "signal": "signal", ...}`
+   - WASP-39b schema defined but not used: `WASP39B_SCHEMA = {"wavelength": "centralwavelng", "signal": "pl_trandep"}`
+
+4. **Part 1 Plans** consistently emphasize:
+   - No filename pattern auto-detection (user rejected this)
+   - Explicit user selection for archive schema
+   - Generic imports must not be affected
+   - WASP-39b has different column headers requiring explicit mapping
+
+### RECOMMENDED DESIGN:
+
+**Explicit Schema Selection via Combo Box**:
+1. Add a `QComboBox` in the import dialog (or main toolbar) to let users select between schemas.
+2. Default to "Generic/Unknown" for standard spectra.
+3. Add "WASP-39 b Archive" option with pre-populated column mapping.
+4. When WASP-39b is selected, call `import_spectrum_csv(file_path, archive_schema=WASP39B_SCHEMA)`.
+
+### IMPLEMENTATION STEPS:
+
+1. Modify [`csv_importer.py`]:
+   - Update `COLUMN_ALIASES` to include WASP-39b canonical aliases alongside generic ones
+   - Ensure both source columns (`centralwavelng`, `pl_trandep`) AND canonical aliases (`wavelength`, `signal`) are stored
+
+2. Modify [`main_window.py`]:
+   - In `_import_csv()`, add combo box for schema selection
+   - Pass selected `archive_schema` to `import_spectrum_csv()`
+
+3. Add error handling:
+   - Warn if WASP-39b file lacks required numeric fields
+   - Show warnings for missing uncertainty values (existing behavior)
+
+### REGRESSION TESTS:
+
+1. Generic CSV with `lambda` → `wavelength` still works
+2. Generic CSV with `uncertainty` column validation unchanged
+3. WASP-39b archive imports successfully with both source and canonical columns
+4. Collision detection still raises error for duplicate canonical names
+
+### DOCUMENTATION UPDATES:
+
+1. Update docstring of `import_spectrum_csv()` to document the `archive_schema` parameter
+2. Document WASP-39b column contract in the module-level comments
+
+---
+
+**This plan maintains explicit schema selection, preserves generic import behavior, and fixes the GUI failure for WASP-39b archives without filename detection.**
+
+Please review this plan. If approved, we'll proceed to ACT mode for implementation.
