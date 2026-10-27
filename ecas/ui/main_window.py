@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
+    QComboBox,
 )
 
 # Reuse the ingestion module rather than duplicating CSV validation here.
@@ -364,7 +365,7 @@ class ECASWindow(QMainWindow):
         try:
             spectrum = import_spectrum_csv(
                 file_name,
-                schema=selected_schema,
+                archive_schema=selected_schema,
             )
         except SpectrumImportError as exc:
             # Remove the old display so it cannot be mistaken for the
@@ -394,7 +395,7 @@ class ECASWindow(QMainWindow):
         try:
             spectrum = import_spectrum_csv(
                 path,
-                schema=selected_schema,
+                archive_schema=selected_schema,
             )
         except SpectrumImportError as exc:
             # Keep failed-import behavior consistent with the file dialog.

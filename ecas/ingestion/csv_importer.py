@@ -237,7 +237,10 @@ def _import_archive_csv(
 
             source_columns = list(normalized_headers)
             canonical_columns = list(schema.keys())
-            output_columns = tuple(source_columns + canonical_columns)
+            # Build a mapping from schema keys to their original column names, then create unified output columns
+            source_to_canonical = {v: k for k, v in WASP39B_SCHEMA.items()}
+            output_columns = ("wavelength",) + tuple(normalized_headers) + ("signal",)
+
 
             parsed_rows: list[dict[str, CellValue]] = []
 

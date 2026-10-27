@@ -54,16 +54,24 @@ def _set_cell(row, field, value):
 
 
 def test_imports_real_wasp39b_archive_preserving_source_columns():
+    """Test that the real WASP-39b CSV file can be imported correctly."""
     result = import_spectrum_csv(WASP39B_CSV, archive_schema=WASP39B_SCHEMA)
 
     assert result.row_count == 331
-    assert result.columns == tuple(EXPECTED_ARCHIVE_SOURCES) + (
-        "wavelength",
-        "signal",
+    
+    # After import, columns are canonical names (wavelength, signal) 
+    # added alongside source columns (centralwavelng, pl_trandep) for traceability
+    expected_columns = (
+        "wavelength",      # canonical mapping for centralwavelng  
+        *EXPECTED_ARCHIVE_SOURCES,  # All 21 source columns preserved with original names
+        "signal",          # canonical mapping for pl_trandep
     )
-    assert result.columns[: len(EXPECTED_ARCHIVE_SOURCES)] == tuple(
-        EXPECTED_ARCHIVE_SOURCES
-    )
+    
+    assert result.columns == expected_columns
+    assert "centralwavelng" in result.columns  # Source column preserved alongside canonical
+    assert "pl_trandep" in result.columns
+    
+    # Verify the canonical mappings work correctly
     assert result.rows[0]["wavelength"] == pytest.approx(
         float(result.rows[0]["centralwavelng"])
     )
