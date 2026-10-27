@@ -6,6 +6,16 @@ ECAS is a spectrum analysis application that stores, retrieves, and processes sp
 ---
 
 
+### WASP-39 b Archive CSV Schema Validation
+**Date:** 2026-10-27
+**Status:** Existing behavior retained.
+
+The WASP-39 b archive importer requires the expected 21 source columns for its supported schema. Files with a different source-column structure must not be silently treated as valid archive files.
+
+Generic CSV import remains a separate path. Manual column mapping for generic CSV files is planned but has not yet been implemented.
+
+This decision does not establish support for all archive schema variants or all generic CSV formats. Any relaxation of archive validation must be justified by a defined schema requirement and accompanied by appropriate tests.
+
 ## Decision: WASP-39b Archive CSV Import Schema
 
 **Date:** 2026-10-23
