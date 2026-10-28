@@ -1,4 +1,4 @@
-"""Reference catalogue search, bounded CO2 product retrieval and offline reopening."""
+"""Reference catalogue search, verified product retrieval and offline reopening."""
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineE
 from ecas.ingestion.exomol_catalogue import MAX_BYTES, parse_catalogue, search_catalogue
 from ecas.ingestion.exomol_catalogue_cache import load_catalogue, store_catalogue
 from ecas.ingestion.exomol_network import PublicExomolCatalogueHttp
-from ecas.ingestion.exomol_product import ProductRequest, supported_entry
+from ecas.ingestion.exomol_product import ProductRequest, SERVICES, supported_entry
 from ecas.ingestion.exomol_product_network import PublicExomolProductHttp
 from ecas.ingestion.exomol_reference_cache import cached_references, load_reference, store_reference
 
@@ -72,13 +72,13 @@ class MolecularReferenceBrowser(QWidget):
         panels.addWidget(catalogue_panel)
         reference_panel=QWidget(); reference_layout=QVBoxLayout(reference_panel)
         reference_layout.setContentsMargins(8,0,0,0)
-        conditions=QLabel('Initial retrieval: CO2 / 12C-16O2 / UCL-4000 only. Calculated cross sections, zero pressure, Doppler-only broadening. Settings describe a reference product, not the planet atmosphere.')
+        conditions=QLabel('Supported retrieval: CO2 / UCL-4000, H2O / POKAZATEL, CH4 / MM (main isotopologues only). Calculated cross sections, zero pressure, Doppler-only broadening. Settings describe a reference product, not the planet atmosphere.')
         conditions.setWordWrap(True); reference_layout.addWidget(conditions)
         form=QFormLayout()
-        self.temperature=QSpinBox(); self.temperature.setRange(100,4000); self.temperature.setValue(500)
-        self.minimum=QSpinBox(); self.minimum.setRange(0,20000); self.minimum.setValue(4000)
-        self.maximum=QSpinBox(); self.maximum.setRange(0,20000); self.maximum.setValue(4010)
-        self.spacing=QDoubleSpinBox(); self.spacing.setDecimals(6); self.spacing.setRange(0.000001,20000); self.spacing.setValue(1)
+        self.temperature=QSpinBox(); self.temperature.setRange(100,5000); self.temperature.setValue(500)
+        self.minimum=QSpinBox(); self.minimum.setRange(0,41200); self.minimum.setValue(4000)
+        self.maximum=QSpinBox(); self.maximum.setRange(0,41200); self.maximum.setValue(4010)
+        self.spacing=QDoubleSpinBox(); self.spacing.setDecimals(6); self.spacing.setRange(0.000001,41200); self.spacing.setValue(1)
         form.addRow('Temperature (K)',self.temperature)
         form.addRow('Minimum (cm^-1)',self.minimum); form.addRow('Maximum (cm^-1)',self.maximum)
         form.addRow('Spacing (cm^-1)',self.spacing)
@@ -176,7 +176,9 @@ class MolecularReferenceBrowser(QWidget):
             f'Isotopologue: {entry.isotope_formula} ({entry.isotopologue})\nInChIKey: {entry.inchi_key}\n'
             f'Dataset: {entry.dataset}; provider version label: {entry.version}\n'
             'Product type, spectral range, units, temperature and pressure: not established by this index.\n'+
-            ('Verified initial service mapping: zero-pressure calculated CO2 cross sections; choose explicit settings.'
+            (f'Verified service: calculated {entry.formula} cross sections; zero pressure/Doppler-only. '
+             f'Limits: 100–{SERVICES[entry.isotopologue].maximum_temperature} K, '
+             f'0–{SERVICES[entry.isotopologue].maximum_wavenumber} cm^-1; exact grid of 2–10000 points.'
              if supported_entry(entry) else 'Retrieval for this catalogue record is not verified/supported yet.')+
             '\nCross sections cannot be compared directly with transit depth. Comparison scoring is not available yet.')
         self._buttons()
@@ -240,7 +242,8 @@ class MolecularReferenceBrowser(QWidget):
             records,invalid=cached_references(self.cache_root/'references')
             for path,result in records:
                 request=result.request
-                self.cached.addItem(f'CO2 | {request.temperature} K | {request.minimum}–{request.maximum} cm^-1',str(path))
+                self.cached.addItem(f'{request.service.formula} / {request.service.dataset} | {request.temperature} K | '
+                                    f'{request.minimum}–{request.maximum} cm^-1 | spacing {request.spacing}',str(path))
                 if selected is not None and path==selected: self.cached.setCurrentIndex(self.cached.count()-1)
             self.reference_status.setText(f'{len(records)} cached references; {invalid} invalid entries excluded.')
         except Exception as error: self.reference_status.setText(f'Reference cache unavailable: {error}')
@@ -254,8 +257,8 @@ class MolecularReferenceBrowser(QWidget):
             for column,value in enumerate(point): self.reference_table.setItem(row,column,QTableWidgetItem(str(value)))
         self.reference_table.resizeColumnsToContents()
         self.current_reference=result
-        self.reference_status.setText(f'Calculated CO2 cross section: {len(product.points)} points; {result.request.temperature} K; zero pressure; Doppler-only. '
-            f'UCL-4000. Source hash: {product.source_sha256[:12]}… CC BY-SA 4.0; references retained in cache.')
+        self.reference_status.setText(f'Calculated {product.provenance.molecule} cross section: {len(product.points)} points; {result.request.temperature} K; zero pressure; Doppler-only. '
+            f'{product.provenance.dataset}. Source hash: {product.source_sha256[:12]}… CC BY-SA 4.0; references retained in cache.')
         self.reference_status.setToolTip(f'Raw SHA-256: {product.source_sha256}\nSource: {product.provenance.source_url}\n'+
                                         '\n'.join(product.provenance.citations))
 
@@ -263,14 +266,14 @@ class MolecularReferenceBrowser(QWidget):
         if self.busy: return
         index=self.results.currentRow()
         if not 0<=index<len(self.entries) or not supported_entry(self.entries[index]):
-            self.status.setText('Select CO2 / 12C-16O2 / UCL-4000 for the verified initial retrieval service.')
+            self.status.setText('Select a supported CO2 / UCL-4000, H2O / POKAZATEL or CH4 / MM main-isotopologue record.')
             return
+        entry=self.entries[index]
         try:
             request=ProductRequest(self.minimum.value(),self.maximum.value(),self.temperature.value(),
-                                   format(self.spacing.value(),'.6f'))
+                                   format(self.spacing.value(),'.6f'),entry.isotopologue)
         except Exception as error:
             self.status.setText(f'Reference settings invalid: {error}'); return
-        entry=self.entries[index]
         catalogue_context=dict(formula=entry.formula,isotopologue=entry.isotopologue,dataset=entry.dataset,
                                version=entry.version,catalogue_sha256=self.catalogue.source_sha256)
         self.busy=True; self.operation='reference'; self._buttons()

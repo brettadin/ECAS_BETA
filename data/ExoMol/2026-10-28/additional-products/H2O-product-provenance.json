@@ -1,0 +1,45 @@
+{
+  "formula": "H2O",
+  "isotopologue": "1H2-16O",
+  "dataset": "POKAZATEL",
+  "started_utc": "2026-10-28T18:28:48.738202+00:00",
+  "authentication": "none",
+  "email_supplied": false,
+  "redirects_followed": false,
+  "steps": [
+    {
+      "method": "GET",
+      "url": "https://www.exomol.com/xsec/1H2-16O/",
+      "http_status": 200,
+      "bytes": 12527,
+      "sha256": "dd856b2a6cc4e97fb82d50246cfa5788ef4baf97586f79352926a8078478e5f8"
+    },
+    {
+      "method": "POST",
+      "url": "https://www.exomol.com/xsec/1H2-16O/",
+      "http_status": 200,
+      "bytes": 10491,
+      "sha256": "70ae6279fee3b85c70f8509b5d8ad3af395f77851035fa888500adad12fc7642"
+    },
+    {
+      "method": "GET",
+      "url": "https://www.exomol.com/results/1H2-16O_4000-4010_500K_1.000000.sigma",
+      "http_status": 200,
+      "bytes": 308,
+      "sha256": "695a0560817ca90d7eb4e09f5e3479daa53ec551a23acba530e3ad42955b25f3"
+    }
+  ],
+  "success": true,
+  "parameters": {
+    "dnu": "1.000000",
+    "numin": "4000",
+    "numax": "4010",
+    "T": "500",
+    "spoon_feed": "on"
+  },
+  "pressure_bar": 0,
+  "broadening": "doppler_only",
+  "licence_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "points": 11,
+  "finished_utc": "2026-10-28T18:28:49.411859+00:00"
+}

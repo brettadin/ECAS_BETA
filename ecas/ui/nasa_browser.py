@@ -1,5 +1,6 @@
 """User-initiated NASA transmission discovery/download and offline cache access."""
 from pathlib import Path
+from collections import Counter
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget
@@ -115,9 +116,15 @@ class NasaArchiveBrowser(QWidget):
                 row = item["metadata"]
                 self.results.addItem(f"{row['pl_name']} | {row['authors']} | {row['instrument']} | {row['num_datapoints']} points")
             self.busy = False
-            self.status.setText(f"{name} resolved as {canonical}: {len(self.items)} transmission records; " +
-                ("50-record limit reached, results may be incomplete." if len(rows) == 50 else
-                 "other spectrum types are not supported for loading."))
+            message = (f"{name} resolved as {canonical}: {len(self.items)} transmission records "
+                       f"available to load out of {len(rows)} returned records.")
+            excluded = Counter(row['spec_type'] for row in rows if row['spec_type'] != 'Transmission')
+            if excluded:
+                message += ' Excluded from loading: ' + ', '.join(
+                    f'{kind} ({count})' for kind, count in sorted(excluded.items())) + '.'
+            if len(rows) == 50:
+                message += ' 50-record limit reached, results may be incomplete.'
+            self.status.setText(message)
             if not rows:
                 self.status.setText(f"{name} resolved as {canonical}. No spectra listed in NASA's queried spectroscopy table. Other archives were not searched.")
             elif not self.items:

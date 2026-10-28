@@ -95,6 +95,12 @@ def test_cached_nasa_selection_attach_and_reopen_after_cache_removal(tmp_path, s
         assert reopened.current_project_attachment['provenance']['cache_record']['metadata']['pl_name'] == 'WASP-39 b'
         assert reopened.current_project_attachment['provenance']['import_schema'] is None
         assert not source.exists()
+        saved_item = reopened.project_browser.spectra.item(0)
+        assert 'WASP-39 b — Feinstein et al. 2023' in saved_item.text()
+        assert '331 rows | source preserved' in saved_item.text()
+        assert 'Near Infrared Imager and Slitless Spectrograph' in saved_item.text()
+        assert 'Table publication: Feinstein et al. 2022' in saved_item.toolTip()
+        assert 'source.tbl' in saved_item.toolTip()
     finally:
         reopened.close()
 

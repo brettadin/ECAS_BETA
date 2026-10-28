@@ -7,6 +7,25 @@ persistence and currently has a separate NASA raw-product/provenance cache.
 
 ## Current decision context — 2026-10-28
 
+Workspace pages: Overview summarizes already loaded state on entry without
+scanning projects/caches. Settings mirrors the existing CSV-schema selector
+bidirectionally and displays configured storage paths read-only. The setting
+remains session-only; no relocation, persistent preference format or new network
+policy is introduced. See `../Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md`.
+Argon's first six feedback reviews were accepted by the user; the new workspace
+increment awaits separate review and desktop acceptance.
+
+Comparison-selection continuation: explicit observation additions copy imported
+values into session choices; independently selected ExoMol cache records are
+validated at discovery and selection. Inspection uses separate original-value
+tables without writing projects or changing the two existing displays. The
+compatibility explanation blocks the supported cross-section pairings; it does
+not promote the research eligibility contract into a production service or invent
+physical-model/response/noise declarations. See
+`../Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md`. All five earlier Argon
+feedback reports were received with zero findings; Batch 6 subsequently approved
+the selection snapshot with zero findings. Desktop acceptance remains separate.
+
 The source of current implementation status is PROJECT_STATE.md; older verification
 counts below describe historical checkpoints. NASA exact-name discovery, supported
 transmission-table import and sidecar cache decisions are recorded in
@@ -30,6 +49,16 @@ New work awaits independent review and desktop acceptance. See
 `../Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md`. The initial project provenance-transfer
 contract is described below. Do not infer
 selection of NIST, JCAMP-DX, line matching or forward modelling from historical plans.
+
+User-feedback follow-up: verified water (H2O / 1H2-16O / POKAZATEL) and methane
+(CH4 / 12C-1H4 / MM) are now explicit service mappings alongside CO2. Immutable
+mapping entries bind identity, endpoint, description, limits and citations; no
+arbitrary catalogue slug becomes a download URL. Requests/cache records carry the
+isotopologue; missing identity in original v1 records means the historical CO2
+service only. Catalogue context must match the validated request. Old records are
+not rewritten. Provider-specific limits are checked before any request; switching
+selected entries does not silently change the chosen settings. New work awaits
+Argon and desktop review; see USER_FEEDBACK_WORKFLOW_20261028.md under Chunk_5_1.
 
 ### Project source attachments — 2026-10-28
 

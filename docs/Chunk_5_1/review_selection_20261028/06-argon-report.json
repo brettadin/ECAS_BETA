@@ -1,0 +1,17 @@
+{
+  "reviewed_files": [
+    "ecas/ui/comparison_browser.py",
+    "ecas/ui/main_window.py",
+    "tests/test_comparison_browser.py",
+    "tests/test_main_window.py",
+    "ecas/ingestion/exomol_reference_cache.py",
+    "ecas/models/spectrum.py",
+    "docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md"
+  ],
+  "findings": [],
+  "limitations": [
+    "Observation snapshots are strictly session-scoped in memory (`deepcopy`) and do not persist across application restarts; persistent storage remains delegated to research projects in the ProjectStore[cite: 13].",
+    "Quantitative comparison operations, physical forward-modeling, unit/grid interpolation, and automated scoring remain deferred and strictly blocked at this stage[cite: 13]."
+  ],
+  "summary": "Batch 6 introduces an independent observation and molecular reference inspection interface on the Comparisons page without prematurely coupling data into a scoring engine[cite: 13]. The implementation isolates observations by deep-copying imported `SpectrumData` session snapshots, ensuring that subsequent imports or disk alterations do not mutate selected data[cite: 13]. Cached molecular references are revalidated on selection and refreshed safely using exact file path strings in QComboBox[cite: 13]. Cache corruptions or file deletions immediately clear the reference table and reset reference state to prevent stale data display[cite: 13]. The compatibility panel explicitly warns that calculated absorption cross sections cannot be directly compared against observational transit depths without an intermediate physical atmospheric model[cite: 13]. No actionable defects were found."
+}

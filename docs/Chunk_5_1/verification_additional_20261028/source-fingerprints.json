@@ -1,0 +1,25 @@
+{
+  "scope": "Additional verified reference mappings after final passing full suite; hashes cover working-file bytes",
+  "files": [
+    {
+      "path": "ecas/ingestion/exomol_product.py",
+      "sha256": "e79aa046607df9f6dc709ff01b1cfa3b4d4a06462b307c7880c7ce564c2d6869"
+    },
+    {
+      "path": "ecas/ingestion/exomol_product_network.py",
+      "sha256": "f4f1df60b8744236ea31757c57115e9fcce6565c1dd3f994c630e42924ff37f3"
+    },
+    {
+      "path": "ecas/ingestion/exomol_reference_cache.py",
+      "sha256": "9aa16975d8bf61471029b10f7a5bb75534773e8b6ec727bf466edbde22e8be87"
+    },
+    {
+      "path": "ecas/ui/molecular_browser.py",
+      "sha256": "47e7b15fefcb91eb0bfc1c8881b5e53fedbb5d3ff15f1f0f8af8cec66158626f"
+    },
+    {
+      "path": "tests/test_exomol_product.py",
+      "sha256": "0c27f4a97c4663980772bc6e2618c2d77830af7d014f752b71a5845571c29475"
+    }
+  ]
+}

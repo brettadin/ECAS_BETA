@@ -1,0 +1,258 @@
+{
+    "manifest": {
+        "requested_name": "55 Cancri e",
+        "resolved_name": "55 Cnc e",
+        "system_name": "55 Cnc",
+        "lookup_status": "OK",
+        "compilation_date": "2026-10-28 11:21:15.260560",
+        "system_snapshot": {
+            "number_of_stars": 2,
+            "number_of_planets": 7
+        }
+    },
+    "system": {
+        "system_info": {
+            "id": "55 Cnc",
+            "alias_set": {
+                "item_count": 2,
+                "default_name": "55 Cnc",
+                "aliases": [
+                    "TOI-1773",
+                    "55 Cnc"
+                ]
+            }
+        },
+        "objects": {
+            "stellar_set": {
+                "item_count": 2,
+                "stars": {
+                    "55 Cnc B": {
+                        "is_host": "True",
+                        "alias_set": {
+                            "item_count": 4,
+                            "default_name": "55 Cnc B",
+                            "aliases": [
+                                "Gaia DR3 704966762213039488",
+                                "55 Cnc B",
+                                "TIC 332064684",
+                                "Gaia DR2 704966762213039488"
+                            ]
+                        }
+                    },
+                    "55 Cnc": {
+                        "is_host": "True",
+                        "alias_set": {
+                            "item_count": 21,
+                            "default_name": "55 Cnc",
+                            "aliases": [
+                                "Gaia DR3 704967037090946688",
+                                "HD 75732 A",
+                                "55 Cnc",
+                                "HR 3522",
+                                "55 Cnc A",
+                                "LHS 2062",
+                                "GJ 324 A",
+                                "HD 75732",
+                                "rho1 Cnc",
+                                "BD+28 1660",
+                                "Copernicus",
+                                "HIP 43587",
+                                "SAO 80478",
+                                "IRAS 08496+2831",
+                                "TYC 1949-02012-1",
+                                "WDS J08526+2820 A",
+                                "2MASS J08523579+2819509",
+                                "WISE J085235.41+281948.5",
+                                "TOI-1773",
+                                "Gaia DR2 704967037090946688",
+                                "TIC 332064670"
+                            ]
+                        }
+                    }
+                }
+            },
+            "planet_set": {
+                "item_count": 7,
+                "planets": {
+                    "55 Cnc b": {
+                        "alias_set": {
+                            "item_count": 22,
+                            "default_name": "55 Cnc b",
+                            "aliases": [
+                                "Gaia DR3 704967037090946688 b",
+                                "HD 75732 A b",
+                                "TOI-1773 b",
+                                "Galileo",
+                                "55 Cnc b",
+                                "HR 3522 b",
+                                "55 Cnc A b",
+                                "LHS 2062 b",
+                                "GJ 324 A b",
+                                "HD 75732 b",
+                                "rho1 Cnc b",
+                                "BD+28 1660 b",
+                                "Copernicus b",
+                                "HIP 43587 b",
+                                "SAO 80478 b",
+                                "IRAS 08496+2831 b",
+                                "TYC 1949-02012-1 b",
+                                "WDS J08526+2820 A b",
+                                "2MASS J08523579+2819509 b",
+                                "WISE J085235.41+281948.5 b",
+                                "TIC 332064670 b",
+                                "Gaia DR2 704967037090946688 b"
+                            ]
+                        }
+                    },
+                    "55 Cnc c": {
+                        "alias_set": {
+                            "item_count": 22,
+                            "default_name": "55 Cnc c",
+                            "aliases": [
+                                "Gaia DR3 704967037090946688 c",
+                                "HD 75732 A c",
+                                "TOI-1773 c",
+                                "Brahe",
+                                "55 Cnc c",
+                                "HR 3522 c",
+                                "55 Cnc A c",
+                                "LHS 2062 c",
+                                "GJ 324 A c",
+                                "HD 75732 c",
+                                "rho1 Cnc c",
+                                "BD+28 1660 c",
+                                "Copernicus c",
+                                "HIP 43587 c",
+                                "SAO 80478 c",
+                                "IRAS 08496+2831 c",
+                                "TYC 1949-02012-1 c",
+                                "WDS J08526+2820 A c",
+                                "2MASS J08523579+2819509 c",
+                                "WISE J085235.41+281948.5 c",
+                                "TIC 332064670 c",
+                                "Gaia DR2 704967037090946688 c"
+                            ]
+                        }
+                    },
+                    "55 Cnc d": {
+                        "alias_set": {
+                            "item_count": 23,
+                            "default_name": "55 Cnc d",
+                            "aliases": [
+                                "Gaia DR3 704967037090946688 d",
+                                "HD 75732 A d",
+                                "TOI-1773 d",
+                                "55 Cnc d",
+                                "HR 3522 d",
+                                "Lipperhey",
+                                "55 Cnc A d",
+                                "LHS 2062 d",
+                                "Lippershey",
+                                "GJ 324 A d",
+                                "HD 75732 d",
+                                "rho1 Cnc d",
+                                "BD+28 1660 d",
+                                "Copernicus d",
+                                "HIP 43587 d",
+                                "SAO 80478 d",
+                                "IRAS 08496+2831 d",
+                                "TYC 1949-02012-1 d",
+                                "WDS J08526+2820 A d",
+                                "2MASS J08523579+2819509 d",
+                                "WISE J085235.41+281948.5 d",
+                                "TIC 332064670 d",
+                                "Gaia DR2 704967037090946688 d"
+                            ]
+                        }
+                    },
+                    "55 Cnc e": {
+                        "requested_object": "True",
+                        "alias_set": {
+                            "item_count": 23,
+                            "default_name": "55 Cnc e",
+                            "aliases": [
+                                "TOI-1773 e",
+                                "Gaia DR3 704967037090946688 e",
+                                "HD 75732 A e",
+                                "Janssen",
+                                "55 Cnc e",
+                                "HR 3522 e",
+                                "55 Cnc A e",
+                                "LHS 2062 e",
+                                "GJ 324 A e",
+                                "HD 75732 e",
+                                "rho1 Cnc e",
+                                "BD+28 1660 e",
+                                "Copernicus e",
+                                "HIP 43587 e",
+                                "SAO 80478 e",
+                                "IRAS 08496+2831 e",
+                                "TYC 1949-02012-1 e",
+                                "WDS J08526+2820 A e",
+                                "2MASS J08523579+2819509 e",
+                                "WISE J085235.41+281948.5 e",
+                                "TOI-1773.01",
+                                "TIC 332064670 e",
+                                "Gaia DR2 704967037090946688 e"
+                            ]
+                        }
+                    },
+                    "55 Cnc f": {
+                        "alias_set": {
+                            "item_count": 22,
+                            "default_name": "55 Cnc f",
+                            "aliases": [
+                                "Gaia DR3 704967037090946688 f",
+                                "HD 75732 A f",
+                                "TOI-1773 f",
+                                "Harriot",
+                                "55 Cnc f",
+                                "HR 3522 f",
+                                "55 Cnc A f",
+                                "LHS 2062 f",
+                                "GJ 324 A f",
+                                "HD 75732 f",
+                                "rho1 Cnc f",
+                                "BD+28 1660 f",
+                                "Copernicus f",
+                                "HIP 43587 f",
+                                "SAO 80478 f",
+                                "IRAS 08496+2831 f",
+                                "TYC 1949-02012-1 f",
+                                "WDS J08526+2820 A f",
+                                "2MASS J08523579+2819509 f",
+                                "WISE J085235.41+281948.5 f",
+                                "TIC 332064670 f",
+                                "Gaia DR2 704967037090946688 f"
+                            ]
+                        }
+                    },
+                    "55 Cnc B b": {
+                        "alias_set": {
+                            "item_count": 4,
+                            "default_name": "55 Cnc B b",
+                            "aliases": [
+                                "55 Cnc B b",
+                                "TIC 332064684 b",
+                                "Gaia DR2 704966762213039488 b",
+                                "Gaia DR3 704966762213039488 b"
+                            ]
+                        }
+                    },
+                    "55 Cnc B c": {
+                        "alias_set": {
+                            "item_count": 4,
+                            "default_name": "55 Cnc B c",
+                            "aliases": [
+                                "55 Cnc B c",
+                                "TIC 332064684 c",
+                                "Gaia DR2 704966762213039488 c",
+                                "Gaia DR3 704966762213039488 c"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

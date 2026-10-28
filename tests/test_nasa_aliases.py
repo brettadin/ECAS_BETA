@@ -10,6 +10,19 @@ from ecas.ingestion.nasa_archive import allowed_url, parse_spectra
 DATA = Path(__file__).resolve().parents[1] / 'data/NASA/2026-10-28'
 
 
+@pytest.mark.parametrize('label,name', [('long-name','55 Cancri e'), ('short-name','55 Cnc e')])
+def test_captured_cancri_aliases_query_canonical_identity_and_preserve_inventory(label, name):
+    capture = DATA / 'cancri-investigation'
+    canonical = parse_aliases((capture / (label+'-aliases.json')).read_bytes(), name)
+    assert canonical == '55 Cnc e'
+    rows = parse_spectra((capture / 'canonical-spectra.json').read_bytes(), canonical)
+    assert len(rows) == 23
+    assert sum(row['spec_type']=='Transmission' for row in rows) == 4
+    assert sum(row['spec_type']=='Eclipse' for row in rows) == 19
+    # The spectroscopy table itself is exact-name; aliases must be resolved first.
+    assert parse_spectra((capture / 'long-name-direct-spectra.json').read_bytes(), name) == []
+
+
 @pytest.mark.parametrize('label,name,canonical,count', [
     ('wasp', 'WASP39b', 'WASP-39 b', 31),
     ('trappist', 'TRAPPIST-1e', 'TRAPPIST-1 e', 6),

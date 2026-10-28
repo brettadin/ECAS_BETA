@@ -14,3 +14,5 @@ docs/Chunk_4/review_20261028/*.txt -whitespace
 docs/Chunk_5/review_20261028/*.txt -whitespace
 # Preserve the original failed-test diagnostic rather than editing its evidence.
 docs/Chunk_5_1/verification_catalogue_20261028/initial-count-assumption.log -whitespace
+# Preserve hashed feedback-review prompts byte-for-byte across checkouts.
+docs/Chunk_5_1/review_*_20261028/*.txt -text -whitespace
