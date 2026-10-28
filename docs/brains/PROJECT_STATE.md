@@ -57,6 +57,33 @@ ECAS_BETA/
 ├── README.md
 └── ...
 ```
+---
+
+### CSV Import Manager and GUI Integration
+10-27-2026
+**Status: Implemented and verified by automated tests; manual GUI verification partially completed.**
+
+- Added `ecas/ingestion/import_manager.py` as a format-selection entry point for spectrum imports.
+- The import manager currently supports CSV files and delegates CSV parsing and validation to `ecas/ingestion/csv_importer.py`.
+- Unsupported extensions, including files without an extension, are rejected with a clear `SpectrumImportError`.
+- Updated `ecas/ui/main_window.py` to route CSV imports through the import manager while preserving the existing generic and WASP-39 b archive schema selection.
+- Added `tests/test_import_manager.py` covering unsupported formats, extensionless files, generic CSV imports, and forwarding of the WASP-39 b archive schema.
+
+**Automated verification:** The full test suite passed: `150 passed in 3.25s`.
+
+**Manual GUI verification:**
+- The WASP-39 b archive CSV imported successfully when `WASP-39 b Archive` was selected.
+- The GUI displayed all 331 rows and plotted `centralwavelng` on the X-axis and `pl_trandep` on the Y-axis.
+- `wasp39b_test.csv` also imported successfully using the archive schema.
+- Other CSV files may fail if they do not match the selected import schema or contain recognizable generic measurement columns.
+
+**Current limitations:**
+- The archive importer requires its expected 21-column source schema.
+- Generic CSV imports still require recognizable wavelength and signal columns; arbitrary column mapping is not implemented.
+- Text-based spectrum imports are not implemented.
+- Successful import of the tested archive dataset does not establish compatibility with all archive CSV variants.
+
+**Deferred work:** Plan and implement user-selectable X/Y column mapping for generic CSV imports. Consider text-based import support in a separate, later increment.
 
 ---
 

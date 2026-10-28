@@ -31,8 +31,8 @@ from PySide6.QtWidgets import (
 from ecas.ingestion.csv_importer import (
     SpectrumImportError,
     WASP39B_SCHEMA,
-    import_spectrum_csv,
 )
+from ecas.ingestion.import_manager import import_spectrum
 
 # The plotting widget receives normalized SpectrumData, not raw CSV files.
 from ecas.visualization.spectra_plot import SpectraPlot
@@ -350,9 +350,14 @@ class ECASWindow(QMainWindow):
             self.spectrum_status.setText("No spectrum loaded.")
 
 
+    def _selected_import_schema(self):
+        """Return the schema selected in the import controls."""
+        if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive":
+            return WASP39B_SCHEMA
+        return None
+
     def _import_csv(self):
         """Open a file dialog and import a CSV spectrum."""
-
         file_name, _ = QFileDialog.getOpenFileName(
             self,
             "Import Spectrum",
@@ -390,19 +395,14 @@ class ECASWindow(QMainWindow):
         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
 
     def _import_csv_from_path(self, path: str):
-        """Import a CSV from a specified path, primarily for testing."""
-
-        # Map the schema selector text to the appropriate schema dict.
-        selected_schema = (
-            WASP39B_SCHEMA
-            if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive"
-            else None
-        )
+        """Import a CSV from a specified path."""
+        selected_schema = self._selected_import_schema()
 
         try:
             spectrum, details = self._read_spectrum_file(path, selected_schema)
         except SpectrumImportError as exc:
-            # Keep failed-import behavior consistent with the file dialog.
+            # Remove the old display so it cannot be mistaken for the
+            # spectrum the user just attempted to import.
             self._clear_spectrum_display()
 
             QMessageBox.warning(

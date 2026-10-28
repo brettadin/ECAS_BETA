@@ -1,4 +1,7 @@
 * trying to manually import the test wasp-39 b csv file, and im getting errors about signal and wavelength. so im doing a quick manual fix by adjusting some coding as suggested by the agents. documenting this here so i have a record. 
+
+* this wasnt an entire fix. There are still some issues. Going to do manual work with chatgpt, see: `/docs/Chunk_4/Part_2/Manual_chatgpt_fixing.md`
+
 <br>
 ## ECAS Chunk 4 — WASP-39 b CSV Import Fix
 

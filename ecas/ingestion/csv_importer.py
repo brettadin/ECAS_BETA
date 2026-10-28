@@ -293,11 +293,16 @@ def _import_archive_csv(
 
                     source_values[field_name] = value
 
-                # Retain all source columns and append canonical aliases.
-                parsed_row: dict[str, CellValue] = dict(source_values)
+                # Match row-key order to output_columns:
+                # canonical wavelength, original source columns, canonical signal.
+                parsed_row: dict[str, CellValue] = {}
 
-                for canonical_name, source_name in schema.items():
-                    parsed_row[canonical_name] = source_values[source_name]
+                parsed_row["wavelength"] = source_values[schema["wavelength"]]
+
+                for field_name in source_columns:
+                    parsed_row[field_name] = source_values[field_name]
+
+                parsed_row["signal"] = source_values[schema["signal"]]
 
                 parsed_rows.append(parsed_row)
 
