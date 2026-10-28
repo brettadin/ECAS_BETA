@@ -1,0 +1,73 @@
+{
+  "captures": [
+    {
+      "file": "long-name-aliases.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=55+Cancri+e",
+      "started_utc": "2026-10-28T18:21:11.890565+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "http_status": 200,
+      "bytes": 11058,
+      "sha256": "67008577e19ec26b0cdd7ade158677dc4923039cf7551205157b4cc71307b35c",
+      "finished_utc": "2026-10-28T18:21:15.943790+00:00",
+      "requested": "55 Cancri e",
+      "resolved": "55 Cnc e"
+    },
+    {
+      "file": "short-name-aliases.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=55+Cnc+e",
+      "started_utc": "2026-10-28T18:21:15.943945+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "http_status": 200,
+      "bytes": 11055,
+      "sha256": "e319b7a29c6bdf86a2c726c0439355c57ddf31cfe94411186079dd3515a6b13d",
+      "finished_utc": "2026-10-28T18:21:19.996189+00:00",
+      "requested": "55 Cnc e",
+      "resolved": "55 Cnc e"
+    },
+    {
+      "file": "compact-name-aliases.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=55Cancrie",
+      "started_utc": "2026-10-28T18:21:19.996348+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "error": "The read operation timed out",
+      "finished_utc": "2026-10-28T18:21:30.068143+00:00"
+    },
+    {
+      "file": "canonical-spectra.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%2755+Cnc+e%27%29+order+by+bibcode%2Cspec_path&format=json",
+      "started_utc": "2026-10-28T18:21:55.307070+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "http_status": 200,
+      "bytes": 8111,
+      "sha256": "407a7b9afdcd7097b2ad7f0a0e626b6fe72961cf1e0fb38415d09f455fb37a21",
+      "finished_utc": "2026-10-28T18:21:56.569068+00:00",
+      "records": 23,
+      "types": {
+        "Transmission": 4,
+        "Eclipse": 19
+      },
+      "validated_transmission_records": 4
+    },
+    {
+      "file": "long-name-direct-spectra.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%2755+Cancri+e%27%29+order+by+bibcode%2Cspec_path&format=json",
+      "started_utc": "2026-10-28T18:21:56.569509+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "http_status": 200,
+      "bytes": 4,
+      "sha256": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865",
+      "finished_utc": "2026-10-28T18:21:57.811199+00:00",
+      "records": 0
+    }
+  ]
+}

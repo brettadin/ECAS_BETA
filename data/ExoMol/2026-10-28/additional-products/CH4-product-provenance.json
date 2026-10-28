@@ -1,0 +1,45 @@
+{
+  "formula": "CH4",
+  "isotopologue": "12C-1H4",
+  "dataset": "MM",
+  "started_utc": "2026-10-28T18:28:49.412284+00:00",
+  "authentication": "none",
+  "email_supplied": false,
+  "redirects_followed": false,
+  "steps": [
+    {
+      "method": "GET",
+      "url": "https://www.exomol.com/xsec/12C-1H4/",
+      "http_status": 200,
+      "bytes": 12824,
+      "sha256": "d7880758ddb5e4d0eba68bd9e314e6ea83d37160e6ffb4e355d0bad42558d485"
+    },
+    {
+      "method": "POST",
+      "url": "https://www.exomol.com/xsec/12C-1H4/",
+      "http_status": 200,
+      "bytes": 10796,
+      "sha256": "2860603ef3b44745f64c7e82b7fb09a548719a849cf16d55d97e058813cd8d1d"
+    },
+    {
+      "method": "GET",
+      "url": "https://www.exomol.com/results/12C-1H4_4000-4010_500K_1.000000.sigma",
+      "http_status": 200,
+      "bytes": 308,
+      "sha256": "cc47d79cf6ba4bb286982f4ffbd74b4af11db32fbc2ee1960209a8e991b77151"
+    }
+  ],
+  "success": true,
+  "parameters": {
+    "dnu": "1.000000",
+    "numin": "4000",
+    "numax": "4010",
+    "T": "500",
+    "spoon_feed": "on"
+  },
+  "pressure_bar": 0,
+  "broadening": "doppler_only",
+  "licence_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "points": 11,
+  "finished_utc": "2026-10-28T18:28:50.093773+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "reviewed_files": [
+    "ecas/ui/comparison_browser.py",
+    "tests/test_comparison_browser.py",
+    "docs/Chunk_5_1/verification_desktop_20261028/RESULTS.md",
+    "docs/Chunk_5_1/verification_desktop_20261028/launch.py"
+  ],
+  "findings": [],
+  "limitations": [
+    "The split SHA-256 display applies specifically to the observation status label on the Comparisons page; underlying stored hash digests and provenance payloads remain 64-character unbroken hex strings[cite: 13].",
+    "Verification was performed on an isolated desktop environment using pre-captured reference fixtures without live remote service calls[cite: 13]."
+  ],
+  "summary": "Batch 8 applies targeted visual and layout usability fixes to the Comparisons workspace without altering data models, persistence, or scientific contracts[cite: 13]. Tables now invoke resizeColumnsToContents to eliminate clipped headers[cite: 13]. Informational labels enable mouse selection (TextSelectableByMouse) for ease of copying[cite: 13]. Long 64-character SHA-256 digests in the observation pane are split into two 32-character lines to prevent horizontal pane crowding while maintaining the complete, unbroken hash in the tooltip and data payload[cite: 13]. All regressions and test suites remain passing with zero actionable defects[cite: 13]."
+}

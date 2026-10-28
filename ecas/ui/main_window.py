@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QComboBox,
+    QScrollArea,
 )
 
 # Reuse the ingestion module rather than duplicating CSV validation here.
@@ -44,6 +45,8 @@ from ecas.ui.project_browser import ProjectBrowser
 from ecas.projects import ProjectStore
 from ecas.ui.source_links import source_link
 from ecas.ui.molecular_browser import MolecularReferenceBrowser
+from ecas.ui.comparison_browser import ComparisonBrowser
+from ecas.ui.workspace_pages import OverviewPage, SettingsPage
 
 
 class ECASWindow(QMainWindow):
@@ -131,6 +134,7 @@ class ECASWindow(QMainWindow):
             "Overview",
             "Projects",
             "Spectral Data",
+            "Molecular References",
             "Comparisons",
             "Settings",
         ])
@@ -174,6 +178,7 @@ class ECASWindow(QMainWindow):
         self.navigation.currentRowChanged.connect(
             self.pages.setCurrentIndex
         )
+        self.navigation.currentRowChanged.connect(self._refresh_workspace_summary)
 
         # Select the Overview page when ECAS first opens.
         self.navigation.setCurrentRow(0)
@@ -185,13 +190,13 @@ class ECASWindow(QMainWindow):
     def _build_pages(self):
         """Create the pages and add them to the stacked page container."""
         # Keep the navigation and page order aligned.
-        # Projects, Spectral Data and reference catalogue search are functional;
-        # Overview/Settings remain placeholders. Comparison scoring is not wired.
+        # Overview summarizes loaded state; Settings mirrors existing preferences.
         definitions = [
             ("ECAS workspace", "Scientific analysis workspace."),
             ("Projects", "Create and manage research projects."),
             ("", ""),
-            ("Comparisons", "Configure and review spectral comparisons."),
+            ("Molecular References", "Search and manage molecular reference data."),
+            ("Comparisons", "Inspect independently selected inputs."),
             ("Settings", "Application preferences and data locations."),
         ]
 
@@ -202,7 +207,11 @@ class ECASWindow(QMainWindow):
             layout.setContentsMargins(32, 28, 32, 28)
             layout.setSpacing(12)
 
-            if index == 1:
+            if index == 0:
+                self.overview_page = OverviewPage(
+                    self._workspace_summary, self.navigation.setCurrentRow, self)
+                layout.addWidget(self.overview_page)
+            elif index == 1:
                 self.project_browser = ProjectBrowser(self.project_store, self)
                 self.project_browser.saveRequested.connect(self._save_to_project)
                 self.project_browser.spectrumReady.connect(self._open_project_spectrum)
@@ -215,6 +224,18 @@ class ECASWindow(QMainWindow):
             elif index == 3:
                 self.reference_browser = MolecularReferenceBrowser(self, cache_root=self.reference_cache_dir)
                 layout.addWidget(self.reference_browser)
+            elif index == 4:
+                self.comparison_browser = ComparisonBrowser(
+                    self._comparison_observation, self.reference_browser.cache_root, self)
+                layout.addWidget(self.comparison_browser)
+            elif index == 5:
+                self.settings_page = SettingsPage(self.spectrum_schema_selector, {
+                    'Research projects': self.project_store.root,
+                    'NASA cache': self.nasa_browser.cache_root,
+                    'ExoMol catalogue cache': self.reference_browser.cache_root,
+                    'ExoMol reference cache': self.reference_browser.cache_root / 'references',
+                }, self)
+                layout.addWidget(self.settings_page)
             else:
                 # The remaining pages currently contain headings and
                 # descriptions only; they are not fully implemented yet.
@@ -231,7 +252,44 @@ class ECASWindow(QMainWindow):
 
             # Adding pages in this order is what links their indices to the
             # matching rows in the navigation list.
-            self.pages.addWidget(page)
+            if index in (0, 5):
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setWidget(page)
+                self.pages.addWidget(scroll)
+            else:
+                self.pages.addWidget(page)
+
+    def _refresh_workspace_summary(self, index):
+        if index == 0:
+            self.overview_page.refresh()
+
+    def _workspace_summary(self):
+        """Summarize loaded state without opening files, caches or project databases."""
+        spectrum = self.current_spectrum
+        observation = (f'{spectrum.source_file.name} — {spectrum.row_count} rows'
+                       if spectrum is not None else 'none loaded')
+        reference = self.reference_browser.current_reference
+        if reference is None:
+            reference_text = 'none loaded'
+        else:
+            product = reference.product
+            reference_text = (f'{product.provenance.molecule} / {product.provenance.dataset}; '
+                              f'{reference.request.temperature} K; {len(product.points)} points')
+        comparison = self.comparison_browser
+        selected_observation = ('selected' if comparison.current_observation is not None else 'not selected')
+        selected_reference = ('selected' if comparison.current_reference is not None else 'not selected')
+        return (f'Current observation: {observation}\n'
+                f'Molecular References display: {reference_text}\n'
+                f'Comparisons: {comparison.observation_selector.count()} session observation choices; '
+                f'observation {selected_observation}; reference {selected_reference}.\n'
+                'This summary updates when Overview is opened; it is not a stored-data inventory.')
+
+    def _comparison_observation(self):
+        """Return the loaded input without rereading files or asserting provenance."""
+        source_hash = (self.current_spectrum_details.source_sha256
+                       if self.current_spectrum_details is not None else None)
+        return self.current_spectrum, source_hash
 
     def _build_spectral_page(self, layout):
         """Create the controls used to import and inspect a spectrum."""

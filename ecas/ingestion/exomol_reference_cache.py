@@ -22,11 +22,12 @@ def _root(root):
     return root
 
 
-def _context(context):
+def _context(context, request):
     if context is None: return
     if not isinstance(context,dict) or set(context)!={'formula','isotopologue','dataset','version','catalogue_sha256'}:
         raise ValueError('Invalid selected catalogue context')
-    if (context['formula'],context['isotopologue'],context['dataset'])!=('CO2','12C-16O2','UCL-4000'):
+    service=request.service
+    if (context['formula'],context['isotopologue'],context['dataset'])!=(service.formula,service.isotopologue,service.dataset):
         raise ValueError('Selected catalogue identity differs from supported service')
     if not isinstance(context['version'],str) or not re.fullmatch('[0-9]{8}',context['version']):
         raise ValueError('Invalid catalogue version label')
@@ -38,7 +39,7 @@ def store_reference(root, result, *, catalogue_context=None):
     # Recompute from raw bytes/settings; never trust a separately supplied parsed product.
     checked=validate_product(result.raw,result.request)
     if checked!=result.product: raise ValueError('Reference payload and parsed provenance disagree')
-    _context(catalogue_context)
+    _context(catalogue_context, result.request)
     envelope=dict(schema='ecas-exomol-reference-v1',request=asdict(result.request),
         provenance=asdict(checked.provenance),retrieved_utc=datetime.now(timezone.utc).isoformat(),
         source_sha256=checked.source_sha256,raw_base64=base64.b64encode(result.raw).decode('ascii'),
@@ -74,16 +75,16 @@ def load_reference(path):
         if sha256(json.dumps(unsigned,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()!=envelope['integrity_sha256']:
             raise ValueError('Reference record integrity mismatch')
         if envelope['schema']!='ecas-exomol-reference-v1': raise ValueError('Unsupported reference record')
-        _context(envelope.get('catalogue_context'))
         stamp=datetime.fromisoformat(envelope['retrieved_utc'])
         if stamp.utcoffset() is None or stamp.utcoffset().total_seconds()!=0: raise ValueError('UTC timestamp required')
         request=ProductRequest(**envelope['request'])
+        _context(envelope.get('catalogue_context'), request)
         source=base64.b64decode(envelope['raw_base64'],validate=True)
         product=validate_product(source,request)
         # JSON round-trip normalizes tuple citations to lists without altering values.
         expected=json.loads(json.dumps(asdict(product.provenance)))
         stored=envelope['provenance']
-        if isinstance(stored,dict) and stored.get('citations')==list(CITATIONS[:2]):
+        if request.isotopologue=='12C-16O2' and isinstance(stored,dict) and stored.get('citations')==list(CITATIONS[:2]):
             # Early v1 records retained the method/dataset citations before the
             # general ExoMol citation was added. Preserve, rather than rewrite,
             # those valid historical metadata while validating every other field.

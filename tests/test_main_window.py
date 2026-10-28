@@ -145,10 +145,25 @@ def test_main_window_has_expected_navigation():
     window = ECASWindow()
 
     assert window.windowTitle().startswith("ECAS")
-    assert window.navigation.count() == 5
-    assert window.pages.count() == 5
+    assert [window.navigation.item(i).text() for i in range(window.navigation.count())] == [
+        'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Comparisons', 'Settings']
+    assert window.pages.count() == window.navigation.count()
+    for index in range(window.navigation.count()):
+        window.navigation.setCurrentRow(index)
+        assert window.pages.currentIndex() == index
 
     window.close()
+
+
+def test_comparisons_explains_pending_work_and_has_no_reference_controls(window):
+    window.navigation.setCurrentRow(4)
+    page = window.pages.currentWidget()
+    descriptions = ' '.join(label.text() for label in page.findChildren(main_window.QLabel))
+    assert 'Select inputs independently' in descriptions
+    assert 'No overlay, residual, score or detection is produced' in descriptions
+    assert not page.findChildren(main_window.MolecularReferenceBrowser)
+    assert window.pages.widget(3).isAncestorOf(window.reference_browser)
+    assert window.reference_browser.http is None and window.reference_browser.product_http is None
 
 
 @pytest.mark.parametrize('via_dialog', [False, True])

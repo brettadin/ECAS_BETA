@@ -3,8 +3,76 @@
 **Last Updated:** 2026-10-28
 **Version:** 1.0 (Beta)
 
-**Current review checkpoint:** `docs/REVIEW_CHECKPOINT_20261028.md` describes the
-publication snapshot and new local recovery bundle. Latest full verification:
+**Authorized publication — 2026-10-28:** The user requested commit/push of the
+reviewed feedback update for external review. See `docs/REVIEW_FEEDBACK_20261028.md`
+for scope, evidence and remaining acceptance. Earlier local/uncommitted statements
+below describe previous checkpoints; use actual Git state for current publication.
+No merge/deployment or scientific-validation completion is authorized or claimed.
+
+**Latest desktop follow-up — 2026-10-28:** Agent checked the normal Windows app
+using original public captures and isolated projects/reference caches. Confirmed
+331-row NASA import/plot, independent water/methane inspection, shared CSV choice
+and restart reset. Fixed clipped comparison reference headings and made the exact
+observation hash easier to inspect/copy. See
+`docs/Chunk_5_1/verification_desktop_20261028/RESULTS.md`. Latest focused/full:
+121 passed (5.54 s); 571 passed, 1 skipped (10.56 s), both exit 0. Batch 8 returned
+zero findings for all four listed files, verified against its saved manifest before
+receipt. See `docs/Chunk_5_1/review_desktop_20261028/08-disposition.md`. All eight
+feedback review batches have zero findings within scope. No receipt-only test
+rerun was needed. Human acceptance and unperformed desktop checks remain
+open. Scientific validation remains deferred. No scientific input was fabricated.
+
+**Latest workspace increment — 2026-10-28:** Following the user's acceptance of
+Argon's six reviews and authorization to continue, Overview now provides workflow
+shortcuts and page-entry summaries of loaded state. Settings shows configured
+read-only data paths and mirrors the existing session CSV-schema choice. See
+`docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md`. No production comparison or
+new persistent preferences. Batch 7 returned zero findings for its four listed
+files; all manifested files and the prompt matched before receipt. See
+`docs/Chunk_5_1/review_workspace_20261028/07-disposition.md`. All seven feedback
+batches have zero findings in their stated scopes. Latest full suite: **571 passed,
+1 skipped**, 11.15 s; focused: 121 passed, 5.82 s; both exit 0. No receipt-only
+test rerun. Remaining items/checklist are reconciled in
+`docs/Chunk_5_1/ACCEPTANCE_STATUS_20261028.md`. Normal-desktop acceptance remains
+open and scientific validation deferred; no chunk completion is claimed.
+Older continuation and checkpoint paragraphs below retain historical states.
+
+**Latest continuation — 2026-10-28:** All five user-supplied Argon feedback batches
+have zero findings; their manifested source hashes matched before continuation.
+Scopes, limitations and the Batch 3 causal-wording correction are recorded in
+`docs/Chunk_5_1/review_feedback_20261028/RECEIVED_REPORTS.md`.
+Comparisons now supports independent session observation snapshots and validated
+cached-reference choices, separate tables and explicit blocked comparison reasons.
+No production eligibility engine or scientific analysis is enabled. See
+`docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md`. Batch 6 has since returned
+zero findings for the selection snapshot; all seven files and its prompt matched
+the review manifest before receipt. See
+`docs/Chunk_5_1/review_selection_20261028/06-disposition.md`.
+All six batches have zero reported findings. Desktop acceptance remains open;
+next approved implementation work is Overview/Settings content.
+Latest suite: **566 passed, 1 skipped**, 8.03 s, exit 0; focused: 116 passed, 3.97 s.
+The checkpoint paragraphs below retain earlier implementation/review states.
+Real-data scientific validation remains deferred; all changes remain local.
+
+**Local user-feedback increments:** Approved workflow and steps 1–4 progress:
+`docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md`. Projects now shows saved
+planet/publication/instrument labels with filename fallbacks and separately
+attributed metadata in tooltips. No saved data/schema changes. Latest local suite:
+560 passed, 1 skipped (8.39 s), exit 0. Molecular References now has its own page;
+Comparisons is a separate explanatory placeholder. Navigation retains observations,
+reference selections and active requests. New work awaits review/desktop acceptance;
+it is not included in the published checkpoint below. 55 Cancri e resolves to
+55 Cnc e and returns four Transmission plus 19 Eclipse records in captured and
+actual-window live checks. The earlier zero-result report was not reproduced;
+its historical cause remains unknown. Search now explains returned/excluded
+counts; alias/query behavior is unchanged. Verified retrieval now also supports
+H2O / 1H2-16O / POKAZATEL and CH4 / 12C-1H4 / MM, with distinct limits/citations
+and identity-bound caches. Actual-window download/offline reopen passed for each
+small sample; original CO2 caches remain readable. Other mappings remain unsupported.
+Next: independent observation/reference selection and compatibility explanations.
+
+**Published review checkpoint:** `docs/REVIEW_CHECKPOINT_20261028.md` describes the
+publication snapshot and local recovery bundle at `98abaec`. Its full verification:
 538 passed, 1 skipped; new Chunk 5.1 work still needs review.
 
 **Earlier recovery checkpoint:** `docs/Chunk_4/HANDOFF_CHECKPOINT_20261028.md` describes
@@ -18,12 +86,14 @@ is recorded reviewed on that confirmation, without invented report details.
 Provider comparison and initial ExoMol two-column zero-pressure cross-section parser
 are in `docs/Chunk_5_1/PROVIDER_INVESTIGATION.md`. Catalogue parsing and offline
 name/formula/isotope/dataset search use an anonymous 189391-byte public capture.
-Comparisons hosts catalogue search, explicit refresh/cancel and atomic cache.
+Molecular References hosts catalogue search, explicit refresh/cancel and atomic cache.
 Bounded CO2 / 12C-16O2 / UCL-4000 product retrieval, separate reference table,
 provenance cache and offline reopening are now implemented. Actual Qt download
 and offline reopening passed an approved live check: 11 calculated points, 500 K,
 4000–4010 cm^-1, zero pressure, Doppler-only. Other catalogue entries remain
-unsupported for retrieval. See `docs/Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md`.
+unsupported for retrieval except the water/methane additions described above. See
+`docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md` for current product support;
+`PRODUCT_RETRIEVAL_IMPLEMENTATION.md` records the earlier CO2-only checkpoint.
 New parser/catalogue/UI/cache/network work awaits independent review and fresh
 desktop visual acceptance; earlier confirmation is not extended to later screens.
 Explicit observation/reference pairing and production comparison remain pending.

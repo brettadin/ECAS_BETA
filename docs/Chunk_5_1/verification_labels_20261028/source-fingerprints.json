@@ -1,0 +1,21 @@
+{
+  "scope": "Project labels after passing focused/full checks; SHA-256 covers working-file bytes",
+  "files": [
+    {
+      "path": "ecas/ui/project_labels.py",
+      "sha256": "484e29705c2f2146328ffaa3c3d23ba2af9837b2c2d63afde0b21425e3781deb"
+    },
+    {
+      "path": "ecas/ui/project_browser.py",
+      "sha256": "8fcba28571ab4047dcff4b8e5461bb2d63939d60d193e76538ca43075a7d23cd"
+    },
+    {
+      "path": "tests/test_project_labels.py",
+      "sha256": "8f9ef71c1966b8252ccb736aa3075c8c6ec59d5ce3f5293750170332cc819a24"
+    },
+    {
+      "path": "tests/test_projects_ui.py",
+      "sha256": "ab5dc3fc3476ff23a3b8abe42a8ccdc9064cc2d4fa999e57c45d3237c57c7728"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "sha256": "6b113da20183885e22745609e94a79ebd9f7e154576465e50157bdf74b52ed79",
+  "batch": "06-comparison-selection.txt",
+  "files": [
+    {
+      "path": "ecas/ui/comparison_browser.py",
+      "sha256": "0c86874beba07bc6e46811f4b618fb5bed283620fdf7abd2d165ff3825151315"
+    },
+    {
+      "path": "ecas/ui/main_window.py",
+      "sha256": "c880a0523fc34e7f066be3f7a6070cfdeff019110a4d59cb5ef2363aec83318b"
+    },
+    {
+      "path": "tests/test_comparison_browser.py",
+      "sha256": "30a5968d78fc832d1f369f9f1230a97b7150923628a31103aa66d540f6ea884d"
+    },
+    {
+      "path": "tests/test_main_window.py",
+      "sha256": "82a16f35f86e18fb5102b600a509c5795c537edd919d9bef8a773d7fde64c241"
+    },
+    {
+      "path": "ecas/ingestion/exomol_reference_cache.py",
+      "sha256": "9aa16975d8bf61471029b10f7a5bb75534773e8b6ec727bf466edbde22e8be87"
+    },
+    {
+      "path": "ecas/models/spectrum.py",
+      "sha256": "b9102f0e6413bd5dbb7d2289c105b7febab50c512e67da2fd0faf16d80f38b23"
+    },
+    {
+      "path": "docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md",
+      "sha256": "b96cf1a85bf21b32b05491fe4500e290f694149786f94b2aed7890927376894a"
+    }
+  ]
+}

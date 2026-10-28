@@ -148,6 +148,33 @@ class FakeHttp:
         if self.callback: self.complete(None, "cancelled")
 
 
+@pytest.mark.parametrize('label,name', [('long-name','55 Cancri e'), ('short-name','55 Cnc e')])
+def test_cancri_search_uses_resolved_name_and_explains_excluded_records(tmp_path, label, name):
+    from ecas.ingestion.nasa_aliases import alias_search
+    capture = FEEDBACK / 'cancri-investigation'
+    http = FakeHttp()
+    widget = NasaArchiveBrowser(cache_root=tmp_path, http=http)
+    try:
+        widget.target.setText(name)
+        widget.search_button.click()
+        assert http.calls == [alias_search(name)]
+        http.complete((capture / (label+'-aliases.json')).read_bytes())
+        assert http.calls == [alias_search(name), spectra_search('55 Cnc e')]
+        raw = (capture / 'canonical-spectra.json').read_bytes()
+        http.complete(raw)
+        assert not widget.busy and widget.results.count() == 4
+        assert all(item['metadata']['spec_type']=='Transmission' for item in widget.items)
+        assert '4 transmission records available to load out of 23 returned records' in widget.status.text()
+        assert 'Excluded from loading: Eclipse (19)' in widget.status.text()
+        assert widget.evidence['raw'] == raw
+        assert not widget.load_button.isEnabled()
+        widget.results.setCurrentRow(0)
+        assert widget.load_button.isEnabled()
+        assert not list(tmp_path.iterdir())  # Metadata search does not download products.
+    finally:
+        widget.close()
+
+
 def test_browser_search_download_cache_and_reopen_without_network(tmp_path):
     http = FakeHttp()
     widget = NasaArchiveBrowser(cache_root=tmp_path, http=http)

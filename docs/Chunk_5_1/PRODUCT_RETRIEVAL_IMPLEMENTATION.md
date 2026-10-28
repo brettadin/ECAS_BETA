@@ -1,5 +1,8 @@
 # Bounded CO2 reference retrieval — 2026-10-28
 
+Historical CO2-only checkpoint. Later verified water/methane mappings and current
+UI location are recorded in `USER_FEEDBACK_WORKFLOW_20261028.md`, step 4.
+
 This increment supersedes the product-retrieval pending items in the earlier
 provider, catalogue and browser notes. Chunk 5.1 remains in progress. New code
 requires independent review and fresh human desktop acceptance; earlier approvals

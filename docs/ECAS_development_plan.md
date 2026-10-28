@@ -1,7 +1,37 @@
 ECAS development plan
 The goal is to build ECAS in manageable chunks, with each chunk producing a working, testable result. We should avoid adding several interconnected systems at once, because that makes errors harder to isolate and leaves you with code that's difficult to understand.
 
-Current baseline (2026-10-28): merged master `2de79c7` includes the NASA retrieval/cache workflow and the CSV import manager. The earlier `7a4061a` build passed 281 tests with one skip; that result does not validate the merge. Inspection reproduced a merged CSV GUI `NameError` because its dispatch method still calls the removed `import_spectrum_csv` import. Repair and re-test this integration before claiming the merged baseline is verified. Earlier counts and completion checklists below are dated historical evidence, not current full-suite results.
+Latest continuation (2026-10-28): user accepted the first six Argon code reviews
+and authorized continuation. Feedback steps 5 (independent input inspection) and
+6 (Overview/Settings content) are implemented locally. Overview provides workflow
+shortcuts and loaded-state summaries; Settings exposes read-only configured paths
+and the shared session CSV-schema preference. See
+`docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md`. Latest suite: 571 passed,
+1 skipped; focused: 121 passed. Batch 7 subsequently returned zero findings for
+its four listed files; all seven feedback reviews now have zero findings in their
+stated scopes. Remaining desktop acceptance and future scientific/production
+boundaries are reconciled in `docs/Chunk_5_1/ACCEPTANCE_STATUS_20261028.md`.
+Desktop acceptance remains open and scientific validation deferred. The following feedback
+paragraphs and counts describe earlier checkpoints, not current acceptance.
+
+Current user-approved feedback workflow (2026-10-28): identify project spectra,
+separate reference browsing from comparison, investigate 55 Cancri e, expand
+verified retrieval mappings, add compatible comparison selection/inspection, then
+develop useful Overview/Settings. See
+`docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md`. Steps 1–2 are implemented locally:
+metadata labels/fallbacks and source-attributed tooltips, no database migration;
+dedicated Molecular References page and a separate explanatory Comparisons page.
+Step 3 evidence: 55 Cancri e resolves to 55 Cnc e and returns four Transmission
+plus 19 Eclipse records in captured and live app checks. Earlier zero results
+were not reproduced; their cause remains unknown. Status now explains excluded
+counts; resolution/query behavior is unchanged. Step 4 adds verified H2O / POKAZATEL
+and CH4 / MM main-isotopologue products alongside CO2, with separate limits,
+citations and cache identities. Actual-window small downloads/offline reopen passed.
+Next: independent dataset selection and compatibility explanations.
+Latest suite: 560 passed/1 skipped, exit 0. Published review baseline is `98abaec`
+(538 passed/1 skipped); these increments still need review and desktop checks.
+
+Historical integration baseline (2026-10-28): merged master `2de79c7` includes the NASA retrieval/cache workflow and the CSV import manager. The earlier `7a4061a` build passed 281 tests with one skip; that result does not validate the merge. Inspection reproduced a merged CSV GUI `NameError` because its dispatch method still calls the removed `import_spectrum_csv` import. This was repaired and re-tested in subsequent increments. Earlier counts and completion checklists below are dated historical evidence, not current full-suite results.
 Local follow-up: CSV routing has since been repaired and alias resolution added.
 Latest full local suite: 341 passed/1 skipped; see PROJECT_STATE and the Chunk 4 log.
 These local changes are not yet committed, pushed or independently accepted.
@@ -198,6 +228,15 @@ Establish the scientific and technical foundations required for defensible spect
 **Completion criterion:** A documented, evidence-based comparison-method selection supported by explicit compatibility rules, representative test cases, evaluation criteria, and known limitations. No production comparison workflow is required in this chunk.
 
 ## Chunk 5.1 — Molecular Reference Spectra and Comparison Data Integration
+
+**Latest continuation (2026-10-28):** All five feedback Argon batches returned zero
+findings; see `docs/Chunk_5_1/review_feedback_20261028/RECEIVED_REPORTS.md` for scope
+and limitations. Independent session observation/cached-reference selection and
+separate inspection now exist in Comparisons, with blocked comparison explanations.
+See `docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md`. Full suite: 566 passed,
+1 skipped. Selection work needs its own review and desktop acceptance; production
+eligibility/analysis and real-data scientific validation remain outside this increment.
+Following status paragraphs describe earlier checkpoints.
 
 **2026-10-28 status:** User confirmed independent review of the existing Chunk 5
 foundation complete and authorized progression. Real-data validation is deferred;

@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+
+
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="keywords" content="">
+<meta name="description" content="">
+<title> | ExoMol</title>
+<link rel="shortcut icon" href="/static/img/favicon.ico">
+
+
+<link rel="stylesheet" href="/static/css/bootstrap.css">
+<link rel="stylesheet" href="/static/css/mezzanine.css">
+<link rel="stylesheet" href="/static/css/bootstrap-theme.css">
+<link rel="stylesheet" href="/static/css/custom.css">
+
+
+
+
+
+
+<script src="/static/mezzanine/js/jquery-3.4.1.js"></script>
+<script src="/static/js/bootstrap.js"></script>
+<script src="/static/js/bootstrap-extras.js"></script>
+
+
+
+<!--[if lt IE 9]>
+<script src="/static/js/html5shiv.js"></script>
+<script src="/static/js/respond.min.js"></script>
+<![endif]-->
+
+
+</head>
+
+<body id="body">
+
+<div class="navbar navbar-default navbar-static-top" role="navigation">
+<div class="container">
+<div class="navbar-header">
+    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="sr-only">Toggle Navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+    </button>
+    
+    <a class="navbar-brand" href="/">ExoMol</a>
+    <p class="navbar-text visible-lg">High temperature molecular line lists for modelling exoplanet atmospheres</p>
+    
+</div>
+<div class="navbar-collapse collapse">
+    
+<form action="/search/" class="navbar-form navbar-right" role="search">
+
+<div class="form-group">
+    <input class="form-control" placeholder="Search" type="text" name="q" value="">
+</div>
+
+
+    
+    <div class="form-group">
+    <select class="form-control" name="type">
+        <option value="">Everything</option>
+        
+        <option value="blog.BlogPost"
+            >
+            Blog posts
+        </option>
+        
+        <option value="pages.Page"
+            >
+            Pages
+        </option>
+        
+    </select>
+    </div>
+    
+
+
+<input type="submit" class="btn btn-default" value="Go">
+
+</form>
+
+    
+<ul class="nav navbar-nav"><li class="dropdown
+               "
+        id="data"><a href="/data/"
+        
+        class="dropdown-toggle disabled" data-toggle="dropdown"
+        >
+            Data
+            <b class="caret"></b></a><ul class="dropdown-menu"><li class="
+               "
+        id="data-search"><a href="/data/search/">Search</a></li><li class="
+               "
+        id="data-molecules"><a href="/data/molecules/">Molecules</a></li><li class="
+               "
+        id="data-atoms"><a href="/data/atoms/">Atoms</a></li><li class="
+               "
+        id="data-quantum-cases"><a href="/data/quantum-cases/">Quantum Cases</a></li><li class="
+               "
+        id="data-data-types"><a href="/data/data-types/">By Data Type</a></li><li class="
+               "
+        id="bibliography"><a href="/bibliography/">Bibliography</a></li><li class="
+               "
+        id="data-licence"><a href="/data/licence/">Licence</a></li><li class="
+               "
+        id="https:--www.exomol.com-exomolhr"><a href="https://www.exomol.com/exomolhr">ExoMolHR</a></li><li class="
+               "
+        id="-databases-"><a href="/databases/">Databases</a></li><li class="
+               "
+        id="http:--exomol.com-opacityapp"><a href="http://exomol.com/opacityapp">ExoMol Opacity Visualiser</a></li></ul></li><li class="
+               "
+        id="software"><a href="/software/"
+        >
+            Software
+            
+        </a></li><li class="dropdown
+               "
+        id="activities"><a href="/activities/"
+        
+        class="dropdown-toggle disabled" data-toggle="dropdown"
+        >
+            Activities
+            <b class="caret"></b></a><ul class="dropdown-menu"><li class="
+               "
+        id="activities-news"><a href="/activities/news/">News</a></li><li class="
+               "
+        id="activities-exomol-updates"><a href="/activities/exomol-updates/">ExoMol updates</a></li><li class="
+               "
+        id="activities-publications"><a href="/activities/publications/">Publications</a></li><li class="dropdown-submenu
+               "
+        id="activities-spectroscopy-of-exoplanets-new-frontiers"><a href="/activities/spectroscopy-of-exoplanets-new-frontiers/">Spectroscopy of Exoplanets: New Frontiers</a><ul class="dropdown-menu"><li class="
+               "
+        id="activities-spectroscopy-of-exoplanets-new-frontiers-venue"><a href="/activities/spectroscopy-of-exoplanets-new-frontiers/venue/">Venue</a></li><li class="
+               "
+        id="activities-spectroscopy-of-exoplanets-new-frontiers-travel"><a href="/activities/spectroscopy-of-exoplanets-new-frontiers/travel/">Travel</a></li><li class="
+               "
+        id="activities-spectroscopy-of-exoplanets-new-frontiers-expression-of-interest"><a href="/activities/spectroscopy-of-exoplanets-new-frontiers/expression-of-interest/">Expression of interest</a></li></ul></li></ul></li><li class="dropdown
+               "
+        id="outreach"><a href="/outreach/"
+        
+        class="dropdown-toggle disabled" data-toggle="dropdown"
+        >
+            Outreach
+            <b class="caret"></b></a><ul class="dropdown-menu"><li class="
+               "
+        id="outreach-twinkle-space-mission"><a href="/outreach/twinkle-space-mission/">Twinkle Space Mission</a></li><li class="
+               "
+        id="outreach-orbyts"><a href="/outreach/orbyts/">EduTwinkle and ORBYTS</a></li><li class="
+               "
+        id="outreach-intro-video"><a href="/outreach/intro-video/">Intro Video: PhysFilmMakers on ExoMol</a></li><li class="
+               "
+        id="outreach-school-talks"><a href="/outreach/school-talks/">School Talks</a></li><li class="
+               "
+        id="outreach-royal-society-summer-exhibition-2015"><a href="/outreach/royal-society-summer-exhibition-2015/">Royal Society Summer Exhibition 2015</a></li><li class="
+               "
+        id="outreach-the-search-for-extra-terrestrial-unintelligence"><a href="/outreach/the-search-for-extra-terrestrial-unintelligence/">The Search for Extra-terrestrial unintelligence</a></li></ul></li><li class="dropdown
+               "
+        id="about"><a href="/about/"
+        
+        class="dropdown-toggle disabled" data-toggle="dropdown"
+        >
+            About
+            <b class="caret"></b></a><ul class="dropdown-menu"><li class="
+               "
+        id="about-group"><a href="/about/group/">The Group</a></li><li class="
+               "
+        id="about-project"><a href="/about/project/">The Project</a></li><li class="
+               "
+        id="about-vacancies"><a href="/about/vacancies/">Vacancies</a></li><li class="
+               "
+        id="about-links"><a href="/about/links/">Links</a></li></ul></li><li class="
+               "
+        id="contact"><a href="/contact/"
+        >
+            Contact
+            
+        </a></li><li class="dropdown
+               "
+        id="databases"><a href="/databases/"
+        
+        class="dropdown-toggle disabled" data-toggle="dropdown"
+        >
+            Databases
+            <b class="caret"></b></a><ul class="dropdown-menu"><li class="
+               "
+        id="-data-"><a href="/data/">ExoMol</a></li><li class="
+               "
+        id="-exoatom-"><a href="/exoatom/">ExoAtom</a></li><li class="
+               "
+        id="https:--www.exomol.com-exomolhr"><a href="https://www.exomol.com/exomolhr">ExoMolHR</a></li><li class="
+               "
+        id="-data-data-types-opacity-"><a href="/data/data-types/opacity/">ExoMolOP</a></li><li class="
+               "
+        id="https:--www.exomol.com-exophoto"><a href="https://www.exomol.com/exophoto">ExoPhoto</a></li><li class="
+               "
+        id="https:--www.exomol.com-exocool"><a href="https://www.exomol.com/exocool">ExoCool</a></li><li class="
+               "
+        id="https:--www.exomol.com-lidb"><a href="https://www.exomol.com/lidb">LiDB</a></li></ul></li><li class="
+               "
+        id="http:--exomol.com-opacityapp"><a href="http://exomol.com/opacityapp"
+        >
+            Visualiser
+            
+        </a></li></ul>
+
+
+</div>
+</div>
+</div>
+
+<div class="container">
+
+
+
+
+
+<ul class="breadcrumb">
+
+</ul>
+
+</div>
+
+
+<div class="container">
+<div class="row">
+
+<div class="col-md-2 left">
+    
+    <div class="panel panel-default tree">
+
+<ul class="nav nav-list navlist-menu-level-0">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</ul>
+</div>
+    
+</div>
+
+<div class="col-md-10 middle">
+    
+<h2>Cross section data for <sup>1</sup>H<sub>2</sub><sup>16</sup>O</h2>
+
+<div class="well">
+
+<p><em>Reminder</em>: the cross sections provided by this page are calculated at <strong>zero-pressure</strong> (<em>i.e.</em> Doppler-broadened lines only). If you enter your email address below it will only be used to inform you of fixes to the service in case it fails. Alternatively, please email <a href="mailto:christian.hill@ucl.ac.uk">christian.hill@ucl.ac.uk</a>.</p>
+<p>The default format of the .sigma data file is a single column of cross section points (in cm<sup>2</sup>/molec), one for each wavenumber bin selected, starting at <em>&nu;</em><sub>min</sub> and spaced by &Delta;<em>&nu;</em>. Select two-column output below if you want each cross section point preceded explicitly by the wavenumber at the centre of the bin it applies to.</p>
+
+<div style="border: 1px black solid; padding: 10px">
+<form action="/xsec/1H2-16O/" method="post"><input type="hidden" name="csrfmiddlewaretoken" value="SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS">
+<table id="xsec_search_table">
+<colgroup>
+<col style="text-align: right; width: 250px;"/>
+<col style="width: 420px;"/>
+</colgroup>
+<p>
+    <label for="id_dnu">&Delta;<em>&nu;</em>:</label>
+    <input type="number" name="dnu" step="any" required id="id_dnu">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_numin"><em>&nu;</em><sub>min</sub> (0 - 41200 cm<sup>-1</sup>):</label>
+    <input type="number" name="numin" min="0.0" step="any" required id="id_numin">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_numax"><em>&nu;</em><sub>max</sub> (0 - 41200 cm<sup>-1</sup>):</label>
+    <input type="number" name="numax" min="0.0" step="any" required id="id_numax">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_T"><em>T</em> (100 - 5000 K):</label>
+    <input type="number" name="T" step="any" required id="id_T">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_spoon_feed">Two-column output: <em>&nu;</em> and <em>&sigma;</em>:</label>
+    <input type="checkbox" name="spoon_feed" id="id_spoon_feed">
+    
+    
+      
+    
+  </p>
+</table>
+<div style="width: 100px; margin: auto;">
+<input type="submit" value="Submit"/>
+</div>
+</form>
+</div>
+
+<div>
+<p>Online absorption cross section service: this cross section has been generated from the POKAZATEL line list [Polyansky <em>et al.</em> (2018)]. for the ExoMol project [Tennyson and Yurchenko (2012)] using the procedure described in [Hill <em>et al.</em> (2013)].</p>
+</div>
+
+<h3>References</h3>
+<ol>
+
+<li>Polyansky, O. L., Kyuberis, A. A., Zobov, N. F., Tennyson, J., Yurchenko, S. N.,  Lodi, L., "ExoMol molecular line lists XXX: a complete high-accuracy line list for water", <em>Monthly Notices of the Royal Astronomical Society</em> <b>480</b>, 2597-2608 (2018).<span class="noprint"> [<a href="https://doi.org/10.1093/mnras/sty1877">link to article</a>]</span>[18PoKyZo.H2O]</li>
+
+</ol>
+</div>
+
+
+</div>
+
+
+</div>
+
+</div>
+</div>
+
+
+
+
+<footer>
+<div class="container">
+
+<div class="row">
+<div class="col-md-4 left">
+<p class="site-info">ExoMol is funded by the ERC under the Advanced Investigator Projects 267219 and 883830</p>
+</div>
+<div class="col-md-6 middle site-info">
+<img src="/static/img/erc-logo.jpg" width="46" height="46" alt="[ERC logo]"/>
+<img src="/static/img/euflag.jpg" width="68" height="46" alt="[EU flag]"/>
+</div>
+<div class="col-md-2 right">
+</div>
+
+</div>
+</div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-155845243-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+
+
+
+</body>
+</html>

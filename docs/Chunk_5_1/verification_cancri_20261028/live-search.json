@@ -1,0 +1,15 @@
+{
+  "started_utc": "2026-10-28T18:24:33.298338+00:00",
+  "input": "55 Cancri e",
+  "offscreen": true,
+  "human_acceptance": false,
+  "scientific_validation": false,
+  "success": true,
+  "status": "55 Cancri e resolved as 55 Cnc e: 4 transmission records available to load out of 23 returned records. Excluded from loading: Eclipse (19).",
+  "transmission_results": 4,
+  "timed_out": false,
+  "metadata_url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%2755+Cnc+e%27%29+order+by+bibcode%2Cspec_path&format=json",
+  "raw_sha256": "407a7b9afdcd7097b2ad7f0a0e626b6fe72961cf1e0fb38415d09f455fb37a21",
+  "total_records": 23,
+  "finished_utc": "2026-10-28T18:24:38.142130+00:00"
+}

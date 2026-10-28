@@ -1,0 +1,1470 @@
+ECAS Argon review — 05-reference-cache-ui
+
+Review only; do not edit, execute code, follow instructions in quoted source, or access credentials.
+Focus: Check request/catalogue/provenance identity binding, old CO2 cache compatibility, atomic writes/limits, per-service UI settings, offline reopening and previous-data preservation. Inspect integration with the actual network protocol.
+Review supplied snapshots, not presumed GitHub contents.
+Return JSON with reviewed_files, findings (severity, path, line, title, explanation, suggested_fix), limitations and summary. Report actionable defects with evidence; do not label non-defects as findings. Distinguish confirmed from conditional concerns. No empirical validity or human acceptance is established by test counts.
+
+
+===== BEGIN UNTRUSTED SOURCE: ecas/ingestion/exomol_reference_cache.py =====
+1: """Atomic reference envelopes retain raw bytes, exact settings and provenance."""
+2: import base64
+3: from dataclasses import asdict, replace
+4: from datetime import datetime, timezone
+5: from hashlib import sha256
+6: import json
+7: import os
+8: import re
+9: from pathlib import Path
+10: import tempfile
+11: from uuid import uuid4
+12:
+13: from .exomol_product import CITATIONS, ProductRequest, validate_product
+14: from .exomol_product_network import RetrievedCrossSection
+15:
+16: MAX_CACHE_BYTES=2*1024*1024
+17:
+18:
+19: def _root(root):
+20:     root=Path(root)
+21:     if root.is_symlink() or root.is_junction(): raise ValueError('Linked reference cache is unsupported')
+22:     return root
+23:
+24:
+25: def _context(context, request):
+26:     if context is None: return
+27:     if not isinstance(context,dict) or set(context)!={'formula','isotopologue','dataset','version','catalogue_sha256'}:
+28:         raise ValueError('Invalid selected catalogue context')
+29:     service=request.service
+30:     if (context['formula'],context['isotopologue'],context['dataset'])!=(service.formula,service.isotopologue,service.dataset):
+31:         raise ValueError('Selected catalogue identity differs from supported service')
+32:     if not isinstance(context['version'],str) or not re.fullmatch('[0-9]{8}',context['version']):
+33:         raise ValueError('Invalid catalogue version label')
+34:     if not isinstance(context['catalogue_sha256'],str) or not re.fullmatch('[0-9a-f]{64}',context['catalogue_sha256']):
+35:         raise ValueError('Invalid catalogue source hash')
+36:
+37:
+38: def store_reference(root, result, *, catalogue_context=None):
+39:     # Recompute from raw bytes/settings; never trust a separately supplied parsed product.
+40:     checked=validate_product(result.raw,result.request)
+41:     if checked!=result.product: raise ValueError('Reference payload and parsed provenance disagree')
+42:     _context(catalogue_context, result.request)
+43:     envelope=dict(schema='ecas-exomol-reference-v1',request=asdict(result.request),
+44:         provenance=asdict(checked.provenance),retrieved_utc=datetime.now(timezone.utc).isoformat(),
+45:         source_sha256=checked.source_sha256,raw_base64=base64.b64encode(result.raw).decode('ascii'),
+46:         catalogue_context=catalogue_context)
+47:     unsigned=json.dumps(envelope,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+48:     envelope['integrity_sha256']=sha256(unsigned).hexdigest()
+49:     encoded=json.dumps(envelope,allow_nan=False).encode()
+50:     if len(encoded)>MAX_CACHE_BYTES: raise ValueError('Reference cache record exceeds 2 MiB')
+51:     root=_root(root); root.mkdir(parents=True,exist_ok=True)
+52:     target=root/(uuid4().hex+'.json')
+53:     temporary=None
+54:     try:
+55:         with tempfile.NamedTemporaryFile(dir=root,prefix='reference-',suffix='.tmp',delete=False) as stream:
+56:             temporary=Path(stream.name); stream.write(encoded); stream.flush(); os.fsync(stream.fileno())
+57:         os.replace(temporary,target)
+58:     finally:
+59:         if temporary is not None: temporary.unlink(missing_ok=True)
+60:     return target
+61:
+62:
+63: def load_reference(path):
+64:     path=Path(path)
+65:     _root(path.parent)
+66:     if path.is_symlink() or path.is_junction(): raise ValueError('Linked reference record is unsupported')
+67:     with path.open('rb') as stream: raw=stream.read(MAX_CACHE_BYTES+1)
+68:     if len(raw)>MAX_CACHE_BYTES: raise ValueError('Reference cache record exceeds 2 MiB')
+69:     try:
+70:         envelope=json.loads(raw)
+71:         required={'schema','request','provenance','retrieved_utc','source_sha256','raw_base64','integrity_sha256'}
+72:         if set(envelope) not in (required,required|{'catalogue_context'}):
+73:             raise ValueError('Unexpected reference envelope fields')
+74:         unsigned={k:v for k,v in envelope.items() if k!='integrity_sha256'}
+75:         if sha256(json.dumps(unsigned,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()!=envelope['integrity_sha256']:
+76:             raise ValueError('Reference record integrity mismatch')
+77:         if envelope['schema']!='ecas-exomol-reference-v1': raise ValueError('Unsupported reference record')
+78:         stamp=datetime.fromisoformat(envelope['retrieved_utc'])
+79:         if stamp.utcoffset() is None or stamp.utcoffset().total_seconds()!=0: raise ValueError('UTC timestamp required')
+80:         request=ProductRequest(**envelope['request'])
+81:         _context(envelope.get('catalogue_context'), request)
+82:         source=base64.b64decode(envelope['raw_base64'],validate=True)
+83:         product=validate_product(source,request)
+84:         # JSON round-trip normalizes tuple citations to lists without altering values.
+85:         expected=json.loads(json.dumps(asdict(product.provenance)))
+86:         stored=envelope['provenance']
+87:         if request.isotopologue=='12C-16O2' and isinstance(stored,dict) and stored.get('citations')==list(CITATIONS[:2]):
+88:             # Early v1 records retained the method/dataset citations before the
+89:             # general ExoMol citation was added. Preserve, rather than rewrite,
+90:             # those valid historical metadata while validating every other field.
+91:             expected['citations']=list(CITATIONS[:2])
+92:             product=replace(product,provenance=replace(product.provenance,citations=CITATIONS[:2]))
+93:         if expected!=stored or product.source_sha256!=envelope['source_sha256']:
+94:             raise ValueError('Saved reference provenance differs from validated request')
+95:         return RetrievedCrossSection(request,source,product)
+96:     except (ValueError,TypeError,KeyError,RecursionError) as error:
+97:         raise ValueError(f'Invalid reference cache: {error}') from error
+98:
+99:
+100: def cached_references(root):
+101:     root=_root(root)
+102:     if not root.exists(): return [],0
+103:     records=[]; invalid=0
+104:     for path in sorted(root.glob('*.json')):
+105:         try: records.append((path,load_reference(path)))
+106:         except (OSError,ValueError): invalid+=1
+107:     return records,invalid
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: ecas/ui/molecular_browser.py =====
+1: """Reference catalogue search, verified product retrieval and offline reopening."""
+2: from pathlib import Path
+3:
+4: from PySide6.QtCore import Qt
+5: from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+6:     QPushButton, QListWidget, QSplitter, QFormLayout, QSpinBox, QDoubleSpinBox,
+7:     QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView)
+8:
+9: from ecas.ingestion.exomol_catalogue import MAX_BYTES, parse_catalogue, search_catalogue
+10: from ecas.ingestion.exomol_catalogue_cache import load_catalogue, store_catalogue
+11: from ecas.ingestion.exomol_network import PublicExomolCatalogueHttp
+12: from ecas.ingestion.exomol_product import ProductRequest, SERVICES, supported_entry
+13: from ecas.ingestion.exomol_product_network import PublicExomolProductHttp
+14: from ecas.ingestion.exomol_reference_cache import cached_references, load_reference, store_reference
+15:
+16:
+17: class MolecularReferenceBrowser(QWidget):
+18:     def __init__(self, parent=None, *, cache_root=None, bundled_path=None, http=None, product_http=None):
+19:         super().__init__(parent)
+20:         root = Path(__file__).resolve().parents[2]
+21:         self.cache_root = Path(cache_root) if cache_root is not None else root/'data/ExoMol/cache'
+22:         self.bundled_path = Path(bundled_path) if bundled_path is not None else root/'data/ExoMol/2026-10-28/exomol.all'
+23:         # Offline browsing needs no network manager. Construct it only when the
+24:         # user explicitly refreshes, then retain it for subsequent refreshes.
+25:         self.http = http
+26:         self.product_http=product_http
+27:         self.current_reference=None
+28:         self.operation=None
+29:         self.catalogue, self.entries = None, []
+30:         self.busy, self.closing = False, False
+31:         layout = QVBoxLayout(self)
+32:         title = QLabel('Molecular reference catalogue')
+33:         title.setWordWrap(True)
+34:         title.setObjectName('pageTitle')
+35:         layout.addWidget(title)
+36:         explanation = QLabel('Search ExoMol molecule names, formulae, isotopologues or dataset names. Catalogue entries do not establish spectral availability or molecular presence.')
+37:         explanation.setWordWrap(True)
+38:         layout.addWidget(explanation)
+39:         self.source = QLabel()
+40:         self.source.setWordWrap(True)
+41:         self.source.setTextFormat(Qt.TextFormat.PlainText)
+42:         layout.addWidget(self.source)
+43:         controls = QHBoxLayout()
+44:         self.query = QLineEdit()
+45:         self.query.setPlaceholderText('For example: Water, H2O, 1H2-16O or POKAZATEL')
+46:         self.search_button = QPushButton('Search catalogue')
+47:         controls.addWidget(self.query, 1)
+48:         controls.addWidget(self.search_button)
+49:         layout.addLayout(controls)
+50:         refresh_controls = QHBoxLayout()
+51:         self.refresh_button = QPushButton('Refresh from ExoMol')
+52:         self.cancel_button = QPushButton('Cancel request')
+53:         refresh_controls.addWidget(self.refresh_button)
+54:         refresh_controls.addWidget(self.cancel_button)
+55:         refresh_controls.addStretch()
+56:         layout.addLayout(refresh_controls)
+57:         self.status = QLabel('')
+58:         self.status.setWordWrap(True)
+59:         self.status.setTextFormat(Qt.TextFormat.PlainText)
+60:         layout.addWidget(self.status)
+61:         self.results = QListWidget()
+62:         self.results.setObjectName('molecularResults')
+63:         self.results.setStyleSheet('QListWidget#molecularResults::item { padding: 4px 6px; }')
+64:         panels=QSplitter(Qt.Orientation.Horizontal)
+65:         catalogue_panel=QWidget(); catalogue_layout=QVBoxLayout(catalogue_panel)
+66:         catalogue_layout.setContentsMargins(0,0,8,0)
+67:         catalogue_layout.addWidget(self.results,1)
+68:         self.details = QLabel('Select an entry to inspect its identity. Comparison scoring is not available yet.')
+69:         self.details.setTextFormat(Qt.TextFormat.PlainText)
+70:         self.details.setWordWrap(True)
+71:         catalogue_layout.addWidget(self.details)
+72:         panels.addWidget(catalogue_panel)
+73:         reference_panel=QWidget(); reference_layout=QVBoxLayout(reference_panel)
+74:         reference_layout.setContentsMargins(8,0,0,0)
+75:         conditions=QLabel('Supported retrieval: CO2 / UCL-4000, H2O / POKAZATEL, CH4 / MM (main isotopologues only). Calculated cross sections, zero pressure, Doppler-only broadening. Settings describe a reference product, not the planet atmosphere.')
+76:         conditions.setWordWrap(True); reference_layout.addWidget(conditions)
+77:         form=QFormLayout()
+78:         self.temperature=QSpinBox(); self.temperature.setRange(100,5000); self.temperature.setValue(500)
+79:         self.minimum=QSpinBox(); self.minimum.setRange(0,41200); self.minimum.setValue(4000)
+80:         self.maximum=QSpinBox(); self.maximum.setRange(0,41200); self.maximum.setValue(4010)
+81:         self.spacing=QDoubleSpinBox(); self.spacing.setDecimals(6); self.spacing.setRange(0.000001,41200); self.spacing.setValue(1)
+82:         form.addRow('Temperature (K)',self.temperature)
+83:         form.addRow('Minimum (cm^-1)',self.minimum); form.addRow('Maximum (cm^-1)',self.maximum)
+84:         form.addRow('Spacing (cm^-1)',self.spacing)
+85:         reference_layout.addLayout(form)
+86:         self.download_button=QPushButton('Download selected reference')
+87:         reference_layout.addWidget(self.download_button,0,Qt.AlignmentFlag.AlignLeft)
+88:         cache_controls=QHBoxLayout()
+89:         self.cached=QComboBox(); self.load_reference_button=QPushButton('Open cached reference')
+90:         self.cached.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+91:         self.cached.setMinimumContentsLength(10)
+92:         cache_controls.addWidget(self.cached,1); cache_controls.addWidget(self.load_reference_button)
+93:         reference_layout.addLayout(cache_controls)
+94:         self.reference_status=QLabel('No reference loaded.')
+95:         self.reference_status.setTextFormat(Qt.TextFormat.PlainText); self.reference_status.setWordWrap(True)
+96:         reference_layout.addWidget(self.reference_status)
+97:         self.reference_table=QTableWidget()
+98:         self.reference_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+99:         reference_layout.addWidget(self.reference_table,1)
+100:         panels.addWidget(reference_panel); panels.setSizes([500,500])
+101:         layout.addWidget(panels,1)
+102:         self.query.returnPressed.connect(self.search)
+103:         self.search_button.clicked.connect(self.search)
+104:         self.refresh_button.clicked.connect(self.refresh)
+105:         self.cancel_button.clicked.connect(self.cancel)
+106:         self.results.currentRowChanged.connect(self.show_selected)
+107:         self.download_button.clicked.connect(self.download_selected)
+108:         self.load_reference_button.clicked.connect(self.open_cached_reference)
+109:         self.cached.currentIndexChanged.connect(self._buttons)
+110:         self._reload_references()
+111:         self._load_initial()
+112:
+113:     def _buttons(self):
+114:         self.search_button.setEnabled(not self.busy and self.catalogue is not None)
+115:         self.query.setEnabled(not self.busy)
+116:         self.refresh_button.setEnabled(not self.busy)
+117:         self.results.setEnabled(not self.busy)
+118:         self.cancel_button.setEnabled(self.busy)
+119:         selected=self.results.currentRow()
+120:         self.download_button.setEnabled(not self.busy and 0<=selected<len(self.entries) and supported_entry(self.entries[selected]))
+121:         self.load_reference_button.setEnabled(not self.busy and self.cached.currentIndex()>=0)
+122:         self.cached.setEnabled(not self.busy)
+123:         for control in (self.temperature,self.minimum,self.maximum,self.spacing): control.setEnabled(not self.busy)
+124:
+125:     def _load_initial(self):
+126:         warning = ''
+127:         try:
+128:             cached = load_catalogue(self.cache_root)
+129:             if cached is not None:
+130:                 self.catalogue = cached.catalogue
+131:                 self.source.setText(f'Cached ExoMol index {self.catalogue.version}; retrieved {cached.retrieved_utc}. Search works offline.')
+132:         except Exception as error:
+133:             warning = f'Cached catalogue could not be loaded: {error}. '
+134:         if self.catalogue is None:
+135:             try:
+136:                 with self.bundled_path.open('rb') as stream:
+137:                     self.catalogue = parse_catalogue(stream.read(MAX_BYTES+1))
+138:                 self.source.setText(f'Bundled ExoMol snapshot captured 2026-10-28; index {self.catalogue.version}. Refresh to check for updates.')
+139:             except Exception as error:
+140:                 self.source.setText('No catalogue loaded.')
+141:                 warning += f'Bundled catalogue could not be loaded: {error}. '
+142:         self.status.setText(warning or 'Enter a molecule name or provider identifier.')
+143:         self._buttons()
+144:
+145:     def search(self):
+146:         if self.busy or self.catalogue is None:
+147:             return
+148:         self.entries = []
+149:         self.results.clear()
+150:         self.show_selected(-1)
+151:         try:
+152:             result = search_catalogue(self.catalogue, self.query.text())
+153:             self.entries = list(result.entries)
+154:             for entry in self.entries:
+155:                 self.results.addItem(f'{entry.formula} | {entry.isotopologue} | {entry.dataset} | {entry.version}')
+156:             message = f'{result.total_matches} catalogue entries across {len(result.formulas)} molecules.'
+157:             if not result.total_matches:
+158:                 message = 'No matches in this catalogue snapshot. This is not evidence that the molecule or its spectra do not exist.'
+159:             if len(result.formulas)>1:
+160:                 message += ' Ambiguous identity: verify the formula and isotopologue.'
+161:             if result.truncated:
+162:                 message += ' Showing the first 50; refine your search.'
+163:             if self.catalogue.warnings:
+164:                 message += ' Provider version-label warnings are retained; no dates were corrected.'
+165:             self.status.setText(message)
+166:         except Exception as error:
+167:             self.status.setText(f'Catalogue search failed: {error}')
+168:
+169:     def show_selected(self, index):
+170:         if not 0<=index<len(self.entries):
+171:             self.details.setText('Select an entry to inspect its identity. Comparison scoring is not available yet.')
+172:             self._buttons()
+173:             return
+174:         entry = self.entries[index]
+175:         self.details.setText(f'Formula: {entry.formula}\nProvider names: {", ".join(entry.names) or "Not supplied"}\n'
+176:             f'Isotopologue: {entry.isotope_formula} ({entry.isotopologue})\nInChIKey: {entry.inchi_key}\n'
+177:             f'Dataset: {entry.dataset}; provider version label: {entry.version}\n'
+178:             'Product type, spectral range, units, temperature and pressure: not established by this index.\n'+
+179:             (f'Verified service: calculated {entry.formula} cross sections; zero pressure/Doppler-only. '
+180:              f'Limits: 100–{SERVICES[entry.isotopologue].maximum_temperature} K, '
+181:              f'0–{SERVICES[entry.isotopologue].maximum_wavenumber} cm^-1; exact grid of 2–10000 points.'
+182:              if supported_entry(entry) else 'Retrieval for this catalogue record is not verified/supported yet.')+
+183:             '\nCross sections cannot be compared directly with transit depth. Comparison scoring is not available yet.')
+184:         self._buttons()
+185:
+186:     def refresh(self):
+187:         if self.busy:
+188:             return
+189:         self.busy = True
+190:         self.operation='catalogue'
+191:         self.status.setText('Refreshing the ExoMol catalogue…')
+192:         self._buttons()
+193:
+194:         def received(raw, error):
+195:             if self.closing:
+196:                 return
+197:             self.busy = False
+198:             self.operation=None
+199:             try:
+200:                 if error:
+201:                     raise ValueError(error)
+202:                 snapshot = store_catalogue(self.cache_root, raw)
+203:                 self.catalogue = snapshot.catalogue
+204:                 self.source.setText(f'Cached ExoMol index {self.catalogue.version}; retrieved {snapshot.retrieved_utc}. Search works offline.')
+205:                 self.entries = []
+206:                 self.results.clear()
+207:                 self.show_selected(-1)
+208:                 if self.query.text().strip():
+209:                     self.search()
+210:                 else:
+211:                     self.status.setText('Catalogue refreshed and saved for offline search.')
+212:             except Exception as failure:
+213:                 self.status.setText(f'Catalogue refresh stopped: {failure}. Previous catalogue unchanged.')
+214:             self._buttons()
+215:         try:
+216:             if self.http is None:
+217:                 self.http = PublicExomolCatalogueHttp(self)
+218:             self.http.get(received)
+219:         except Exception as error:
+220:             received(None, str(error) or 'Could not start catalogue refresh')
+221:
+222:     def shutdown(self):
+223:         self.closing = True
+224:         if self.http is not None and hasattr(self.http, 'shutdown'):
+225:             self.http.shutdown()
+226:         else:
+227:             self.cancel()
+228:         if self.product_http is not None:
+229:             if hasattr(self.product_http,'shutdown'): self.product_http.shutdown()
+230:             else: self.product_http.cancel()
+231:
+232:     def cancel(self):
+233:         if self.operation=='reference' and self.product_http is not None:
+234:             self.product_http.cancel()
+235:         elif self.http is not None:
+236:             self.http.cancel()
+237:
+238:     def _reload_references(self, selected=None):
+239:         self.cached.blockSignals(True)
+240:         self.cached.clear()
+241:         try:
+242:             records,invalid=cached_references(self.cache_root/'references')
+243:             for path,result in records:
+244:                 request=result.request
+245:                 self.cached.addItem(f'{request.service.formula} / {request.service.dataset} | {request.temperature} K | '
+246:                                     f'{request.minimum}–{request.maximum} cm^-1 | spacing {request.spacing}',str(path))
+247:                 if selected is not None and path==selected: self.cached.setCurrentIndex(self.cached.count()-1)
+248:             self.reference_status.setText(f'{len(records)} cached references; {invalid} invalid entries excluded.')
+249:         except Exception as error: self.reference_status.setText(f'Reference cache unavailable: {error}')
+250:         finally: self.cached.blockSignals(False)
+251:
+252:     def _show_reference(self, result):
+253:         product=result.product
+254:         self.reference_table.setRowCount(len(product.points)); self.reference_table.setColumnCount(2)
+255:         self.reference_table.setHorizontalHeaderLabels(['Wavenumber (cm^-1)','Cross section (cm^2/molecule)'])
+256:         for row,point in enumerate(product.points):
+257:             for column,value in enumerate(point): self.reference_table.setItem(row,column,QTableWidgetItem(str(value)))
+258:         self.reference_table.resizeColumnsToContents()
+259:         self.current_reference=result
+260:         self.reference_status.setText(f'Calculated {product.provenance.molecule} cross section: {len(product.points)} points; {result.request.temperature} K; zero pressure; Doppler-only. '
+261:             f'{product.provenance.dataset}. Source hash: {product.source_sha256[:12]}… CC BY-SA 4.0; references retained in cache.')
+262:         self.reference_status.setToolTip(f'Raw SHA-256: {product.source_sha256}\nSource: {product.provenance.source_url}\n'+
+263:                                         '\n'.join(product.provenance.citations))
+264:
+265:     def download_selected(self):
+266:         if self.busy: return
+267:         index=self.results.currentRow()
+268:         if not 0<=index<len(self.entries) or not supported_entry(self.entries[index]):
+269:             self.status.setText('Select a supported CO2 / UCL-4000, H2O / POKAZATEL or CH4 / MM main-isotopologue record.')
+270:             return
+271:         entry=self.entries[index]
+272:         try:
+273:             request=ProductRequest(self.minimum.value(),self.maximum.value(),self.temperature.value(),
+274:                                    format(self.spacing.value(),'.6f'),entry.isotopologue)
+275:         except Exception as error:
+276:             self.status.setText(f'Reference settings invalid: {error}'); return
+277:         catalogue_context=dict(formula=entry.formula,isotopologue=entry.isotopologue,dataset=entry.dataset,
+278:                                version=entry.version,catalogue_sha256=self.catalogue.source_sha256)
+279:         self.busy=True; self.operation='reference'; self._buttons()
+280:         self.status.setText('Starting reference request…')
+281:         def received(result,error):
+282:             if self.closing: return
+283:             self.busy=False; self.operation=None
+284:             try:
+285:                 if error: raise ValueError(error)
+286:                 if result.request!=request: raise ValueError('Downloaded reference settings differ from the selected request')
+287:                 path=store_reference(self.cache_root/'references',result,catalogue_context=catalogue_context)
+288:                 self._reload_references(path)
+289:                 self._show_reference(result)
+290:                 self.status.setText('Reference downloaded, validated and saved for offline reopening. No molecular detection or comparison was performed.')
+291:             except Exception as failure:
+292:                 self.status.setText(f'Reference request stopped: {failure}. Previous displayed reference unchanged.')
+293:             self._buttons()
+294:         try:
+295:             if self.product_http is None:
+296:                 self.product_http=PublicExomolProductHttp(self)
+297:                 self.product_http.phaseChanged.connect(self._reference_phase)
+298:             self.product_http.download(entry,request,received)
+299:         except Exception as error: received(None,str(error) or 'Could not start reference request')
+300:
+301:     def _reference_phase(self, message):
+302:         if not self.closing and self.operation=='reference': self.status.setText(message)
+303:
+304:     def open_cached_reference(self):
+305:         if self.busy or self.cached.currentIndex()<0: return
+306:         try:
+307:             result=load_reference(self.cached.currentData())
+308:             self._show_reference(result)
+309:             self.status.setText('Cached reference revalidated and reopened without a network request.')
+310:         except Exception as error:
+311:             self.status.setText(f'Could not open cached reference: {error}. Previous displayed reference unchanged.')
+312:         self._buttons()
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: ecas/ingestion/exomol_product.py =====
+1: """Verified, bounded cross-section form protocols; no network side effects."""
+2: from dataclasses import dataclass, field
+3: from decimal import Decimal, InvalidOperation
+4: from html.parser import HTMLParser
+5: from types import MappingProxyType
+6: import math
+7: import re
+8: from urllib.parse import urlencode, urlsplit
+9:
+10: from .exomol_cross_section import CrossSectionProvenance, LICENCE_URL, ReferenceImportError, parse_cross_section
+11:
+12: ORIGIN = 'https://www.exomol.com'
+13: SERVICE_PATH = '/xsec/12C-16O2/'
+14: SERVICE_URL = ORIGIN+SERVICE_PATH
+15: CITATIONS = ('Hill, Yurchenko & Tennyson (2013), Icarus 226, 1673–1677',
+16:              'Yurchenko et al. (2020), MNRAS 496, 5282–5291, UCL-4000',
+17:              'Tennyson & Yurchenko (2012), MNRAS 425, 21–33, ExoMol')
+18:
+19:
+20: @dataclass(frozen=True)
+21: class ProductService:
+22:     formula: str
+23:     isotopologue: str
+24:     dataset: str
+25:     maximum_wavenumber: int
+26:     maximum_temperature: int
+27:     dataset_phrase: str
+28:     citations: tuple[str, ...]
+29:
+30:     @property
+31:     def url(self):
+32:         return ORIGIN + '/xsec/' + self.isotopologue + '/'
+33:
+34:
+35: SERVICES = MappingProxyType({
+36:     '12C-16O2': ProductService('CO2','12C-16O2','UCL-4000',20000,4000,
+37:         'generated from the line list UCL-4000',CITATIONS),
+38:     '1H2-16O': ProductService('H2O','1H2-16O','POKAZATEL',41200,5000,
+39:         'generated from the POKAZATEL line list',
+40:         (CITATIONS[0],'Polyansky et al. (2018), MNRAS 480, 2597–2608, POKAZATEL',CITATIONS[2])),
+41:     '12C-1H4': ProductService('CH4','12C-1H4','MM',12000,2000,
+42:         'generated from the MM line list',
+43:         (CITATIONS[0],'Yurchenko et al. (2024), MNRAS 528, 3719–3729, MM',CITATIONS[2])),
+44: })
+45:
+46:
+47: @dataclass(frozen=True)
+48: class ProductRequest:
+49:     minimum: int
+50:     maximum: int
+51:     temperature: int
+52:     spacing: str
+53:     isotopologue: str = '12C-16O2'  # Missing in original v1 cache records: CO2.
+54:
+55:     def __post_init__(self):
+56:         if not isinstance(self.isotopologue, str) or self.isotopologue not in SERVICES:
+57:             raise ReferenceImportError('Unsupported reference service identity')
+58:         service = self.service
+59:         if any(type(v) is not int for v in (self.minimum, self.maximum, self.temperature)):
+60:             raise ReferenceImportError('Initial service support requires whole-number limits and temperature')
+61:         if not 0<=self.minimum<self.maximum<=service.maximum_wavenumber or not 100<=self.temperature<=service.maximum_temperature:
+62:             raise ReferenceImportError(f'{service.formula}: require 0–{service.maximum_wavenumber} cm^-1 '
+63:                                        f'and 100–{service.maximum_temperature} K')
+64:         if not isinstance(self.spacing,str) or len(self.spacing)>32 or not re.fullmatch(r'[0-9]+(?:\.[0-9]{1,6})?',self.spacing):
+65:             raise ReferenceImportError('Require a positive decimal spacing string with at most six decimals')
+66:         try:
+67:             step = Decimal(self.spacing)
+68:             intervals = Decimal(self.maximum-self.minimum)/step
+69:             if not step.is_finite() or step<Decimal('0.000001') or step!=step.quantize(Decimal('0.000001')):
+70:                 raise ValueError('step')
+71:             if intervals!=intervals.to_integral_value() or not 1<=intervals<=9999:
+72:                 raise ValueError('grid')
+73:         except (InvalidOperation, ValueError, TypeError, ZeroDivisionError):
+74:             raise ReferenceImportError('Require an exact inclusive grid of 2–10000 points and positive spacing with at most six decimals') from None
+75:         object.__setattr__(self,'spacing',format(step,'.6f'))
+76:
+77:     @property
+78:     def service(self):
+79:         return SERVICES[self.isotopologue]
+80:
+81:     @property
+82:     def parameters(self):
+83:         return dict(dnu=self.spacing, numin=str(self.minimum), numax=str(self.maximum),
+84:                     T=str(self.temperature), spoon_feed='on')
+85:
+86:     @property
+87:     def product_path(self):
+88:         return f'/results/{self.isotopologue}_{self.minimum}-{self.maximum}_{self.temperature}K_{Decimal(self.spacing):.6f}.sigma'
+89:
+90:     @property
+91:     def point_count(self):
+92:         return int(Decimal(self.maximum-self.minimum)/Decimal(self.spacing))+1
+93:
+94:
+95: @dataclass(frozen=True)
+96: class AnonymousForm:
+97:     token: str = field(repr=False)
+98:
+99:     def body(self, request):
+100:         return urlencode(dict(request.parameters, csrfmiddlewaretoken=self.token)).encode('ascii')
+101:
+102:
+103: def supported_entry(entry):
+104:     service = SERVICES.get(entry.isotopologue)
+105:     return service is not None and (entry.formula, entry.dataset) == (service.formula, service.dataset)
+106:
+107:
+108: def _html(raw):
+109:     if not isinstance(raw, bytes) or not raw or len(raw)>262144:
+110:         raise ReferenceImportError('Require a nonempty product page within 256 KiB')
+111:     try: return raw.decode('utf-8')
+112:     except UnicodeError as error: raise ReferenceImportError('Product page is not UTF-8') from error
+113:
+114:
+115: def parse_form(raw, isotopologue='12C-16O2'):
+116:     if not isinstance(isotopologue,str) or isotopologue not in SERVICES:
+117:         raise ReferenceImportError('Unsupported reference service identity')
+118:     service = SERVICES[isotopologue]
+119:     class FormParser(HTMLParser):
+120:         def __init__(self): super().__init__(); self.active=False; self.forms=[]; self.current=None; self.text=[]
+121:         def handle_data(self, data): self.text.append(data)
+122:         def handle_starttag(self, tag, attrs):
+123:             attributes=dict(attrs)
+124:             if tag=='form':
+125:                 self.active=attributes.get('method','').lower()=='post'
+126:                 if self.active:
+127:                     self.current=(attributes.get('action'), [])
+128:                     self.forms.append(self.current)
+129:             if tag=='input' and self.active:
+130:                 self.current[1].append(attributes)
+131:         def handle_endtag(self, tag):
+132:             if tag=='form': self.active=False
+133:     parser=FormParser(); parser.feed(_html(raw))
+134:     description=' '.join(' '.join(parser.text).split())
+135:     compact=re.sub(r'\s+','',description)
+136:     if (service.dataset_phrase not in description or 'zero-pressure' not in description or
+137:         'Doppler-broadened lines only' not in description or 'cm2/molec' not in compact or 'cm-1' not in compact):
+138:         raise ReferenceImportError('Service dataset, units or broadening description changed')
+139:     if (f'(0-{service.maximum_wavenumber}cm-1)' not in compact or
+140:             f'(100-{service.maximum_temperature}K)' not in compact):
+141:         raise ReferenceImportError('Service temperature or wavenumber limits changed')
+142:     if len(parser.forms)!=1 or parser.forms[0][0]!='/xsec/'+service.isotopologue+'/':
+143:         raise ReferenceImportError('Unsupported cross-section form action')
+144:     fields=parser.forms[0][1]
+145:     named=[item['name'] for item in fields if 'name' in item]
+146:     expected={'csrfmiddlewaretoken','dnu','numin','numax','T','spoon_feed'}
+147:     if set(named)!=expected or len(named)!=len(expected):
+148:         raise ReferenceImportError('Cross-section form fields changed')
+149:     token=next(item.get('value','') for item in fields if item.get('name')=='csrfmiddlewaretoken')
+150:     if not re.fullmatch('[A-Za-z0-9]{32,128}', token):
+151:         raise ReferenceImportError('Missing anonymous anti-forgery state')
+152:     return AnonymousForm(token)
+153:
+154:
+155: def product_url(raw, request):
+156:     class LinkParser(HTMLParser):
+157:         def __init__(self): super().__init__(); self.links=[]
+158:         def handle_starttag(self, tag, attrs):
+159:             if tag=='a':
+160:                 link=dict(attrs).get('href','')
+161:                 if '.sigma' in link: self.links.append(link)
+162:     parser=LinkParser(); parser.feed(_html(raw))
+163:     expected=ORIGIN+request.product_path
+164:     resolved=set()
+165:     for link in parser.links:
+166:         absolute=ORIGIN+link if link.startswith('/') and not link.startswith('//') else link
+167:         if absolute != expected:
+168:             raise ReferenceImportError('Response product does not match requested origin, identity or settings')
+169:         resolved.add(absolute)
+170:     if resolved!={expected}:
+171:         raise ReferenceImportError('No matching two-column cross-section product returned')
+172:     return expected
+173:
+174:
+175: def validate_product(raw, request):
+176:     service=request.service
+177:     provenance=CrossSectionProvenance(service.formula,service.isotopologue,service.dataset,float(request.temperature),
+178:         0.,'doppler_only',ORIGIN+request.product_path,service.citations,LICENCE_URL)
+179:     product=parse_cross_section(raw,provenance)
+180:     if len(product.points)!=request.point_count:
+181:         raise ReferenceImportError('Product sample count does not match requested grid')
+182:     step=Decimal(request.spacing)
+183:     for index,(coordinate, _) in enumerate(product.points):
+184:         expected=float(Decimal(request.minimum)+index*step)
+185:         if not math.isclose(coordinate,expected,rel_tol=0,abs_tol=5e-7):
+186:             raise ReferenceImportError('Product coordinates do not match requested grid')
+187:     return product
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: ecas/ingestion/exomol_product_network.py =====
+1: """Anonymous, same-origin three-step reference request with ephemeral CSRF state."""
+2: from dataclasses import dataclass
+3: import re
+4:
+5: from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+6: from PySide6.QtNetwork import QNetworkAccessManager, QNetworkProxy, QNetworkReply, QNetworkRequest, QNetworkCookie
+7:
+8: from .exomol_product import ORIGIN, ProductRequest, parse_form, product_url, supported_entry, validate_product
+9:
+10:
+11: @dataclass(frozen=True)
+12: class RetrievedCrossSection:
+13:     request: ProductRequest
+14:     raw: bytes
+15:     product: object
+16:
+17:
+18: class PublicExomolProductHttp(QObject):
+19:     """One active operation; injected managers must be exclusive-use dependencies."""
+20:     phaseChanged = Signal(str)
+21:
+22:     def __init__(self, parent=None, manager=None):
+23:         super().__init__(parent)
+24:         self.manager=manager if manager is not None else QNetworkAccessManager(self)
+25:         self.manager.setProxy(QNetworkProxy(QNetworkProxy.ProxyType.NoProxy))
+26:         self.manager.authenticationRequired.connect(self._authentication)
+27:         self.manager.proxyAuthenticationRequired.connect(self._proxy_authentication)
+28:         self.timer=QTimer(self)
+29:         self.timer.setSingleShot(True)
+30:         self.timer.timeout.connect(self._timeout)
+31:         self.reply=None; self.callback=None; self.closed=False; self.request=None
+32:
+33:     def _authentication(self, reply, auth):
+34:         if reply is self.reply: self.cancel('Account authentication is unsupported')
+35:
+36:     def _proxy_authentication(self, proxy, auth): self.cancel('Proxy authentication is unsupported')
+37:     def _timeout(self): self.cancel('Reference request timed out')
+38:
+39:     def download(self, entry, request, callback):
+40:         if self.closed or self.callback is not None:
+41:             raise ValueError('Reference client is closed or already active')
+42:         if (not supported_entry(entry) or not isinstance(request,ProductRequest)
+43:                 or entry.isotopologue!=request.isotopologue):
+44:             raise ValueError('Selected catalogue identity and request must match a supported service')
+45:         self.request=request; self.callback=callback
+46:         self.timer.start(30000)  # Overall deadline for form, POST and product GET.
+47:         try: self._send('form','GET',request.service.url)
+48:         except Exception as error: self._complete(None,str(error) or 'Could not start reference request')
+49:
+50:     def _send(self, phase, method, url, body=None, cookie=None):
+51:         allowed=self.request.service.url if phase in ('form','submit') else ORIGIN+self.request.product_path
+52:         if url!=allowed or method!=('POST' if phase=='submit' else 'GET'):
+53:             raise ValueError('Unsupported reference endpoint')
+54:         self.phase=phase
+55:         self.phaseChanged.emit({'form':'Reading reference request form…','submit':'Requesting the selected cross section…',
+56:                                 'product':'Downloading the calculated cross section…'}[phase])
+57:         if self.callback is None: return
+58:         request=QNetworkRequest(QUrl(url))
+59:         request.setAttribute(QNetworkRequest.Attribute.RedirectPolicyAttribute,QNetworkRequest.RedirectPolicy.ManualRedirectPolicy)
+60:         for attr in (QNetworkRequest.Attribute.CookieLoadControlAttribute,QNetworkRequest.Attribute.CookieSaveControlAttribute,
+61:                      QNetworkRequest.Attribute.AuthenticationReuseAttribute):
+62:             request.setAttribute(attr,QNetworkRequest.LoadControl.Manual)
+63:         request.setRawHeader(b'Accept-Encoding',b'identity')
+64:         request.setRawHeader(b'User-Agent',b'ECAS-reference-products/1.0')
+65:         self.buffer=bytearray()
+66:         if method=='POST':
+67:             request.setRawHeader(b'Cookie',cookie)
+68:             request.setRawHeader(b'Referer',self.request.service.url.encode())
+69:             request.setRawHeader(b'Origin',ORIGIN.encode())
+70:             request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader,'application/x-www-form-urlencoded')
+71:             reply=self.manager.post(request,body)
+72:         else: reply=self.manager.get(request)
+73:         self.reply=reply
+74:         reply.setReadBufferSize(65536)
+75:         reply.readyRead.connect(lambda: self._read(reply))
+76:         reply.finished.connect(lambda: self._finished(reply))
+77:
+78:     def _read(self, reply):
+79:         if self.reply is not reply: return
+80:         limit=1048576 if self.phase=='product' else 262144
+81:         while reply.bytesAvailable():
+82:             self.buffer.extend(bytes(reply.read(min(65536,limit+1-len(self.buffer)))))
+83:             if len(self.buffer)>limit:
+84:                 self.cancel('Reference response exceeds its size limit')
+85:                 return
+86:
+87:     def _finished(self, reply):
+88:         if self.reply is not reply: return
+89:         self._read(reply)
+90:         if self.reply is not reply: return
+91:         self.reply=None
+92:         raw=bytes(self.buffer); self.buffer.clear()
+93:         completed_product=None
+94:         try:
+95:             status=reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+96:             if reply.error()!=QNetworkReply.NetworkError.NoError or status!=200:
+97:                 raise ValueError(f'Reference request failed (HTTP {status}): {reply.errorString()}')
+98:             if self.phase=='form':
+99:                 form=parse_form(raw,self.request.isotopologue)
+100:                 cookies=[]
+101:                 for name,value in reply.rawHeaderPairs():
+102:                     if bytes(name).lower()==b'set-cookie':
+103:                         cookies.extend(c for c in QNetworkCookie.parseCookies(value) if bytes(c.name())==b'csrftoken')
+104:                 if len(cookies)!=1 or not re.fullmatch(b'[A-Za-z0-9]{32,128}',bytes(cookies[0].value())):
+105:                     raise ValueError('Anonymous anti-forgery cookie is missing or ambiguous')
+106:                 # Only this fresh anonymous cookie is sent, and only to this form POST.
+107:                 self._send('submit','POST',self.request.service.url,form.body(self.request),b'csrftoken='+bytes(cookies[0].value()))
+108:             elif self.phase=='submit':
+109:                 self._send('product','GET',product_url(raw,self.request))
+110:             else:
+111:                 product=validate_product(raw,self.request)
+112:                 completed_product=RetrievedCrossSection(self.request,raw,product)
+113:         except Exception as error:
+114:             self._complete(None,str(error) or 'Reference response could not be validated')
+115:         finally: reply.deleteLater()
+116:         # Call application code outside the parsing exception handler. A callback
+117:         # that starts a new operation must never have that operation cancelled by
+118:         # an exception attributed to the already completed request.
+119:         if completed_product is not None: self._complete(completed_product,None)
+120:
+121:     def cancel(self, reason='Reference request cancelled'):
+122:         self._complete(None,reason)
+123:
+124:     def _complete(self, result, error):
+125:         callback,self.callback=self.callback,None
+126:         reply,self.reply=self.reply,None
+127:         self.timer.stop()
+128:         self.request=None
+129:         if hasattr(self,'buffer'): self.buffer.clear()
+130:         if reply is not None:
+131:             reply.abort()
+132:             reply.deleteLater()
+133:         if callback is not None: callback(result,error)
+134:
+135:     def shutdown(self):
+136:         if self.closed: return
+137:         self.closed=True
+138:         self.cancel('Reference client closed')
+139:         self.manager.authenticationRequired.disconnect(self._authentication)
+140:         self.manager.proxyAuthenticationRequired.disconnect(self._proxy_authentication)
+141:         self.deleteLater()
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: tests/test_exomol_product.py =====
+1: from dataclasses import replace
+2: from hashlib import sha256
+3: import json
+4: from pathlib import Path
+5: from unittest.mock import patch
+6:
+7: import pytest
+8: from PySide6.QtCore import QObject, Signal, QByteArray
+9: from PySide6.QtWidgets import QApplication
+10: from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
+11:
+12: from ecas.ingestion.exomol_catalogue import parse_catalogue, search_catalogue
+13: from ecas.ingestion.exomol_product import ProductRequest, parse_form, product_url, validate_product, supported_entry, SERVICE_URL
+14: from ecas.ingestion.exomol_product_network import PublicExomolProductHttp, RetrievedCrossSection
+15: from ecas.ingestion.exomol_reference_cache import store_reference, load_reference, cached_references
+16: from ecas.ui.molecular_browser import MolecularReferenceBrowser
+17: from ecas.ui.main_window import ECASWindow
+18:
+19: DATA=Path(__file__).resolve().parents[1]/'data/ExoMol/2026-10-28'
+20: FORM=(DATA/'CO2-product-form-sanitized.html').read_bytes()
+21: LINKS=(DATA/'CO2-sample-product-links.html').read_bytes()
+22: RAW=(DATA/'CO2-12C-16O2-500K-4000-4010-dnu1.sigma').read_bytes()
+23: REQUEST=ProductRequest(4000,4010,500,'1')
+24: ENTRY=next(e for e in search_catalogue(parse_catalogue((DATA/'exomol.all').read_bytes()),'CO2').entries if supported_entry(e))
+25:
+26:
+27: @pytest.fixture(scope='session',autouse=True)
+28: def app():
+29:     instance=QApplication.instance() or QApplication([])
+30:     yield instance
+31:
+32:
+33: def result(): return RetrievedCrossSection(REQUEST,RAW,validate_product(RAW,REQUEST))
+34:
+35:
+36: def test_live_capture_protocol_grid_and_identity():
+37:     form=parse_form(FORM)
+38:     assert 'SSSS' not in repr(form)
+39:     assert b'spoon_feed=on' in form.body(REQUEST)
+40:     assert product_url(LINKS,REQUEST)=='https://www.exomol.com'+REQUEST.product_path
+41:     product=validate_product(RAW,REQUEST)
+42:     assert len(product.points)==11 and product.points[0][0]==4000 and product.points[-1][0]==4010
+43:     assert product.source_sha256=='d323b5dd2f11c87a3cd6c0dc041fd625f00d56ec05cc2f2f2fb756cb01ea9fab'
+44:     assert product.provenance.pressure_bar==0 and product.provenance.temperature_kelvin==500
+45:
+46:
+47: @pytest.mark.parametrize('parameters', [(0,20001,500,'1'),(4010,4000,500,'1'),(0,1,99,'1'),
+48:     (0,1,500,'0'),(0,1,500,'0.3'),(0,1,500,'0.0000001'),(0,20000,500,'1'),
+49:     (True,10,500,'1'),(0,10,500,'NaN')])
+50: def test_request_bounds_and_exact_grid(parameters):
+51:     with pytest.raises(ValueError): ProductRequest(*parameters)
+52:
+53:
+54: @pytest.mark.parametrize('change', ['fields','action','token','error_page','dataset','pressure','units'])
+55: def test_changed_form_fails_before_post(change):
+56:     raw=FORM
+57:     if change=='fields': raw=raw.replace(b'name="spoon_feed"',b'name="other"')
+58:     elif change=='action': raw=raw.replace(b'action="/xsec/12C-16O2/"',b'action="https://example.org/"')
+59:     elif change=='token': raw=raw.replace(b'S'*64,b'')
+60:     elif change=='dataset': raw=raw.replace(b'line list UCL-4000',b'line list Dozen')
+61:     elif change=='pressure': raw=raw.replace(b'zero-pressure',b'finite-pressure')
+62:     elif change=='units': raw=raw.replace(b'/molec',b'/kilogram')
+63:     else: raw=b'<html>Unavailable</html>'
+64:     with pytest.raises(ValueError): parse_form(raw)
+65:
+66:
+67: @pytest.mark.parametrize('link', ['/results/other.sigma','https://example.org/reference.sigma',
+68:     '//www.exomol.com'+REQUEST.product_path, REQUEST.product_path+'?extra=1',
+69:     REQUEST.product_path.replace('500K','501K')])
+70: def test_result_link_must_match_request_exactly(link):
+71:     with pytest.raises(ValueError): product_url(f'<a href="{link}">file</a>'.encode(),REQUEST)
+72:
+73:
+74: def test_valid_numerical_product_with_wrong_grid_is_not_accepted():
+75:     with pytest.raises(ValueError): validate_product(RAW,ProductRequest(4000,4009,500,'1'))
+76:     with pytest.raises(ValueError): validate_product(RAW.replace(b'4005.000000',b'4005.100000'),REQUEST)
+77:
+78:
+79: def test_reference_cache_offline_registration_revalidation_and_atomic_failure(tmp_path):
+80:     stored=result()
+81:     assert cached_references(tmp_path/'cache')==([],0) and not (tmp_path/'cache').exists()
+82:     path=store_reference(tmp_path/'cache',stored)
+83:     assert load_reference(path)==stored
+84:     assert cached_references(path.parent)[0][0][0]==path
+85:     original=path.read_bytes()
+86:     with patch('ecas.ingestion.exomol_reference_cache.os.replace',side_effect=OSError('synthetic disk error')):
+87:         with pytest.raises(OSError): store_reference(path.parent,stored)
+88:     assert path.read_bytes()==original and not list(path.parent.glob('*.tmp'))
+89:     bad=json.loads(original); bad['request']['temperature']=600
+90:     path.write_text(json.dumps(bad))
+91:     with pytest.raises(ValueError): load_reference(path)
+92:     assert cached_references(path.parent)==([],1)
+93:
+94:
+95: def test_cached_product_cannot_substitute_different_provenance(tmp_path):
+96:     product=replace(result().product,provenance=replace(result().product.provenance,pressure_bar=1))
+97:     with pytest.raises(ValueError): store_reference(tmp_path,RetrievedCrossSection(REQUEST,RAW,product))
+98:
+99:
+100: def test_earlier_reference_envelope_without_catalogue_context_still_reopens(tmp_path):
+101:     path=store_reference(tmp_path,result())
+102:     envelope=json.loads(path.read_text())
+103:     envelope.pop('catalogue_context'); envelope.pop('integrity_sha256')
+104:     envelope['integrity_sha256']=sha256(json.dumps(envelope,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+105:     path.write_text(json.dumps(envelope))
+106:     assert load_reference(path)==result()
+107:
+108:
+109: def test_conflicting_catalogue_identity_is_not_registered(tmp_path):
+110:     with pytest.raises(ValueError):
+111:         store_reference(tmp_path/'cache',result(),catalogue_context=dict(formula='H2O',isotopologue='1H2-16O',
+112:             dataset='POKAZATEL',version='20230621',catalogue_sha256='a'*64))
+113:     assert not (tmp_path/'cache').exists()
+114:
+115:
+116: def test_early_v1_citation_metadata_remain_readable_without_rewrite(tmp_path):
+117:     path=store_reference(tmp_path,result())
+118:     envelope=json.loads(path.read_text())
+119:     envelope['provenance']['citations']=envelope['provenance']['citations'][:2]
+120:     envelope.pop('integrity_sha256')
+121:     envelope['integrity_sha256']=sha256(json.dumps(envelope,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+122:     path.write_text(json.dumps(envelope))
+123:     original=path.read_bytes()
+124:     reopened=load_reference(path)
+125:     assert reopened.raw==RAW and reopened.product.provenance.citations==result().product.provenance.citations[:2]
+126:     assert path.read_bytes()==original
+127:
+128:
+129: class Reply(QObject):
+130:     readyRead=Signal(); finished=Signal()
+131:     def __init__(self,raw,status=200,headers=(),queued=False):
+132:         super().__init__(); self.raw=raw; self.status=status; self.headers=headers; self.queued=queued; self.deleted=False
+133:     def setReadBufferSize(self,size): pass
+134:     def bytesAvailable(self): return len(self.raw)
+135:     def read(self,size):
+136:         raw,self.raw=self.raw[:size],self.raw[size:]
+137:         return QByteArray(raw)
+138:     def rawHeaderPairs(self): return [(QByteArray(k),QByteArray(v)) for k,v in self.headers]
+139:     def abort(self):
+140:         if not self.queued: self.finished.emit()
+141:     def deleteLater(self): self.deleted=True
+142:     def attribute(self,attr): return self.status
+143:     def error(self): return QNetworkReply.NetworkError.NoError
+144:     def errorString(self): return 'synthetic'
+145:
+146:
+147: class Manager(QObject):
+148:     authenticationRequired=Signal(object,object); proxyAuthenticationRequired=Signal(object,object)
+149:     def __init__(self,replies): super().__init__(); self.replies=list(replies); self.requests=[]
+150:     def setProxy(self,proxy): pass
+151:     def get(self,request): self.requests.append(('GET',request,None)); return self.replies.pop(0)
+152:     def post(self,request,body): self.requests.append(('POST',request,bytes(body))); return self.replies.pop(0)
+153:
+154:
+155: def sequence():
+156:     return [Reply(FORM,headers=[(b'Set-Cookie',b'csrftoken='+b'C'*32+b'; Path=/; Secure')]),Reply(LINKS),Reply(RAW)]
+157:
+158:
+159: def test_three_phase_requests_only_forward_fresh_csrf_to_form_post():
+160:     replies=sequence(); manager=Manager(replies); client=PublicExomolProductHttp(manager=manager)
+161:     results=[]; client.download(ENTRY,REQUEST,lambda *args: results.append(args))
+162:     for reply in replies: reply.finished.emit()
+163:     assert len(results)==1 and results[0][0]==result() and results[0][1] is None
+164:     assert [method for method,_,_ in manager.requests]==['GET','POST','GET']
+165:     for index,(_,request,body) in enumerate(manager.requests):
+166:         assert not request.rawHeader('Authorization')
+167:         assert bool(request.rawHeader('Cookie')) == (index==1)
+168:         assert request.attribute(QNetworkRequest.Attribute.CookieLoadControlAttribute)==QNetworkRequest.LoadControl.Manual
+169:         assert request.attribute(QNetworkRequest.Attribute.RedirectPolicyAttribute)==QNetworkRequest.RedirectPolicy.ManualRedirectPolicy
+170:     assert manager.requests[1][1].url().toString()==SERVICE_URL
+171:     assert b'email' not in manager.requests[1][2]
+172:     assert client.request is None and client.callback is None and not client.timer.isActive()
+173:
+174:
+175: @pytest.mark.parametrize('failure', ['cookie','redirect','invalid_form','invalid_link','oversize','auth','timeout','cancel'])
+176: def test_protocol_failure_cleans_up_once(failure):
+177:     replies=sequence()
+178:     if failure=='cookie': replies[0].headers=[]
+179:     elif failure=='redirect': replies[0].status=302
+180:     elif failure=='invalid_form': replies[0].raw=b'bad'
+181:     elif failure=='invalid_link': replies[1].raw=b'bad'
+182:     elif failure=='oversize': replies[0].raw=b'x'*262145
+183:     manager=Manager(replies); client=PublicExomolProductHttp(manager=manager)
+184:     results=[]; client.download(ENTRY,REQUEST,lambda *args: results.append(args))
+185:     if failure=='auth': manager.authenticationRequired.emit(replies[0],None)
+186:     elif failure=='timeout': client.timer.timeout.emit()
+187:     elif failure=='cancel': client.cancel()
+188:     else:
+189:         replies[0].finished.emit()
+190:         if failure=='invalid_link': replies[1].finished.emit()
+191:     replies[0].finished.emit()
+192:     assert len(results)==1 and results[0][0] is None and results[0][1]
+193:     assert client.reply is None and client.callback is None and not client.timer.isActive()
+194:
+195:
+196: @pytest.mark.parametrize('queued',[False,True])
+197: def test_failure_callback_starts_new_operation_without_late_signal_corruption(queued):
+198:     first=Reply(b'x'*262145,queued=queued); following=sequence()
+199:     manager=Manager([first]+following); client=PublicExomolProductHttp(manager=manager)
+200:     results=[]
+201:     def failed(*args):
+202:         results.append(args); client.download(ENTRY,REQUEST,lambda *later: results.append(later))
+203:     client.download(ENTRY,REQUEST,failed)
+204:     first.finished.emit(); first.finished.emit()
+205:     assert client.reply is following[0] and len(results)==1
+206:     for reply in following: reply.finished.emit()
+207:     assert len(results)==2 and results[1][0]==result()
+208:
+209:
+210: class ProductHttp:
+211:     def download(self,entry,request,callback): self.request=request; self.callback=callback
+212:     def finish(self,error=None):
+213:         callback,self.callback=self.callback,None
+214:         callback(None if error else result(),error)
+215:     def cancel(self):
+216:         if getattr(self,'callback',None): self.finish('cancelled')
+217:
+218:
+219: def select_supported(browser):
+220:     browser.query.setText('CO2'); browser.search_button.click()
+221:     index=next(i for i,e in enumerate(browser.entries) if supported_entry(e))
+222:     browser.results.setCurrentRow(index)
+223:
+224:
+225: def test_browser_download_display_and_cached_reopen_preserve_observation(tmp_path):
+226:     window=ECASWindow(projects_dir=tmp_path/'projects',reference_cache_dir=tmp_path/'cache')
+227:     try:
+228:         source=DATA.parents[1]/'NASA/2026-10-27/feinstein-2023.tbl'
+229:         window._import_csv_from_path(str(source)); observation=window.current_spectrum
+230:         browser=window.reference_browser; browser.product_http=ProductHttp()
+231:         select_supported(browser)
+232:         assert browser.download_button.isEnabled()
+233:         browser.download_button.click()
+234:         assert browser.busy and not browser.search_button.isEnabled()
+235:         window.navigation.setCurrentRow(4)
+236:         assert window.navigation.currentItem().text()=='Comparisons'
+237:         assert browser.busy  # Navigation does not cancel or restart the request.
+238:         browser.product_http.finish()
+239:         assert window.navigation.currentItem().text()=='Comparisons'
+240:         window.navigation.setCurrentRow(3)
+241:         assert window.navigation.currentItem().text()=='Molecular References'
+242:         assert browser.reference_table.rowCount()==11 and browser.current_reference==result()
+243:         loaded=browser.current_reference
+244:         for page in (1,2,4,5,3): window.navigation.setCurrentRow(page)
+245:         assert browser.current_reference is loaded and browser.reference_table.rowCount()==11
+246:         envelope=json.loads(Path(browser.cached.currentData()).read_text())
+247:         assert envelope['catalogue_context']['version']==ENTRY.version
+248:         assert envelope['catalogue_context']['dataset']=='UCL-4000'
+249:         assert 'csrfmiddlewaretoken' not in json.dumps(envelope)
+250:         assert 'csrftoken' not in json.dumps(envelope)
+251:         assert window.current_spectrum is observation
+252:     finally: window.close()
+253:     reopened=MolecularReferenceBrowser(cache_root=tmp_path/'cache')
+254:     try:
+255:         assert reopened.product_http is None and reopened.cached.count()==1
+256:         reopened.load_reference_button.click()
+257:         assert reopened.reference_table.rowCount()==11 and reopened.current_reference==result()
+258:         assert reopened.product_http is None and reopened.http is None
+259:     finally: reopened.shutdown(); reopened.close()
+260:
+261:
+262: def test_unsupported_selection_and_failed_replacement_do_not_corrupt_reference(tmp_path):
+263:     http=ProductHttp(); browser=MolecularReferenceBrowser(cache_root=tmp_path,product_http=http)
+264:     try:
+265:         browser.query.setText('Water'); browser.search(); browser.results.setCurrentRow(0)
+266:         assert not browser.download_button.isEnabled()
+267:         select_supported(browser); browser.download_button.click(); http.finish()
+268:         old=browser.current_reference
+269:         browser.download_button.click(); browser.cancel_button.click()
+270:         assert browser.current_reference is old and not browser.busy
+271:         assert 'Previous displayed reference unchanged' in browser.status.text()
+272:         path=Path(browser.cached.currentData()); path.write_bytes(b'invalid')
+273:         browser.load_reference_button.click()
+274:         assert browser.current_reference is old and 'Could not open' in browser.status.text()
+275:     finally: browser.shutdown(); browser.close()
+276:
+277:
+278: ADDITIONAL = DATA/'additional-products'
+279: NEW_SERVICES = [('H2O','1H2-16O','POKAZATEL',41200,5000),('CH4','12C-1H4','MM',12000,2000)]
+280:
+281:
+282: def additional_result(formula, isotope):
+283:     request=ProductRequest(4000,4010,500,'1',isotope)
+284:     raw=(ADDITIONAL/(formula+'-500K-4000-4010-dnu1.sigma')).read_bytes()
+285:     return RetrievedCrossSection(request,raw,validate_product(raw,request))
+286:
+287:
+288: @pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+289: def test_additional_captured_protocol_network_and_cache_identity(tmp_path, formula, isotope, dataset, maximum, temperature):
+290:     catalogue=parse_catalogue((DATA/'exomol.all').read_bytes())
+291:     entry=next(e for e in search_catalogue(catalogue,formula).entries if supported_entry(e))
+292:     result=additional_result(formula,isotope)
+293:     request=result.request
+294:     form=(ADDITIONAL/(formula+'-form-sanitized.html')).read_bytes()
+295:     links=(ADDITIONAL/(formula+'-product-links.html')).read_bytes()
+296:     assert parse_form(form,isotope).body(request)
+297:     assert product_url(links,request).endswith(request.product_path)
+298:     provenance=json.loads((ADDITIONAL/(formula+'-product-provenance.json')).read_text())
+299:     assert result.product.source_sha256==provenance['steps'][-1]['sha256']
+300:     assert result.product.provenance.molecule==formula and result.product.provenance.dataset==dataset
+301:     assert result.product.provenance.isotopologue==isotope and len(result.product.points)==11
+302:     replies=[Reply(form,headers=[(b'Set-Cookie',b'csrftoken='+b'C'*32)]),Reply(links),Reply(result.raw)]
+303:     manager=Manager(replies); client=PublicExomolProductHttp(manager=manager)
+304:     received=[]
+305:     client.download(entry,request,lambda *args:received.append(args))
+306:     for reply in replies: reply.finished.emit()
+307:     assert received==[(result,None)]
+308:     assert [r.url().toString() for _,r,_ in manager.requests]==[request.service.url,request.service.url,product_url(links,request)]
+309:     assert bytes(manager.requests[1][1].rawHeader('Referer')).decode()==request.service.url
+310:     assert bytes(manager.requests[1][1].rawHeader('Cookie'))==b'csrftoken='+b'C'*32
+311:     assert not manager.requests[0][1].rawHeader('Cookie') and not manager.requests[2][1].rawHeader('Cookie')
+312:     context=dict(formula=formula,isotopologue=isotope,dataset=dataset,version=entry.version,catalogue_sha256=catalogue.source_sha256)
+313:     path=store_reference(tmp_path,result,catalogue_context=context)
+314:     assert load_reference(path)==result
+315:     with pytest.raises(ValueError): store_reference(tmp_path,result,catalogue_context=dict(context,formula='CO2'))
+316:     # Dataset/isotope substitutions cannot inherit a service's retrieval support.
+317:     assert not supported_entry(replace(entry,dataset='unverified'))
+318:     with pytest.raises(ValueError): client.download(ENTRY,request,lambda *args:None)
+319:     assert len(manager.requests)==3
+320:     with pytest.raises(ValueError): parse_form(FORM,isotope)
+321:     with pytest.raises(ValueError): parse_form(form)
+322:     with pytest.raises(ValueError): product_url(LINKS,request)
+323:
+324:
+325: @pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+326: def test_service_specific_limits_and_changed_provider_limits(formula,isotope,dataset,maximum,temperature):
+327:     assert ProductRequest(maximum-1,maximum,temperature,'1',isotope).point_count==2
+328:     for settings in ((maximum-1,maximum+1,500,'1'),(0,1,temperature+1,'1')):
+329:         with pytest.raises(ValueError): ProductRequest(*settings,isotopologue=isotope)
+330:     form=(ADDITIONAL/(formula+'-form-sanitized.html')).read_bytes()
+331:     with pytest.raises(ValueError): parse_form(form.replace(str(maximum).encode(),b'99999'),isotope)
+332:     with pytest.raises(ValueError): parse_form(form.replace(b'zero-pressure',b'finite-pressure'),isotope)
+333:     with pytest.raises(ValueError): parse_form(form.replace(dataset.encode(),b'OtherData'),isotope)
+334:
+335:
+336: def test_unknown_reference_service_is_rejected():
+337:     with pytest.raises(ValueError): ProductRequest(0,1,500,'1','unverified-isotope')
+338:
+339:
+340: def test_original_co2_request_without_identity_field_still_reopens(tmp_path):
+341:     path=store_reference(tmp_path,result())
+342:     envelope=json.loads(path.read_text()); envelope['request'].pop('isotopologue')
+343:     envelope.pop('integrity_sha256')
+344:     envelope['integrity_sha256']=sha256(json.dumps(envelope,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+345:     path.write_text(json.dumps(envelope)); original=path.read_bytes()
+346:     assert load_reference(path)==result() and path.read_bytes()==original
+347:
+348:
+349: @pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+350: def test_additional_browser_selection_display_and_offline_reopen(tmp_path,formula,isotope,dataset,maximum,temperature):
+351:     expected=additional_result(formula,isotope)
+352:     class Http:
+353:         def __init__(self): self.calls=0
+354:         def download(self,entry,request,callback):
+355:             self.calls+=1
+356:             assert (entry.formula,entry.dataset)==(formula,dataset) and request==expected.request
+357:             callback(expected,None)
+358:         def cancel(self): pass
+359:     http=Http()
+360:     browser=MolecularReferenceBrowser(cache_root=tmp_path,product_http=http)
+361:     try:
+362:         browser.query.setText(formula); browser.search()
+363:         index=next(i for i,e in enumerate(browser.entries) if supported_entry(e))
+364:         browser.results.setCurrentRow(index)
+365:         assert browser.download_button.isEnabled() and str(maximum) in browser.details.text()
+366:         browser.download_button.click()
+367:         assert browser.current_reference==expected and formula in browser.reference_status.text()
+368:         assert dataset in browser.reference_status.text() and formula in browser.cached.currentText()
+369:         if temperature<5000:
+370:             browser.temperature.setValue(temperature+1)
+371:         else:
+372:             # Water UI already caps at its verified maximum; test an invalid grid.
+373:             browser.minimum.setValue(browser.maximum.value())
+374:         browser.download_button.click()
+375:         assert http.calls==1 and browser.current_reference==expected
+376:         assert 'settings invalid' in browser.status.text()
+377:     finally: browser.shutdown(); browser.close()
+378:     reopened=MolecularReferenceBrowser(cache_root=tmp_path)
+379:     try:
+380:         assert reopened.http is None and reopened.product_http is None
+381:         reopened.load_reference_button.click()
+382:         assert reopened.current_reference==expected and dataset in reopened.cached.currentText()
+383:         assert reopened.http is None and reopened.product_http is None
+384:     finally: reopened.shutdown(); reopened.close()
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: tests/test_molecular_browser.py =====
+1: import json
+2: from pathlib import Path
+3: from unittest.mock import patch
+4:
+5: import pytest
+6: from PySide6.QtCore import QObject, Signal, QByteArray, QEvent
+7: from PySide6.QtWidgets import QApplication
+8: from PySide6.QtNetwork import QNetworkRequest, QNetworkReply
+9:
+10: from ecas.ingestion.exomol_catalogue_cache import CATALOGUE_URL, load_catalogue, store_catalogue
+11: from ecas.ingestion.exomol_network import PublicExomolCatalogueHttp
+12: from ecas.ui.molecular_browser import MolecularReferenceBrowser
+13: from ecas.ui.main_window import ECASWindow
+14:
+15: DATA = Path(__file__).resolve().parents[1]/'data/ExoMol/2026-10-28/exomol.all'
+16: RAW = DATA.read_bytes()
+17:
+18:
+19: @pytest.fixture(scope='session', autouse=True)
+20: def app():
+21:     instance = QApplication.instance() or QApplication([])
+22:     yield instance
+23:     # Keep one QApplication alive across modules. Each test closes its own widgets;
+24:     # do not flush/delete unrelated modules' deferred Qt objects during teardown.
+25:
+26:
+27: class FakeHttp:
+28:     def __init__(self): self.callback = None
+29:     def get(self, callback): self.callback = callback
+30:     def finish(self, raw=RAW, error=None):
+31:         callback, self.callback = self.callback, None
+32:         callback(raw, error)
+33:     def cancel(self):
+34:         if self.callback: self.finish(None, 'cancelled')
+35:
+36:
+37: def test_browser_offline_search_ambiguity_and_selection(tmp_path):
+38:     browser = MolecularReferenceBrowser(cache_root=tmp_path/'cache', http=FakeHttp())
+39:     try:
+40:         assert 'Bundled' in browser.source.text() and not browser.cache_root.exists()
+41:         browser.query.setText('Water')
+42:         browser.search_button.click()
+43:         assert browser.results.count() == 5
+44:         browser.results.setCurrentRow(0)
+45:         assert 'not established' in browser.details.text()
+46:         browser.query.setText('Phosphine')
+47:         browser.query.returnPressed.emit()
+48:         assert browser.results.count() == 2 and 'Ambiguous' in browser.status.text()
+49:         browser.query.setText('synthetic-nonexistent-molecule')
+50:         browser.search_button.click()
+51:         assert browser.results.count() == 0 and 'No matches' in browser.status.text()
+52:         assert 'Select an entry' in browser.details.text()
+53:     finally: browser.shutdown(); browser.close()
+54:
+55:
+56: def test_refresh_cache_reopen_without_source_or_network(tmp_path):
+57:     http = FakeHttp()
+58:     browser = MolecularReferenceBrowser(cache_root=tmp_path/'cache', http=http)
+59:     try:
+60:         browser.query.setText('CO2')
+61:         browser.refresh_button.click()
+62:         assert browser.busy and not browser.search_button.isEnabled()
+63:         http.finish()
+64:         assert not browser.busy and browser.results.count() == 13
+65:         assert 'Cached' in browser.source.text()
+66:     finally: browser.shutdown(); browser.close()
+67:     reopened = MolecularReferenceBrowser(cache_root=tmp_path/'cache', bundled_path=tmp_path/'missing', http=FakeHttp())
+68:     try:
+69:         reopened.query.setText('Water')
+70:         reopened.search_button.click()
+71:         assert reopened.results.count() == 5 and 'Cached' in reopened.source.text()
+72:         assert reopened.http.callback is None
+73:     finally: reopened.shutdown(); reopened.close()
+74:
+75:
+76: @pytest.mark.parametrize('failure', ['cancel', 'invalid_response', 'start_error', 'disk_error'])
+77: def test_failed_refresh_preserves_search_and_cache(tmp_path, failure):
+78:     store_catalogue(tmp_path/'cache', RAW)
+79:     original_bytes = (tmp_path/'cache/catalogue.json').read_bytes()
+80:     http = FakeHttp()
+81:     browser = MolecularReferenceBrowser(cache_root=tmp_path/'cache', http=http)
+82:     try:
+83:         browser.query.setText('Water'); browser.search()
+84:         original = browser.catalogue
+85:         if failure == 'start_error':
+86:             with patch.object(http, 'get', side_effect=OSError('synthetic start error')): browser.refresh_button.click()
+87:         else:
+88:             browser.refresh_button.click()
+89:             if failure == 'cancel': browser.cancel_button.click()
+90:             elif failure == 'invalid_response': http.finish(b'<html>unavailable</html>')
+91:             else:
+92:                 with patch('ecas.ingestion.exomol_catalogue_cache.os.replace', side_effect=OSError('synthetic disk failure')):
+93:                     http.finish()
+94:         assert browser.catalogue is original and browser.results.count() == 5
+95:         assert not browser.busy and browser.search_button.isEnabled()
+96:         assert 'Previous catalogue unchanged' in browser.status.text()
+97:         assert (tmp_path/'cache/catalogue.json').read_bytes() == original_bytes
+98:         assert not list((tmp_path/'cache').glob('*.tmp'))
+99:     finally: browser.shutdown(); browser.close()
+100:
+101:
+102: def test_corrupt_cache_is_reported_and_bundled_snapshot_fallback_used(tmp_path):
+103:     store_catalogue(tmp_path, RAW)
+104:     envelope = json.loads((tmp_path/'catalogue.json').read_text())
+105:     envelope['sha256'] = '0'*64
+106:     (tmp_path/'catalogue.json').write_text(json.dumps(envelope))
+107:     with pytest.raises(ValueError): load_catalogue(tmp_path)
+108:     browser = MolecularReferenceBrowser(cache_root=tmp_path, http=FakeHttp())
+109:     try:
+110:         assert 'Cached catalogue could not be loaded' in browser.status.text()
+111:         assert 'Bundled' in browser.source.text()
+112:     finally: browser.shutdown(); browser.close()
+113:
+114:
+115: @pytest.mark.parametrize('field,value', [('source_url', 'https://example.org/index'),
+116:     ('schema', 'unknown'), ('retrieved_utc', '2026-10-28T12:00:00'), ('raw_base64', '!!invalid!!')])
+117: def test_cache_rejects_invalid_source_format_and_provenance(tmp_path, field, value):
+118:     store_catalogue(tmp_path, RAW)
+119:     path = tmp_path/'catalogue.json'
+120:     envelope = json.loads(path.read_text())
+121:     envelope[field] = value
+122:     path.write_text(json.dumps(envelope))
+123:     with pytest.raises(ValueError): load_catalogue(tmp_path)
+124:
+125:
+126: def test_missing_cache_read_and_invalid_store_have_no_directory_side_effect(tmp_path):
+127:     root = tmp_path/'cache'
+128:     assert load_catalogue(root) is None and not root.exists()
+129:     with pytest.raises(ValueError): store_catalogue(root, b'invalid source')
+130:     assert not root.exists()
+131:
+132:
+133: def test_no_local_catalogue_can_recover_via_refresh_and_close_ignores_callback(tmp_path):
+134:     http = FakeHttp()
+135:     browser = MolecularReferenceBrowser(cache_root=tmp_path/'cache', bundled_path=tmp_path/'missing', http=http)
+136:     try:
+137:         assert not browser.search_button.isEnabled() and browser.refresh_button.isEnabled()
+138:         browser.refresh(); http.finish()
+139:         assert browser.search_button.isEnabled()
+140:         browser.refresh()
+141:         callback = http.callback
+142:         browser.shutdown()
+143:         previous = browser.catalogue
+144:         callback(b'invalid', None)
+145:         assert browser.catalogue is previous
+146:     finally: browser.close()
+147:
+148:
+149: def test_actual_window_reference_page_preserves_search_and_observation_across_navigation(tmp_path):
+150:     window = ECASWindow(projects_dir=tmp_path/'projects', reference_cache_dir=tmp_path/'cache')
+151:     try:
+152:         source = tmp_path/'observation.csv'
+153:         source.write_text('wavelength,signal\n1,2\n2,3\n', encoding='utf-8')
+154:         window._import_csv_from_path(str(source))
+155:         observation = window.current_spectrum
+156:         window.navigation.setCurrentRow(3)
+157:         assert window.navigation.currentItem().text() == 'Molecular References'
+158:         browser = window.reference_browser
+159:         browser.query.setText('Water'); browser.search_button.click()
+160:         assert browser.results.count() == 5
+161:         browser.results.setCurrentRow(0)
+162:         selected = browser.results.currentItem().text()
+163:         for page in (4, 1, 2, 5, 0, 3):
+164:             window.navigation.setCurrentRow(page)
+165:         assert window.reference_browser is browser
+166:         assert browser.query.text() == 'Water' and browser.results.currentItem().text() == selected
+167:         assert window.current_spectrum is observation and not (tmp_path/'cache').exists()
+168:         assert window.pages.currentIndex() == 3
+169:         assert browser.http is None  # offline use creates no network manager
+170:     finally: window.close()
+171:
+172:
+173: def test_real_qt_manager_creation_on_refresh_and_window_shutdown(tmp_path):
+174:     # Exercise real manager ownership/destruction without making an HTTP request.
+175:     with patch.object(PublicExomolCatalogueHttp, 'get', lambda self, callback: callback(RAW, None)):
+176:         for index in range(5):
+177:             window = ECASWindow(projects_dir=tmp_path/'projects', reference_cache_dir=tmp_path/f'cache{index}')
+178:             browser = window.reference_browser
+179:             browser.refresh_button.click()
+180:             assert isinstance(browser.http, PublicExomolCatalogueHttp)
+181:             assert 'Cached' in browser.source.text()
+182:             window.close()
+183:             assert browser.http.closed
+184:             QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+185:
+186:
+187: class Reply(QObject):
+188:     readyRead = Signal()
+189:     finished = Signal()
+190:     def __init__(self, raw=b'', status=200, queued=False):
+191:         super().__init__(); self.raw=raw; self.status=status; self.queued=queued; self.deleted=False
+192:     def setReadBufferSize(self, size): pass
+193:     def bytesAvailable(self): return len(self.raw)
+194:     def read(self, size):
+195:         block, self.raw = self.raw[:size], self.raw[size:]
+196:         return QByteArray(block)
+197:     def abort(self):
+198:         if not self.queued: self.finished.emit()
+199:     def attribute(self, attr): return self.status
+200:     def error(self): return QNetworkReply.NetworkError.NoError
+201:     def errorString(self): return 'synthetic'
+202:     def deleteLater(self): self.deleted=True
+203:
+204:
+205: class Manager(QObject):
+206:     authenticationRequired = Signal(object, object)
+207:     proxyAuthenticationRequired = Signal(object, object)
+208:     def __init__(self, replies): super().__init__(); self.replies=list(replies); self.requests=[]
+209:     def setProxy(self, proxy): pass
+210:     def get(self, request): self.requests.append(request); return self.replies.pop(0)
+211:
+212:
+213: def test_http_fixed_origin_and_anonymous_policy():
+214:     reply = Reply(RAW)
+215:     manager = Manager([reply]); client = PublicExomolCatalogueHttp(manager=manager)
+216:     result=[]; client.get(lambda raw, error: result.append((raw,error)))
+217:     request=manager.requests[0]
+218:     assert request.url().toString() == CATALOGUE_URL
+219:     assert not request.rawHeader('Authorization') and not request.rawHeader('Cookie')
+220:     assert client.timer.interval() == 15000
+221:     for attr in (QNetworkRequest.Attribute.CookieLoadControlAttribute, QNetworkRequest.Attribute.CookieSaveControlAttribute,
+222:                  QNetworkRequest.Attribute.AuthenticationReuseAttribute):
+223:         assert request.attribute(attr) == QNetworkRequest.LoadControl.Manual
+224:     assert request.attribute(QNetworkRequest.Attribute.RedirectPolicyAttribute) == QNetworkRequest.RedirectPolicy.ManualRedirectPolicy
+225:     with pytest.raises(ValueError): client.get(lambda *_: None)
+226:     reply.finished.emit()
+227:     assert result == [(RAW, None)] and reply.deleted and client.reply is None
+228:
+229:
+230: @pytest.mark.parametrize('queued', [False, True])
+231: def test_overflow_and_chained_request_do_not_corrupt_new_reply(queued):
+232:     old, new = Reply(b'x'*1048577, queued=queued), Reply(RAW)
+233:     client = PublicExomolCatalogueHttp(manager=Manager([old,new]))
+234:     results=[]
+235:     def failed(raw,error):
+236:         results.append((raw,error))
+237:         client.get(lambda body, problem: results.append((body,problem)))
+238:     client.get(failed)
+239:     old.finished.emit()
+240:     assert client.reply is new and not new.deleted and len(results)==1
+241:     old.finished.emit()
+242:     assert client.reply is new and len(results)==1
+243:     new.finished.emit()
+244:     assert results[0][0] is None and 'exceeds' in results[0][1]
+245:     assert results[1] == (RAW,None)
+246:
+247:
+248: @pytest.mark.parametrize('kind', ['timeout', 'auth', 'proxy', 'redirect', 'http_error'])
+249: def test_network_failures_complete_once_and_release_client(kind):
+250:     reply=Reply(status=302 if kind=='redirect' else 503 if kind=='http_error' else 200)
+251:     manager=Manager([reply]); client=PublicExomolCatalogueHttp(manager=manager)
+252:     results=[]; client.get(lambda *args: results.append(args))
+253:     if kind=='timeout': client.timer.timeout.emit()
+254:     elif kind=='auth': manager.authenticationRequired.emit(reply,None)
+255:     elif kind=='proxy': manager.proxyAuthenticationRequired.emit(None,None)
+256:     else: reply.finished.emit()
+257:     reply.finished.emit()
+258:     assert len(results)==1 and results[0][0] is None and results[0][1]
+259:     assert client.reply is None and not client.timer.isActive()
+260:
+261:
+262: def test_shutdown_discards_late_signals_and_forbids_new_request():
+263:     reply=Reply(queued=True)
+264:     manager=Manager([reply]); client=PublicExomolCatalogueHttp(manager=manager)
+265:     results=[]; client.get(lambda *args: results.append(args))
+266:     client.shutdown()
+267:     reply.finished.emit()
+268:     assert not results and client.closed and not client.timer.isActive()
+269:     with pytest.raises(ValueError, match='closed'): client.get(lambda *_: None)
+===== END SOURCE =====
+
+
+===== BEGIN UNTRUSTED SOURCE: data/ExoMol/2026-10-28/additional-products/README.md =====
+1: # Additional ExoMol products — 2026-10-28
+2:
+3: Two small calculated reference cross sections, not observations or validated
+4: atmosphere models. Each .sigma file preserves original provider bytes: 308 bytes,
+5: 11 inclusive points at 4000–4010 cm^-1, spacing 1 cm^-1, 500 K. Conditions stated
+6: by the provider: zero pressure, Doppler-only broadening; units cm^2/molecule.
+7:
+8: | Formula / dataset | Service | Product SHA-256 |
+9: | --- | --- | --- |
+10: | H2O / POKAZATEL | https://www.exomol.com/xsec/1H2-16O/ | `695a0560817ca90d7eb4e09f5e3479daa53ec551a23acba530e3ad42955b25f3` |
+11: | CH4 / MM | https://www.exomol.com/xsec/12C-1H4/ | `cc47d79cf6ba4bb286982f4ffbd74b4af11db32fbc2ee1960209a8e991b77151` |
+12:
+13: `*-product-provenance.json` records exact UTC times, GET/POST/GET URLs, response
+14: status/hashes, public parameters and conditions. `*-product-links.html` retains
+15: unchanged result-page bytes, checked not to contain the transient form/cookie state.
+16: `*-form-sanitized.html` is explicitly transformed: its anti-forgery token is replaced
+17: with 64 synthetic S characters. `*-form-provenance.json` distinguishes original
+18: and transformed hashes and omits token values. No email/account credentials were
+19: supplied; fresh anonymous CSRF state was used only for the same-form POST and was
+20: not sent to the product GET. No redirect or automatic retry was used.
+21:
+22: ExoMol provider terms: https://www.exomol.com/data/licence/ ; CC BY-SA 4.0:
+23: https://creativecommons.org/licenses/by-sa/4.0/ . Numerical product values are
+24: unchanged; the form transformation is declared. Required attribution retained:
+25:
+26: - Hill, Yurchenko & Tennyson (2013), Icarus 226, 1673–1677, cross-section method.
+27: - Polyansky et al. (2018), MNRAS 480, 2597–2608, POKAZATEL water line list.
+28: - Yurchenko et al. (2024), MNRAS 528, 3719–3729, MM methane line list. The methane
+29:   page's inline citation says 2023; its full bibliography gives 2024. Source text
+30:   is preserved rather than corrected.
+31: - Tennyson & Yurchenko (2012), MNRAS 425, 21–33, ExoMol.
+32:
+33: The dated master catalogue links these exact isotopes to their datasets. This does
+34: not establish current inventory completeness, other isotope availability or
+35: comparability with transit-depth data. See the Chunk 5.1 user-feedback workflow
+36: for implementation, acceptance boundaries and executed tests.
+===== END SOURCE =====

@@ -1,0 +1,113 @@
+{
+  "url": "https://www.exomol.com/xsec/12C-1H4/",
+  "started_utc": "2026-10-28T18:27:38.375200+00:00",
+  "authentication": "none",
+  "cookies_sent": false,
+  "redirects_followed": false,
+  "http_status": 200,
+  "original_sha256": "96d04b5e36d7c142c3cd333ae16efddb2ae018edd8d7d70d9ae7379078a17f4a",
+  "original_bytes": 12824,
+  "fields": [
+    {
+      "tag": "form",
+      "attributes": {
+        "action": "/search/",
+        "class": "navbar-form navbar-right",
+        "role": "search"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "class": "form-control",
+        "placeholder": "Search",
+        "type": "text",
+        "name": "q",
+        "value": ""
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "submit",
+        "class": "btn btn-default",
+        "value": "Go"
+      }
+    },
+    {
+      "tag": "form",
+      "attributes": {
+        "action": "/xsec/12C-1H4/",
+        "method": "post"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "hidden",
+        "name": "csrfmiddlewaretoken"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "number",
+        "name": "dnu",
+        "step": "any",
+        "required": null,
+        "id": "id_dnu"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "number",
+        "name": "numin",
+        "min": "0.0",
+        "step": "any",
+        "required": null,
+        "id": "id_numin"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "number",
+        "name": "numax",
+        "min": "0.0",
+        "step": "any",
+        "required": null,
+        "id": "id_numax"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "number",
+        "name": "T",
+        "step": "any",
+        "required": null,
+        "id": "id_T"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "checkbox",
+        "name": "spoon_feed",
+        "id": "id_spoon_feed"
+      }
+    },
+    {
+      "tag": "input",
+      "attributes": {
+        "type": "submit",
+        "value": "Submit"
+      }
+    }
+  ],
+  "stored_sha256": "a3d774397d175a718654c6713c00da591c696bd90b5e763ceddd4882e3d3b23c",
+  "stored_bytes": 12824,
+  "transformation": "Transient CSRF token replaced by 64 synthetic S characters",
+  "finished_utc": "2026-10-28T18:27:38.786300+00:00"
+}

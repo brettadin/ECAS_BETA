@@ -146,14 +146,25 @@ def test_no_local_catalogue_can_recover_via_refresh_and_close_ignores_callback(t
     finally: browser.close()
 
 
-def test_actual_window_comparisons_tab_contains_search_and_preserves_display(tmp_path):
+def test_actual_window_reference_page_preserves_search_and_observation_across_navigation(tmp_path):
     window = ECASWindow(projects_dir=tmp_path/'projects', reference_cache_dir=tmp_path/'cache')
     try:
+        source = tmp_path/'observation.csv'
+        source.write_text('wavelength,signal\n1,2\n2,3\n', encoding='utf-8')
+        window._import_csv_from_path(str(source))
+        observation = window.current_spectrum
         window.navigation.setCurrentRow(3)
+        assert window.navigation.currentItem().text() == 'Molecular References'
         browser = window.reference_browser
         browser.query.setText('Water'); browser.search_button.click()
         assert browser.results.count() == 5
-        assert window.current_spectrum is None and not (tmp_path/'cache').exists()
+        browser.results.setCurrentRow(0)
+        selected = browser.results.currentItem().text()
+        for page in (4, 1, 2, 5, 0, 3):
+            window.navigation.setCurrentRow(page)
+        assert window.reference_browser is browser
+        assert browser.query.text() == 'Water' and browser.results.currentItem().text() == selected
+        assert window.current_spectrum is observation and not (tmp_path/'cache').exists()
         assert window.pages.currentIndex() == 3
         assert browser.http is None  # offline use creates no network manager
     finally: window.close()
