@@ -1,0 +1,14 @@
+{
+  "started_utc": "2026-10-28T06:58:49.425680+00:00",
+  "finished_utc": "2026-10-28T06:58:50.511609+00:00",
+  "status": "Catalogue refreshed and saved for offline search.",
+  "cache": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\reference-ui-live-5ef002cc",
+  "catalogue_url": "https://www.exomol.com/db/exomol.all",
+  "offscreen": true,
+  "human_acceptance": false,
+  "sha256": "3bc26ed45c5483839ee7a17ce4b135bdd5b2230147b6c261e07102884ffe646c",
+  "water_entries": 5,
+  "offline_water_entries": 5,
+  "offline_network_client_created": false,
+  "success": true
+}

@@ -1,0 +1,41 @@
+{
+  "command": [
+    "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-m",
+    "pytest",
+    "-p",
+    "no:cacheprovider",
+    "-o",
+    "pythonpath=.",
+    "--basetemp=C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\pytest-aliases-focused",
+    "tests/test_nasa_aliases.py",
+    "tests/test_nasa_online.py",
+    "tests/test_main_window.py",
+    "-q",
+    "--junitxml=C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\aliases-focused.xml"
+  ],
+  "environment_keys": [
+    "APPDATA",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+    "QT_QPA_PLATFORM",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 2.157350299996324,
+  "python": "3.14.5 (tags/v3.14.5:5607950, May 10 2026, 10:43:50) [MSC v.1944 64 bit (AMD64)]",
+  "versions": {
+    "pytest": "9.2.0",
+    "PySide6": "6.12.0",
+    "pyqtgraph": "0.14.0",
+    "numpy": "2.5.4"
+  }
+}

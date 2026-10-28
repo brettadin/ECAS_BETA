@@ -1,0 +1,10 @@
+{
+  "started_utc": "2026-10-28T06:58:15.498389+00:00",
+  "finished_utc": "2026-10-28T06:58:15.558267+00:00",
+  "status": "Catalogue refresh stopped: Catalogue request failed (HTTP None): Host www.exomol.com not found. Previous catalogue unchanged.",
+  "cache": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\reference-ui-live-036a36b5",
+  "catalogue_url": "https://www.exomol.com/db/exomol.all",
+  "offscreen": true,
+  "human_acceptance": false,
+  "success": false
+}

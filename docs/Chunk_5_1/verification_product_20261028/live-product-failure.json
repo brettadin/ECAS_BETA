@@ -1,0 +1,10 @@
+{
+  "started_utc": "2026-10-28T07:24:20.865285+00:00",
+  "finished_utc": "2026-10-28T07:24:20.927943+00:00",
+  "status": "Reference request stopped: Reference request failed (HTTP None): Host www.exomol.com not found. Previous displayed reference unchanged.",
+  "cache": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\reference-product-live-2f1eddf6",
+  "offscreen": true,
+  "human_acceptance": false,
+  "scientific_validation": false,
+  "success": false
+}

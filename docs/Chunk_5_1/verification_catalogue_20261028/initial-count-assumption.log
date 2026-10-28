@@ -1,0 +1,357 @@
+...................................s................................EEEE [ 82%]
+EEEEEEE........                                                          [100%]
+=================================== ERRORS ====================================
+______ ERROR at setup of test_real_metadata_capture_counts_and_identity _______
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+_______ ERROR at setup of test_provider_name_formula_and_isotope_search _______
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+__ ERROR at setup of test_ambiguous_provider_alias_is_not_silently_resolved ___
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+_____ ERROR at setup of test_complete_miss_and_limit_have_distinct_states _____
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+___________ ERROR at setup of test_invalid_search_input_rejected[] ____________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+_________ ERROR at setup of test_invalid_search_input_rejected[None] __________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+________ ERROR at setup of test_invalid_search_input_rejected[water\n] ________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+________ ERROR at setup of test_invalid_search_input_rejected[query3] _________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+___________________ ERROR at setup of test_search_bounds[0] ___________________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+__________________ ERROR at setup of test_search_bounds[201] __________________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+_________________ ERROR at setup of test_search_bounds[True] __________________
+
+    @pytest.fixture(scope='module')
+    def catalogue():
+>       return parse_catalogue(SOURCE.read_bytes())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_exomol_catalogue.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ingestion\exomol_catalogue.py:104: in parse_catalogue
+    names = tuple(take('Name of the molecule') for _ in range(count('Number of molecule names listed', 100)))
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ecas\ingestion\exomol_catalogue.py:75: in count
+    value = take(label)
+            ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+label = 'Number of molecule names listed'
+
+    def take(label):
+        nonlocal position
+        if position >= len(lines):
+            raise CatalogueError(f'Truncated catalogue; expected {label}')
+        value, separator, actual = lines[position].partition('#')
+        position += 1
+        value = value.strip()
+        if not separator or actual.strip() != label or not value or len(value)>512 or any(ord(c)<32 or ord(c)==127 for c in value):
+>           raise CatalogueError(f'Unsupported catalogue field at line {position}: expected {label}')
+E           ecas.ingestion.exomol_catalogue.CatalogueError: Unsupported catalogue field at line 419: expected Number of molecule names listed
+
+ecas\ingestion\exomol_catalogue.py:71: CatalogueError
+=========================== short test summary info ===========================
+ERROR tests/test_exomol_catalogue.py::test_real_metadata_capture_counts_and_identity
+ERROR tests/test_exomol_catalogue.py::test_provider_name_formula_and_isotope_search
+ERROR tests/test_exomol_catalogue.py::test_ambiguous_provider_alias_is_not_silently_resolved
+ERROR tests/test_exomol_catalogue.py::test_complete_miss_and_limit_have_distinct_states
+ERROR tests/test_exomol_catalogue.py::test_invalid_search_input_rejected[] - ...
+ERROR tests/test_exomol_catalogue.py::test_invalid_search_input_rejected[None]
+ERROR tests/test_exomol_catalogue.py::test_invalid_search_input_rejected[water\n]
+ERROR tests/test_exomol_catalogue.py::test_invalid_search_input_rejected[query3]
+ERROR tests/test_exomol_catalogue.py::test_search_bounds[0] - ecas.ingestion....
+ERROR tests/test_exomol_catalogue.py::test_search_bounds[201] - ecas.ingestio...
+ERROR tests/test_exomol_catalogue.py::test_search_bounds[True] - ecas.ingesti...
+75 passed, 1 skipped, 11 errors in 1.08s

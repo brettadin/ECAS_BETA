@@ -1,0 +1,119 @@
+{
+  "stage": "chunk5-investigation-v1",
+  "source_audit": {
+    "source": "data/NASA/2026-10-27/feinstein-2023.tbl",
+    "sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+    "rows": 331,
+    "metadata": {
+      "PL_NAME": "WASP-39 b",
+      "SPEC_TYPE": "Transmission",
+      "INSTRUMENT": "Near Infrared Imager and Slitless Spectrograph (NIRISS)",
+      "FACILITY": "NASA 6.5m James Webb Space Telescope (JWST) Satellite Mission",
+      "NOTE": "None",
+      "REFERENCE": "Feinstein et al. 2022"
+    },
+    "units": {
+      "centralwavelng": "microns",
+      "bandwidth": "microns",
+      "pl_trandep": "%",
+      "pl_trandeperr1": "",
+      "pl_trandeperr2": "",
+      "pl_trandeplim": "",
+      "pl_trandep_authors": "",
+      "pl_trandep_url": "",
+      "pl_ratror": "",
+      "pl_ratrorerr1": "",
+      "pl_ratrorerr2": "",
+      "pl_ratrorlim": "",
+      "pl_ratror_authors": "",
+      "pl_ratror_url": "",
+      "pl_radj": "Jupiter radii",
+      "pl_radjerr1": "",
+      "pl_radjerr2": "",
+      "pl_radjlim": "",
+      "pl_radj_authors": "",
+      "pl_radj_url": "",
+      "pl_tranmid": "days",
+      "pl_tranmiderr1": "",
+      "pl_tranmiderr2": "",
+      "pl_tranmidlim": "",
+      "st_rad": "solar radii",
+      "st_raderr1": "",
+      "st_raderr2": "",
+      "st_rad_authors": "",
+      "st_rad_url": ""
+    },
+    "fields": {
+      "centralwavelng": {
+        "missing": 0,
+        "min": 0.63096,
+        "max": 2.79649
+      },
+      "bandwidth": {
+        "missing": 0,
+        "min": 0.00147,
+        "max": 0.01288
+      },
+      "pl_trandep": {
+        "missing": 0,
+        "min": 2.03628,
+        "max": 2.20857
+      },
+      "pl_trandeperr1": {
+        "missing": 0,
+        "min": 0.00423,
+        "max": 0.03465
+      },
+      "pl_trandeperr2": {
+        "missing": 0,
+        "min": -0.03465,
+        "max": -0.00423
+      }
+    },
+    "upper_nonpositive": 0,
+    "lower_nonnegative": 0,
+    "unequal_error_magnitudes": 0,
+    "transit_depth_flags": [
+      0
+    ],
+    "interpretation": "Descriptive audit only; no error confidence level, covariance or bin edges inferred"
+  },
+  "synthetic_experiment": {
+    "kind": "synthetic_not_observed",
+    "samples": 101,
+    "axis": "wavelength in microns; identical grid for every candidate",
+    "signal": "fictional transit depth in percent",
+    "uncertainty_assumption": "independent known 1-sigma; no fitted parameters",
+    "scores": {
+      "identical": {
+        "weighted_residual_sum": 0.0,
+        "pearson_correlation": 1.0
+      },
+      "offset_0.2_percentage_points": {
+        "weighted_residual_sum": 40400.00000000007,
+        "pearson_correlation": 1.0
+      },
+      "double_feature_amplitude": {
+        "weighted_residual_sum": 1002.6513098524019,
+        "pearson_correlation": 1.0
+      },
+      "shifted_feature": {
+        "weighted_residual_sum": 1087.2081799559267,
+        "pearson_correlation": 0.3235222036297437
+      },
+      "constant": {
+        "weighted_residual_sum": 1002.6513098523999,
+        "pearson_correlation": null
+      }
+    },
+    "declared_unit_conversion": {
+      "weighted_residual_sum": 0.0,
+      "pearson_correlation": 1.0
+    },
+    "limitations": [
+      "No noise distribution calibration, covariance, resolution matching or physical model",
+      "Correlation ignores additive offsets and positive scale changes",
+      "No score is a molecular detection or posterior probability"
+    ]
+  }
+}

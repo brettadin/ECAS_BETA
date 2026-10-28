@@ -1,0 +1,27 @@
+{
+  "started_utc": "2026-10-28T04:21:40.954796+00:00",
+  "success": true,
+  "results": [
+    {
+      "input": "WASP39b",
+      "transmission_results": 28,
+      "status": "WASP39b resolved as WASP-39 b: 28 transmission records; other spectrum types are not supported for loading."
+    },
+    {
+      "input": "TRAPPIST-1e",
+      "transmission_results": 6,
+      "status": "TRAPPIST-1e resolved as TRAPPIST-1 e: 6 transmission records; other spectrum types are not supported for loading."
+    },
+    {
+      "input": "Kepler-452b",
+      "transmission_results": 0,
+      "status": "Kepler-452b resolved as Kepler-452 b. No spectra listed in NASA's queried spectroscopy table. Other archives were not searched."
+    },
+    {
+      "input": "Proxima Centauri b",
+      "transmission_results": 0,
+      "status": "Proxima Centauri b resolved as Proxima Cen b. No spectra listed in NASA's queried spectroscopy table. Other archives were not searched."
+    }
+  ],
+  "finished_utc": "2026-10-28T04:21:59.697340+00:00"
+}

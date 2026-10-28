@@ -1,0 +1,73 @@
+{
+    "manifest": {
+        "requested_name": "Kepler-452b",
+        "resolved_name": "Kepler-452 b",
+        "system_name": "Kepler-452",
+        "lookup_status": "OK",
+        "compilation_date": "2026-10-27 21:17:05.725440",
+        "system_snapshot": {
+            "number_of_stars": 1,
+            "number_of_planets": 1
+        }
+    },
+    "system": {
+        "system_info": {
+            "id": "Kepler-452",
+            "alias_set": {
+                "item_count": 1,
+                "default_name": "Kepler-452",
+                "aliases": [
+                    "Kepler-452"
+                ]
+            }
+        },
+        "objects": {
+            "stellar_set": {
+                "item_count": 1,
+                "stars": {
+                    "Kepler-452": {
+                        "is_host": "True",
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "Kepler-452",
+                            "aliases": [
+                                "Gaia DR3 2079597124345617280",
+                                "KOI-7016",
+                                "Kepler-452",
+                                "KIC 8311864",
+                                "2MASS J19440088+4416392",
+                                "WISE J194400.89+441639.2",
+                                "TIC 272174474",
+                                "Gaia DR2 2079597124345617280"
+                            ]
+                        }
+                    }
+                }
+            },
+            "planet_set": {
+                "item_count": 1,
+                "planets": {
+                    "Kepler-452 b": {
+                        "requested_object": "True",
+                        "alias_set": {
+                            "item_count": 10,
+                            "default_name": "Kepler-452 b",
+                            "aliases": [
+                                "Gaia DR3 2079597124345617280 b",
+                                "KOI-7016 b",
+                                "K07016.01",
+                                "KOI-7016.01",
+                                "Kepler-452 b",
+                                "KIC 8311864 b",
+                                "2MASS J19440088+4416392 b",
+                                "WISE J194400.89+441639.2 b",
+                                "TIC 272174474 b",
+                                "Gaia DR2 2079597124345617280 b"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -6,9 +6,9 @@ The project is being developed incrementally, with an emphasis on scientific int
 
 > **Project status:** ECAS is under active development. The current application, verified capabilities, outstanding work, and known limitations are recorded in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md). Architectural proposals and long-term goals must not be interpreted as implemented functionality.
 
-For this NASA workflow review branch, start with the
-[human review handoff](docs/Chunk_4/review_20261027/HUMAN_REVIEW.md), including test
-evidence, Argon follow-up status and the newer GitHub master commit still to integrate.
+For the current review branch, start with the
+[review checkpoint](docs/REVIEW_CHECKPOINT_20261028.md), covering project/NASA
+improvements, the Chunk 5 research foundation and initial molecular references.
 
 ## Contents
 
@@ -37,6 +37,24 @@ ECAS aims to develop a maintainable research application that can support workfl
 These goals describe the intended direction of the project. Individual capabilities must be confirmed against the current implementation and project-state records.
 
 ## Current application
+
+The **Comparisons** tab now supports molecular reference catalogue search.
+Search Water, H2O or an ExoMol isotope/dataset identifier; select a result to inspect
+its identity. It starts with a cached or bundled dated index. **Refresh from ExoMol**
+makes one bounded anonymous metadata request and saves a validated snapshot for
+offline use; **Cancel request** preserves the prior catalogue. No network request
+is made at startup. Catalogue records do not establish spectral availability,
+coverage or compatibility.
+
+For the initial verified download, search **CO2**, select **12C-16O2 / UCL-4000**,
+choose temperature/range/spacing, then **Download selected reference**. The
+calculated zero-pressure, Doppler-only cross section appears in a separate table;
+**Open cached reference** revalidates it offline. Retrieval for other catalogue
+records remains unsupported. Defaults are reference settings, not inferred planet
+conditions. There is no scientific comparison or molecular-detection result.
+See [product retrieval status](docs/Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md)
+for verification, bounds and pending review. Runtime reference caches at
+data/ExoMol/cache/ are excluded from Git.
 
 The supplied project history identifies a Python desktop application using PySide6 for its user interface, PyQtGraph for spectral visualization, and SQLite-backed persistence.
 
@@ -185,7 +203,7 @@ a fresh session instead of reusing a saved link.
 
 ### Search NASA and reopen cached spectra
 
-1. Open **Spectral Data**, enter an exact NASA planet name such as `WASP-39 b`,
+1. Open **Spectral Data**, enter a planet name or alias such as `WASP39b`,
    and click **Search NASA**. No request is made until you start a search.
 2. Select a transmission spectrum, then click **Download selected spectrum**.
    The application retrieves a fresh download link, validates the table, preserves
@@ -197,7 +215,13 @@ The cache is local to this checkout at `data/NASA/cache/` and is excluded from G
 It retains raw tables, source URLs, retrieval times, metadata responses and SHA-256
 hashes. This registration is separate from project SQLite persistence.
 
-Search is limited to 50 metadata records for the exact name; a limit warning means
+NASA first resolves the input to one explicitly identified planet; the resolved
+name is shown. Unresolved, host-only, ambiguous or inconsistent responses stop
+with an error rather than choosing a planet. A resolved planet may have no spectra
+in this archive's queried table; this is distinct from unsupported spectrum types.
+Other archives are not searched.
+
+The canonical-name search is limited to 50 metadata records; a limit warning means
 the result may be incomplete. Only the supported transmission subset can load.
 Each anonymous NASA request has a 15-second deadline and 1 MiB response cap, with
 no automatic retries, redirects, cookies or authentication. A changed NASA session
@@ -208,7 +232,34 @@ The actual application workflow was tested offscreen against NASA for WASP-39 b:
 requests. Interactive testing on the friend's computer and independent Argon
 review remain pending. This verifies retrieval and display, not scientific validity.
 
-### 4. Run the tests
+### 4. Save spectra in projects
+
+1. Open **Projects**, enter a project ID (letters, numbers, underscores or hyphens),
+   and click **Create project**, or select an existing project.
+2. Import a spectrum or load a searched/cached spectrum in **Spectral Data**.
+3. Return to **Projects** and click **Add displayed spectrum to project**.
+4. Select a saved spectrum and click **Open selected spectrum** to restore the
+   plot, data and available metadata. Projects are discovered again after restart.
+
+Projects live inside this checkout's `projects/` directory, excluded from Git.
+New attachments retain original file bytes, parsed values, units, source hashes
+and provenance. NASA cache attachments also retain the original cache record and
+metadata response. Reopening does not require the original file, cache or network.
+Changed records fail visibly; these integrity hashes are not proof of authenticity.
+Existing database rows remain readable and are labelled as legacy records without
+source attachments. To preserve a missing source for such a record, reimport the
+original data first; provenance is never fabricated. Adding the same spectrum
+again creates another saved record rather than overwriting an earlier one.
+
+The project source-size limit is 16 MiB and the JSON record limit is 64 MiB.
+Project deletion, renaming, synchronization and large-project performance work are
+not implemented. Back up your `projects/` directory separately when sharing code.
+
+Source-URL cells are underlined and can be opened with a double-click. NASA-relative
+calculation links are expanded for display only; raw imported values are preserved.
+Opening a link invokes the system browser only after that explicit action.
+
+### 5. Run the tests
 
 After approval for any needed test-dependency downloads:
 

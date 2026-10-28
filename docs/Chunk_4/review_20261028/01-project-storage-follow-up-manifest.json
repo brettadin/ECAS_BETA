@@ -1,0 +1,18 @@
+{
+  "batch": "01-project-storage-follow-up.txt",
+  "request_sha256": "b3b1f8d72abb9b2090de96fc059b0d10285ce0a463c0a9eaf3b3c4a127ba22f9",
+  "sources": [
+    {
+      "path": "ecas/persistence.py",
+      "sha256": "09b8b14f4a6dd1e8f525db2dec6b770986214718b9ad45e91ae3477cb5c71679"
+    },
+    {
+      "path": "ecas/projects.py",
+      "sha256": "3bc5507bb5e51e09684cca707d744b295cc871b1f5fcddd2594a0f82ab86b858"
+    },
+    {
+      "path": "tests/test_project_review_regressions.py",
+      "sha256": "a0c25b15a4b25cad2110861177bfcb0c910f93bd35c5fb681a4896aabbb91b17"
+    }
+  ]
+}

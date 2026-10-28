@@ -120,6 +120,7 @@ def allowed_url(url):
     return (parts.scheme == "https" and parts.netloc == "exoplanetarchive.ipac.caltech.edu"
             and not parts.fragment and (parts.path == "/TAP/sync"
             or parts.path == "/cgi-bin/atmospheres/nph-firefly"
+            or parts.path == "/cgi-bin/Lookup/nph-aliaslookup.py"
             or bool(re.fullmatch(r"/workspace/TMP_[A-Za-z0-9_]+/atmospheres/tab1/data/(?:[0-9]{2}/){4}[A-Za-z0-9_.+-]+\.tbl", parts.path))
             and ".." not in parts.path))
 

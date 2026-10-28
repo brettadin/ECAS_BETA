@@ -1,7 +1,81 @@
 # ECAS - Design Decisions Log
 
 ## Project Overview
-ECAS is a spectrum analysis application that stores, retrieves, and processes spectral data from NMR experiments. The system uses SQLite for persistent storage of spectrum data organized by project.
+ECAS — Exoplanetary Characterization & Astrochemistry Suite is a scientific desktop
+application for exoplanet spectroscopy. It uses SQLite for project spectrum
+persistence and currently has a separate NASA raw-product/provenance cache.
+
+## Current decision context — 2026-10-28
+
+The source of current implementation status is PROJECT_STATE.md; older verification
+counts below describe historical checkpoints. NASA exact-name discovery, supported
+transmission-table import and sidecar cache decisions are recorded in
+`../Chunk_4/Chunk_4_decisions.md`. The cache is separate from project SQLite.
+Current CSV output order is `wavelength`, the 21 source columns, then `signal`;
+the earlier descriptions of appending both aliases do not describe current order.
+Source fields and both aliases remain present. No general format/unit conversion
+or scientific compatibility is implied by this ordering or by successful parsing.
+
+Initial comparison method: compatible-observable overlay with explicit response
+handling and residual inspection, with weighted diagnostics only when justified.
+See `../Chunk_5/INITIAL_METHOD_DECISION.md`; user subsequently confirmed independent
+foundation review complete. It does not implement production comparison or establish
+empirical validity. Real-data validation is deferred by user instruction. Initial
+reference source: ExoMol anonymous catalogue search and narrow two-column,
+zero-pressure .sigma representation. Bounded CO2 / 12C-16O2 / UCL-4000 retrieval,
+separate reference display and provenance cache/offline reopening are implemented.
+An approved actual Qt download/reopen check passed for one 11-point product; this
+does not establish atmospheric validity or coverage for other molecules/settings.
+New work awaits independent review and desktop acceptance. See
+`../Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md`. The initial project provenance-transfer
+contract is described below. Do not infer
+selection of NIST, JCAMP-DX, line matching or forward modelling from historical plans.
+
+### Project source attachments — 2026-10-28
+
+Project UI uses application services (`ProjectStore`) and the persistence backend;
+the widgets do not issue SQL. Existing project IDs and SQLite spectrum row IDs are
+retained. New records optionally add `ecas-project-source-v1` to their existing
+JSON payload; no table migration or rewrite of legacy rows is performed. Original
+source bytes are base64-encoded in the same saved record as parsed values, units,
+source hash, CSV schema where applicable, and NASA table/cache metadata. Cache
+records and exact metadata-response bytes are retained when available. Files are
+snapshotted rather than linked so cache cleanup cannot invalidate saved projects.
+
+Validate the displayed data against the current source before attaching. Reopening
+checks a digest binding the normalized spectrum and attachment, plus the raw-body
+hash. These detect changes, not malicious replacement by a party able to recompute
+the hashes or establish remote authenticity. Legacy data is explicitly unverified
+with respect to original bytes and can be opened without inventing provenance.
+Source copies are capped at 16 MiB and records at 64 MiB as application memory
+limits. Read-only project loading does not create or migrate databases; project
+creation is exclusive and writes require an explicit UI action. Project storage
+is checkout-local under ignored `projects/`. No project deletion/rename or bulk
+migration feature is introduced. The new API rejects linked roots/folders/databases;
+this is not a claim of race-proof isolation on a hostile filesystem.
+
+NASA-relative URLs are expanded only in the table's presentation layer for known
+NASA-table imports/project attachments. Source rows and raw bytes remain unchanged.
+Only HTTP(S) links without embedded credentials can be opened, on explicit double-
+click, through the system browser. Other text is retained without link behavior.
+
+### NASA target name resolution — 2026-10-28
+
+Use NASA's documented System Aliases service before canonical-name spectroscopy
+queries: https://exoplanetarchive.ipac.caltech.edu/docs/sysaliases.html . Inspected
+real responses for the four human-feedback cases. Require status OK, matching
+requested name, exactly one planet explicitly marked requested_object=True, and
+agreement among the planet key, default_name and manifest resolved_name. Never
+select the first planet of a returned system. Host-only, ambiguous, malformed or
+inconsistent responses stop with a visible error. Names, sizes and JSON structure
+are bounded; the same anonymous/cancellable client is used with the newly allowed
+exact alias-service path. Canonical metadata/query identity is retained in the
+existing spectrum cache. Original interactive input is displayed in resolution
+status, not added as a new persisted cache-schema field.
+
+An empty canonical-name inventory means no products in the queried spectroscopy
+table, not that the planet is unknown, its data are FITS, or all archives lack
+observations. Changing measurement-format support is a separate task.
 
 ---
 

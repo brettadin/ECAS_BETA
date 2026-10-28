@@ -482,3 +482,251 @@ in 3.61 seconds, exit 0. This check validates the staged package rather than rel
 on ignored working files. Exact command, capture hashes and output are in
 verification_20261027/review-package.json and .log. Only review documentation and
 evidence additions followed this check. No new dependencies or model calls.
+
+## Approved roadmap reconciliation — 2026-10-28
+
+User approved the read-only investigation's documentation plan. Inspected current
+GitHub refs and fetched history without replacing working files. PR #1 is merged
+at 2de79c7; 6c90ce5 integrated the earlier import-manager work with the NASA branch.
+Created local codex/roadmap-reconciliation-20261028 from origin/master with a clean
+starting tree. No user changes were discarded and no push/commit was made.
+
+Updated the existing development plan, PROJECT_STATE, DECISIONS, publication-time
+human-review handoff and README pointer. Retained the already-revised Chunk 5/5.1/6
+roadmap rather than duplicating it, and made in-app molecular search/provider
+capability verification explicit. Added Chunk 4 feedback priorities and acceptance
+requirements, distinguished historical test results from merged status, and
+recorded the authorized bounded task loop. Historical chunk plans remain unchanged.
+
+Evidence: merged main_window.py imports import_spectrum but its CSV dispatch still
+references import_spectrum_csv. An in-memory diagnostic executing that exact method
+with a synthetic .csv path raised NameError (no input file read). This is a code
+regression, not an already-fixed status claim. The 281/1 skipped result remains
+valid only for the earlier tested build, not the merged baseline. Initial roadmap
+reconciliation did not edit application/test files or claim a fresh full test run.
+
+Next eligible autonomous increment after documentation checks: route CSV through
+the new import manager while preserving .tbl handling, align regression tests to
+that service boundary, then execute focused and full merged-baseline checks. After
+that, investigate human-reported search behavior before selecting a name-resolution
+approach. Projects/provenance and comparison scientific/provider decisions remain
+open. No new model call, dependency, non-NASA download or external publication.
+
+### Reconciliation verification and autonomous transition
+
+Reviewed the documentation diff, ran git diff --check and verified unique Chunk
+5/5.1/6 headings, the explicit in-app search clause and the README review-link
+target. At this boundary only six documentation files differed; application/tests
+were unchanged. The user-approved reconciliation was complete before code work.
+
+## Merged CSV routing repair — 2026-10-28
+
+Bounded acceptance: generic/archive CSV imports use the new import manager from
+both GUI entry points; NASA .tbl handling and failure clearing remain intact.
+Baseline focused run: 9 failed, 10 passed in 2.95 s. Both actual CSV imports and
+stale mocks referring to the removed main-window importer symbol failed.
+Changed the CSV branch of _read_spectrum_file to import_spectrum; aligned mocks
+with that service boundary, retained real bundled-data assertions, and added real
+generic CSV/unsupported-extension clearing cases for both routes. No importer
+validation was relaxed. Focused: 23 passed in 2.59 s. Full: 289 passed, 1 skipped
+in 4.60 s. Exact invocations used the existing sanitized driver:
+`.venv/Scripts/python.exe -I -B .venv/checks/run_checks.py merge-before`,
+`merge-focused`, then `merge-full`. Logs/run metadata preserved under
+verification_20261027/merge-* (existing evidence location). The skipped test still
+requires Windows directory-symlink privileges. Changes remain local/uncommitted.
+
+## Human-feedback name/inventory investigation and implementation — 2026-10-28
+
+Under existing public NASA authorization, inspected the official System Aliases
+documentation and captured four bounded anonymous lookup responses plus canonical
+spectroscopy inventories. Raw bodies, URLs/times/status/hash provenance and scope
+are under data/NASA/2026-10-28. WASP39b resolved to WASP-39 b (31 records, 28
+Transmission); TRAPPIST-1e resolved to TRAPPIST-1 e (6 Transmission). Kepler-452b
+resolved to Kepler-452 b and Proxima Centauri b to Proxima Cen b, both with empty
+queried inventories. No evidence supports blaming FITS at this metadata stage.
+No measurement files were downloaded and other archives were not searched.
+
+Implemented nasa_aliases.py and a two-stage browser search. Require exactly one
+explicitly requested planet consistent with the response manifest; do not choose
+another planet from a system. Added the exact alias path to the existing bounded
+NASA-only client. Display original/resolved names and distinguish empty inventories
+from unsupported returned types. Existing canonical metadata cache identity and
+offline reopening remain intact; no cache/database schema migration was made.
+
+Added captured-response and corrupt/ambiguous/mismatched-response tests, integrated
+browser cases, and updated existing tests for the added lookup phase. Focused:
+94 passed in 1.71 s. Full: 307 passed, 1 skipped in 4.43 s. Executed existing
+sanitized driver stages aliases-focused and aliases-full; logs and exact commands
+are under verification_20261028/. No unexecuted/manual test is counted as passed.
+
+Also executed `.venv/Scripts/python.exe -I -B .venv/checks/live_nasa_search.py`:
+actual ECASWindow and PublicNasaHttp, sanitized offscreen subprocess, 45-second
+application guard/55-second outer deadline. All four real searches returned the
+expected resolution/status; actual counts were 28, 6, 0, 0. Metadata only, no test
+HTTP substitute, no paid/model calls or credentials. Results/process output are
+under verification_20261028/live-search-*. This is software/source compatibility
+evidence, not human interactive acceptance or scientific validation.
+
+Next eligible task: define and implement project creation/selection and attachment
+of current/cached spectra with durable provenance, using persistence services.
+Do not mistake the existing SpectrumData JSON round trip for complete project
+provenance support. Relative-link presentation and a limited layout pass remain
+later feedback items. Independent re-review, human acceptance and scientific
+method/provider investigation remain open. No commits/pushes were made in this run.
+
+Final self-review retained the 50-record truncation warning even when all returned
+records have unsupported types. Added the corresponding boundary regression and
+executed driver stage aliases-final: 308 passed, 1 skipped in 3.90 s, exit 0.
+Exact command/output metadata are in verification_20261028/aliases-final-*.
+Inspected the production diff and new parser/tests; git diff --check passes.
+The bounded-work checkpoint is documentation reconciliation, merged CSV repair,
+and alias/empty-inventory feedback handling; remaining project/provenance work
+requires its own design and verification increment, not a claim of completion here.
+
+## Project attachment and remaining human-feedback UI work — 2026-10-28
+
+Continued under the approved autonomous roadmap, preserving prior local work.
+Plan/acceptance: create/select projects and attach displayed imported/cached
+spectra; preserve source bytes, values, metadata, schema and provenance; reopen
+after original/cache removal without HTTP; keep legacy records readable; reject
+changed data and avoid partial registration. No destructive migration or project
+deletion UI. New modules: ecas/projects.py use-case service and
+ecas/ui/project_browser.py controls, with small persistence/window extensions.
+
+Persistence adds create/list/stable-ID record reads and optional source attachments
+inside existing JSON rows. Widgets use ProjectStore; SQL stays in persistence.
+Creation is exclusive; reads use SQLite read-only mode; attachment writes one row
+containing both data and source envelope. No existing table/row is migrated.
+Sources are capped at 16 MiB and records at 64 MiB. Attachment digests bind values
+and provenance; raw hashes check preserved bytes. They are integrity checks, not
+authenticity or hostile-storage proof. Table source changes since import, including
+header-only citation changes, are rejected using the captured source hash. CSV is
+reparsed/compared before attaching. Verified saved attachments can be copied
+between projects without the original file. Legacy rows are explicitly labelled;
+missing provenance is never invented. projects/ is excluded from Git.
+
+Tests cover empty reads without filesystem writes, invalid/duplicate IDs, legacy
+records, stable IDs, source caps, cache/provenance preservation after deletion,
+source/data/provenance tampering, failed SQL insert rollback, NASA tables under
+both CSV schemas, changed-source rejection preserving the prior display,
+revalidation at open and visible refresh errors. Service/persistence: 34 passed,
+one skipped (0.64 s). Initial UI integration: 84 passed (2.16 s). Initial full
+project suite: 328 passed, one skipped (5.98 s).
+
+Completed the limited link/layout feedback: NASA-relative URLs expand only for
+display in known NASA table imports/project attachments. Source rows/bytes remain
+unchanged. HTTP(S) links without credentials open via QDesktopServices only after
+explicit double-click; browser-launch failure is visible. Download/import buttons
+align left at preferred width; NASA result padding is smaller without changing
+navigation styling. No broader redesign or extra dependencies.
+
+Link/UI focused suite: 96 passed (2.65 s). Full milestones: 339 passed/one skipped
+(6.46 s), then 340/one skipped (6.48 s) after stable-ID/source-cap/browser failure
+checks. Final provenance-header regression and full suite: 341 passed, one skipped
+in 5.50 s; exit 0. Actual commands used the existing sanitized driver:
+`.venv/Scripts/python.exe -I -B .venv/checks/run_checks.py STAGE`, stages
+projects-service, projects-ui, projects-full, projects-links-focused, projects-final,
+projects-reviewed and projects-integrity-final. Exact commands, logs/environment
+keys and version records are in verification_20261028/projects-*.
+Skip remains unavailable Windows directory-symlink privileges. Test deletions were
+confined to checked, test-owned temporary fixtures; no user project was deleted.
+
+Executed .venv/checks/preview_projects.py in a sanitized offscreen child using the
+real NASA fixture and an isolated ignored test project. Inspected Projects and
+Spectral Data screenshots: button/layout geometry is usable, but missing font
+glyphs prevented typography/readability verification. Normal Windows desktop
+appearance remains a human check. Images stay under ignored .venv/checks and are
+not presented as a human-approved visual.
+
+All five feedback tasks now have local implementation and automated evidence;
+Chunk 4 acceptance remains open. Next gates are targeted independent review and
+normal-desktop checks of projects, links, search and layout. Scientific-method/
+provider investigation is future Chunk 5/5.1 work; no comparison algorithm or
+projections were added. No commit, push, new dependency, credential/model call or
+network request occurred in this increment. Prior local work remains preserved.
+
+## Project storage Argon batch 1 corrections — 2026-10-28
+
+Accepted concurrent-read snapshot consistency, cross-platform v1 checksum
+verification and selective single-record loading. Added an explicit read
+transaction while retaining prefetch size guards; verify hashes using the saved
+path spelling and adapt only verified in-memory envelopes for copying; use a
+read-only LIMIT/OFFSET query for index loads. Retained the documented commit-each-
+save contract for injected connections (bulk transaction ownership is unsupported).
+Four new regression cases cover WAL concurrent deletion, unrelated malformed
+rows and both path-rendering directions. Focused: 39 passed/one skipped; full:
+345 passed/one skipped, 5.74 s. Commands/logs: verification_20261028/project-review-*.
+Detailed triage and limitations: review_20261028/01-project-storage-disposition.md.
+Original review snapshots preserved. Local corrections await independent follow-up;
+human acceptance remains open. No commit, push, download or paid review run.
+
+## Project interface Argon batch 2 corrections — 2026-10-28
+
+Fixed actionable missing-record feedback after external deletion and visible
+Projects-panel feedback when a saved spectrum has no plottable measurements.
+Kept existing absolute-link validation: source_link explicitly accepts HTTP(S)
+absolute links, and double-click opening is tested. Both supported importers
+already wrap read OSError; eight new tests inject locked/deleted-file errors
+through dialog/path CSV/table routes and verify visible warnings. Real database
+deletion and an unplottable legacy row exercise the two UI corrections.
+Focused suite: 107 passed (3.40 s). Full: 355 passed/one existing symlink-privilege
+skip (7.23 s). Evidence: verification_20261028/project-ui-review-*; detailed triage:
+review_20261028/02-project-interface-disposition.md. Changes remain local; independent
+follow-up and human desktop acceptance remain pending. No paid review, download,
+credential access, dependency change, commit or push.
+
+## Argon batch 3 links/layout triage — 2026-10-28
+
+No functional defect established. Argon confirmed absolute links work, resolving
+the Batch 2 missing-helper assumption. Retained cheap click-time URL validation;
+removing it is optional cleanup without a demonstrated benefit. Recorded precise
+limits (control characters rejected, no universal OS malformed-URL guarantee) in
+review_20261028/03-links-layout-disposition.md. Documentation only; no tests rerun.
+Latest full suite remains 355 passed/one skipped. Batch 4, Batch 1/2 correction
+follow-ups and normal-desktop human acceptance remain open. No model call or push.
+
+## Argon batch 4 alias/CSV triage — 2026-10-28
+
+The reported P1 callback and P2 empty-state items explicitly describe non-defects;
+confirmed existing exception handling, selection checks and current evidence reset.
+Added a fallback for message-free SpectrumImportError warnings in dialog and path
+imports. Two regression cases exercise actual handlers. Focused: 97 passed
+(1.95 s); full: 357 passed/one existing Windows symlink-privilege skip (6.24 s).
+Evidence: verification_20261028/aliases-review-*; triage and correction snapshot:
+review_20261028/04-aliases-csv-*. All four original batches are triaged; independent
+review of corrections and normal-desktop human acceptance remain open. Changes
+stay local. No download, model call, credential access, dependency change or push.
+
+## Argon batch 1 correction re-review received — 2026-10-28
+
+User supplied independent re-review of persistence.py, projects.py and storage
+regressions with zero findings. Batch 1 correction review is complete for that
+snapshot. Recorded the transaction-scope limitation: BEGIN is currently the first
+statement on a fresh read-only connection; revisit ownership if reuse/writes are
+added. No code change or test rerun. Latest suite remains 357 passed/one skipped.
+Batch 2/4 correction reviews and human desktop acceptance remain open. No push.
+
+## Argon batch 2 correction re-review received — 2026-10-28
+
+User supplied independent re-review with zero findings. Argon confirmed both UI
+corrections and validated the link and importer-error triage using supplied helper
+context. Batch 2 correction review is complete for its snapshot. Documentation
+only; no code changes or test reruns. Latest suite remains 357 passed/one skipped.
+Batch 4 correction re-review and normal-desktop human acceptance remain pending.
+No model call, download, commit or push.
+
+## Argon batch 4 correction re-review received — 2026-10-28
+
+User supplied independent re-review with zero findings, scoped to empty-error UI
+presentation and the regression tests. Batch 4 correction review is complete.
+All original batches and correction re-reviews are recorded with no unresolved
+confirmed findings. Human desktop acceptance remains open. No code changes or
+test reruns; latest suite remains 357 passed/one skipped. Changes remain local,
+uncommitted and unpushed. No model call or download.
+
+## Manual review confirmation received — 2026-10-28
+
+User stated manual review is complete and authorized continuation. Recorded manual
+acceptance gate complete based on that statement; no checklist results invented.
+This does not reverse the explicit deferral of real-data validation or independently
+accept new Chunk 5 research/contract work. No code change for this receipt.

@@ -1,0 +1,14 @@
+{
+  "batch": "04-aliases-csv-follow-up.txt",
+  "request_sha256": "6bd1fe1018bdf347b7ba77fc699393db0003403eeb5b0f2e58305c0951fdac31",
+  "sources": [
+    {
+      "path": "ecas/ui/main_window.py",
+      "sha256": "5795d015050111ab075d8744245172836faedef76fe1a7bde606efe1b5c26bfd"
+    },
+    {
+      "path": "tests/test_main_window.py",
+      "sha256": "28f96f7ec8bce348422b245b15d1fad63776e7368a9c324a89b6c045f3304c63"
+    }
+  ]
+}

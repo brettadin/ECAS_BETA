@@ -9,6 +9,7 @@ from ecas.ingestion.nasa_archive import (
 )
 from ecas.ingestion.nasa_discovery import planet_search
 from ecas.ingestion.nasa_network import PublicNasaHttp
+from ecas.ingestion.nasa_aliases import alias_search, parse_aliases
 
 
 class NasaArchiveBrowser(QWidget):
@@ -26,7 +27,7 @@ class NasaArchiveBrowser(QWidget):
         layout = QVBoxLayout(self)
         controls = QHBoxLayout()
         self.target = QLineEdit()
-        self.target.setPlaceholderText("Exact NASA planet name, e.g. WASP-39 b")
+        self.target.setPlaceholderText("Planet name or alias, e.g. WASP39b")
         self.search_button = QPushButton("Search NASA")
         self.cache_button = QPushButton("Cached spectra")
         self.cancel_button = QPushButton("Cancel")
@@ -39,10 +40,13 @@ class NasaArchiveBrowser(QWidget):
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         self.results = QListWidget()
+        self.results.setObjectName('nasaResults')
+        self.results.setStyleSheet('QListWidget#nasaResults::item { padding: 4px 6px; }')
+        self.results.setSpacing(1)
         self.results.setMaximumHeight(130)
         layout.addWidget(self.results)
         self.load_button = QPushButton("Download selected spectrum")
-        layout.addWidget(self.load_button)
+        layout.addWidget(self.load_button, 0, Qt.AlignmentFlag.AlignLeft)
         self.search_button.clicked.connect(self.search)
         self.cache_button.clicked.connect(self.show_cache)
         self.cancel_button.clicked.connect(self.cancel)
@@ -88,28 +92,41 @@ class NasaArchiveBrowser(QWidget):
             return
         try:
             name = planet_search(self.target.text()).name
-            url = spectra_search(name)
+            lookup_url = alias_search(name)
         except ValueError as error:
             self._fail(error)
             return
         self.items = []
         self.results.clear()
         self.load_button.setText("Download selected spectrum")
-        self.status.setText("Searching NASA spectral metadata…")
+        self.status.setText("Resolving the planet name with NASA…")
 
-        def receive(raw):
-            rows = parse_spectra(raw, name)
+        def resolved(raw):
+            canonical = parse_aliases(raw, name)
+            self.status.setText(f"Resolved {name} as {canonical}; searching NASA spectra…")
+            self._request(spectra_search(canonical), lambda body: receive(body, canonical))
+
+        def receive(raw, canonical):
+            url = spectra_search(canonical)
+            rows = parse_spectra(raw, canonical)
             self.evidence = {"url": url, "raw": raw}
             self.items = [{"metadata": row} for row in rows if row["spec_type"] == "Transmission"]
             for item in self.items:
                 row = item["metadata"]
                 self.results.addItem(f"{row['pl_name']} | {row['authors']} | {row['instrument']} | {row['num_datapoints']} points")
             self.busy = False
-            self.status.setText(f"{len(self.items)} transmission records; " +
+            self.status.setText(f"{name} resolved as {canonical}: {len(self.items)} transmission records; " +
                 ("50-record limit reached, results may be incomplete." if len(rows) == 50 else
                  "other spectrum types are not supported for loading."))
+            if not rows:
+                self.status.setText(f"{name} resolved as {canonical}. No spectra listed in NASA's queried spectroscopy table. Other archives were not searched.")
+            elif not self.items:
+                types = ', '.join(sorted({row['spec_type'] for row in rows}))
+                self.status.setText(f"{canonical}: archive records exist ({types}), but no supported transmission records were returned.")
+                if len(rows) == 50:
+                    self.status.setText(self.status.text() + " 50-record limit reached; results may be incomplete.")
             self._buttons()
-        self._request(url, receive)
+        self._request(lookup_url, resolved)
 
     def show_cache(self):
         if self.busy:

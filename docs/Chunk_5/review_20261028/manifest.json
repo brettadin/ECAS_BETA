@@ -1,0 +1,76 @@
+[
+  {
+    "batch": "01-response-and-uncertainty.txt",
+    "request_sha256": "3dcad75e4573d4cf3ba6116ba7fe01d0dca08bc93f29af6e87f881acdcd774cb",
+    "sources": [
+      {
+        "path": "docs/Chunk_5/comparison_investigation.py",
+        "sha256": "900c1ac2723ddffadf2f3575dcf4312237ec6a7b5b9eca5980e18207b5e2f7d5"
+      },
+      {
+        "path": "tests/test_comparison_investigation.py",
+        "sha256": "734fb996ab2ec9ca04a76d4d2b6fa5a231201015366803f8a6b38dbde4e32163"
+      },
+      {
+        "path": "ecas/ingestion/nasa_table.py",
+        "sha256": "0d0e52fac9b4cc3dcb3a2ad6879cff7981119539afb0c8196a3a8f4601578e51"
+      },
+      {
+        "path": "docs/Chunk_5/RESPONSE_AND_UNCERTAINTY_EXPERIMENT.md",
+        "sha256": "3a9742be83047d670a9223676429becb15d2878e26150212272bfd146ccecad6"
+      }
+    ]
+  },
+  {
+    "batch": "02-template-fitting-and-calibration.txt",
+    "request_sha256": "3400888e1f9cb1195195642080502bc7f00c6662c57f9a2acdd8e58e04fa9a87",
+    "sources": [
+      {
+        "path": "docs/Chunk_5/template_investigation.py",
+        "sha256": "6229f6d973583e2e194ddc00767ce76a4d3578c25e0104fa3e1a0f6c43047798"
+      },
+      {
+        "path": "tests/test_template_investigation.py",
+        "sha256": "f21a5d9a1212486055aa2047762241f4b205525458e105c522561766eaee4ba3"
+      },
+      {
+        "path": "docs/Chunk_5/comparison_investigation.py",
+        "sha256": "900c1ac2723ddffadf2f3575dcf4312237ec6a7b5b9eca5980e18207b5e2f7d5"
+      },
+      {
+        "path": "docs/Chunk_5/MODEL_COMPARISON_PROTOTYPE.md",
+        "sha256": "851d45d1e85a2235eb5a6e0b6aaadb141981aa5676920779c48a173d8f53f043"
+      }
+    ]
+  },
+  {
+    "batch": "03-contract-and-scientific-claims.txt",
+    "request_sha256": "c6aef010461d94b7db8ee9c05db4806418cf07e79ed7105fd65cade6f2b9201d",
+    "sources": [
+      {
+        "path": "docs/Chunk_5/COMPARISON_INPUT_CONTRACT_DRAFT.md",
+        "sha256": "3e853a6b674b01766b70ababf9059cb5950e096b5ed30fbd494b123001eb71e3"
+      },
+      {
+        "path": "docs/Chunk_5/RESPONSE_AND_UNCERTAINTY_EXPERIMENT.md",
+        "sha256": "3a9742be83047d670a9223676429becb15d2878e26150212272bfd146ccecad6"
+      },
+      {
+        "path": "docs/Chunk_5/MODEL_COMPARISON_PROTOTYPE.md",
+        "sha256": "851d45d1e85a2235eb5a6e0b6aaadb141981aa5676920779c48a173d8f53f043"
+      },
+      {
+        "path": "docs/Chunk_5/verification_response_20261028/investigation-report.json",
+        "sha256": "1acc177a4ee683ee310ed93c90b2229dc28bd85afcb58b200aeaf0dfac6aceb1"
+      },
+      {
+        "path": "docs/Chunk_5/verification_template_20261028/template-report.json",
+        "sha256": "e891f1e7d719cc0ec2adb07f24fd82f97596b989ee83077e91441ebe2b5a4808"
+      },
+      {
+        "path": "ecas/models/spectrum.py",
+        "sha256": "b9102f0e6413bd5dbb7d2289c105b7febab50c512e67da2fd0faf16d80f38b23"
+      }
+    ]
+  }
+]

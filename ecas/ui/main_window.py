@@ -9,6 +9,8 @@ does not become tied to the user interface.
 """
 
 from pathlib import Path
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices, QColor
 
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -38,12 +40,16 @@ from ecas.ingestion.import_manager import import_spectrum
 from ecas.visualization.spectra_plot import SpectraPlot
 from ecas.ingestion.nasa_table import import_transmission_table
 from ecas.ui.nasa_browser import NasaArchiveBrowser
+from ecas.ui.project_browser import ProjectBrowser
+from ecas.projects import ProjectStore
+from ecas.ui.source_links import source_link
+from ecas.ui.molecular_browser import MolecularReferenceBrowser
 
 
 class ECASWindow(QMainWindow):
     """Main ECAS window and coordinator for its interface."""
 
-    def __init__(self):
+    def __init__(self, *, projects_dir=None, reference_cache_dir=None):
         """Initialize the window, navigation, pages, and status bar."""
         super().__init__()
 
@@ -142,6 +148,12 @@ class ECASWindow(QMainWindow):
         self.spectra_plot = None
         self.current_spectrum = None
         self.current_spectrum_details = None
+        self.current_spectrum_schema = None
+        self.current_project_attachment = None
+        self.project_store = ProjectStore(projects_dir if projects_dir is not None
+                                          else Path(__file__).resolve().parents[2] / 'projects')
+        self.project_browser = None
+        self.reference_cache_dir = reference_cache_dir
 
         # Build each page before assembling the overall window layout.
         self._build_pages()
@@ -173,8 +185,8 @@ class ECASWindow(QMainWindow):
     def _build_pages(self):
         """Create the pages and add them to the stacked page container."""
         # Keep the navigation and page order aligned.
-        # Spectral Data receives a dedicated layout; the other pages are
-        # placeholders until their functionality is implemented.
+        # Projects, Spectral Data and reference catalogue search are functional;
+        # Overview/Settings remain placeholders. Comparison scoring is not wired.
         definitions = [
             ("ECAS workspace", "Scientific analysis workspace."),
             ("Projects", "Create and manage research projects."),
@@ -190,11 +202,19 @@ class ECASWindow(QMainWindow):
             layout.setContentsMargins(32, 28, 32, 28)
             layout.setSpacing(12)
 
-            if index == 2:
+            if index == 1:
+                self.project_browser = ProjectBrowser(self.project_store, self)
+                self.project_browser.saveRequested.connect(self._save_to_project)
+                self.project_browser.spectrumReady.connect(self._open_project_spectrum)
+                layout.addWidget(self.project_browser)
+            elif index == 2:
                 # Index 2 corresponds to "Spectral Data" in the navigation.
                 # Its controls are created in a separate method to keep this
                 # page-building loop easy to maintain.
                 self._build_spectral_page(layout)
+            elif index == 3:
+                self.reference_browser = MolecularReferenceBrowser(self, cache_root=self.reference_cache_dir)
+                layout.addWidget(self.reference_browser)
             else:
                 # The remaining pages currently contain headings and
                 # descriptions only; they are not fully implemented yet.
@@ -258,6 +278,7 @@ class ECASWindow(QMainWindow):
             QTableWidget.EditTrigger.NoEditTriggers
         )
         self.spectrum_table.setSortingEnabled(False)
+        self.spectrum_table.itemDoubleClicked.connect(self._open_source_link)
 
         # Place the plot above the table so users can inspect the shape of
         # the spectrum and then examine its underlying imported measurements.
@@ -270,17 +291,18 @@ class ECASWindow(QMainWindow):
         # silently infer scientific meaning from a filename or failed parse.
         layout.addWidget(schema_label)
         layout.addWidget(self.spectrum_schema_selector)
-        layout.addWidget(import_button, 0)
+        layout.addWidget(import_button, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self.spectrum_status)
         layout.addWidget(self.spectra_plot, 2)
         layout.addWidget(self.spectrum_table, 1)
 
-    def _display_spectrum(self, spectrum, schema=None):
+    def _display_spectrum(self, spectrum, schema=None, *, nasa_source=False):
         """Display one normalized SpectrumData object in the plot and table.
 
         Args:
             spectrum: The SpectrumData object to display.
             schema: Optional schema dict for archive handling. Defaults to None (generic).
+            nasa_source: Resolve NASA-relative source links for display only.
         """
 
         # Load the plot first. If the data cannot be plotted, do not leave
@@ -310,12 +332,25 @@ class ECASWindow(QMainWindow):
                 item = QTableWidgetItem(
                     "" if value is None else str(value)
                 )
+                if column.endswith('_url'):
+                    link = source_link(value, nasa_source=nasa_source)
+                    if link:
+                        item.setText(link)
+                        item.setData(Qt.ItemDataRole.UserRole, link)
+                        item.setToolTip(f'Original source value: {value}\nDouble-click to open this source link.')
+                        item.setForeground(QColor('#81a1c1'))
+                        font = item.font()
+                        font.setUnderline(True)
+                        item.setFont(font)
                 self.spectrum_table.setItem(
                     row_index, column_index, item
                 )
 
         self.spectrum_table.resizeColumnsToContents()
         self.current_spectrum = spectrum
+        self.current_spectrum_schema = schema
+        self.current_project_attachment = None
+        self.project_browser.set_spectrum_available(True)
 
         # Report the imported dataset and any warnings supplied by the importer.
         source_name = spectrum.source_file.name
@@ -345,6 +380,10 @@ class ECASWindow(QMainWindow):
 
         self.current_spectrum = None
         self.current_spectrum_details = None
+        self.current_spectrum_schema = None
+        self.current_project_attachment = None
+        if self.project_browser is not None:
+            self.project_browser.set_spectrum_available(False)
 
         if self.spectrum_status is not None:
             self.spectrum_status.setText("No spectrum loaded.")
@@ -386,12 +425,12 @@ class ECASWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 "Spectrum Import Failed",
-                str(exc),
+                str(exc) or 'The spectrum could not be imported. No further error details were provided.',
             )
             self.statusBar().showMessage("Import failed")
             return
 
-        self._display_spectrum(spectrum, schema=selected_schema)
+        self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
 
     def _import_csv_from_path(self, path: str):
@@ -408,20 +447,54 @@ class ECASWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 "Spectrum Import Failed",
-                str(exc),
+                str(exc) or 'The spectrum could not be imported. No further error details were provided.',
             )
             self.statusBar().showMessage("Import failed")
             return
 
-        self._display_spectrum(spectrum, schema=selected_schema)
+        self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
 
     def _read_spectrum_file(self, path, schema):
         if Path(path).suffix.lower() == ".tbl":
             details = import_transmission_table(path)
             return details.spectrum, details
-        return import_spectrum_csv(path, archive_schema=schema), None
+        return import_spectrum(path, archive_schema=schema), None
 
     def closeEvent(self, event):
         self.nasa_browser.cancel()
+        self.reference_browser.shutdown()
         super().closeEvent(event)
+
+    def _save_to_project(self, name):
+        if self.current_spectrum is None:
+            self.project_browser.fail('Load a spectrum in Spectral Data first')
+            return
+        try:
+            identifier = self.project_store.attach(name, self.current_spectrum,
+                self.current_spectrum_schema, self.current_project_attachment,
+                expected_source_sha256=(self.current_spectrum_details.source_sha256
+                                        if self.current_spectrum_details is not None else None))
+            self.project_browser.reload()
+            self.project_browser.status.setText(f'Added spectrum {identifier} to {name}; source bytes and provenance preserved.')
+        except Exception as error:
+            self.project_browser.fail(error)
+
+    def _open_project_spectrum(self, record):
+        try:
+            self._display_spectrum(record.spectrum, schema=record.import_schema, nasa_source=record.details is not None)
+            if self.current_spectrum is record.spectrum:
+                self.current_spectrum_details = record.details
+                self.current_project_attachment = record.attachment
+                self.navigation.setCurrentRow(2)
+            else:
+                self.project_browser.fail('Spectrum could not be plotted: no valid plottable measurements.')
+        except Exception as error:
+            self._clear_spectrum_display()
+            self.project_browser.fail(error)
+
+    def _open_source_link(self, item):
+        link = item.data(Qt.ItemDataRole.UserRole)
+        if link and source_link(link):
+            if not QDesktopServices.openUrl(QUrl(link)):
+                self.statusBar().showMessage('Could not open the source link in a browser.')

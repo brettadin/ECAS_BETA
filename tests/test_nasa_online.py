@@ -19,6 +19,8 @@ from ecas.ui.nasa_browser import NasaArchiveBrowser
 DATA = Path(__file__).resolve().parents[1] / "data/NASA/2026-10-27"
 RAW = (DATA / "wasp39b-spectra-metadata.json").read_bytes()
 TABLE = (DATA / "feinstein-2023.tbl").read_bytes()
+FEEDBACK = DATA.parent / '2026-10-28'
+ALIASES = (FEEDBACK / 'wasp-aliases.json').read_bytes()
 RECORD = next(r for r in json.loads(RAW) if r["bibcode"] == "2023Natur.614..670F")
 PAGE = b"FF_InitPage('/work/abc', '/workspace/TMP_example_123', '/exodata/FDL')"
 URL = spectrum_url(PAGE, RECORD)
@@ -151,9 +153,10 @@ def test_browser_search_download_cache_and_reopen_without_network(tmp_path):
     widget = NasaArchiveBrowser(cache_root=tmp_path, http=http)
     loaded = []
     widget.spectrumReady.connect(loaded.append)
-    widget.target.setText("WASP-39 b")
+    widget.target.setText("WASP39b")
     widget.search()
     assert widget.busy and not widget.search_button.isEnabled()
+    http.complete(ALIASES)
     http.complete(RAW)
     idx = next(i for i, item in enumerate(widget.items) if item["metadata"]["bibcode"] == RECORD["bibcode"])
     widget.results.setCurrentRow(idx)
@@ -196,8 +199,9 @@ def test_queued_download_failure_recovers_ui_and_preserves_display(tmp_path, fai
     browser.cache_root = tmp_path
     window._import_csv_from_path(str(DATA / 'feinstein-2023.tbl'))
     original, details = window.current_spectrum, window.current_spectrum_details
-    browser.target.setText('WASP-39 b')
+    browser.target.setText('WASP39b')
     browser.search()
+    http.complete(ALIASES)
     http.complete(RAW)
     index = next(i for i, item in enumerate(browser.items)
                  if item['metadata']['bibcode'] == RECORD['bibcode'])
@@ -280,6 +284,43 @@ def test_actual_window_reopens_cached_table_with_metadata_under_either_csv_schem
         assert window.spectra_plot._current_spectrum is None
     finally:
         window.close()
+
+
+@pytest.mark.parametrize('label,name,expected', [
+    ('trappist', 'TRAPPIST-1e', 6), ('kepler', 'Kepler-452b', 0),
+    ('proxima', 'Proxima Centauri b', 0)])
+def test_browser_resolves_feedback_names_and_explains_empty_inventory(tmp_path, label, name, expected):
+    http = FakeHttp()
+    widget = NasaArchiveBrowser(cache_root=tmp_path, http=http)
+    widget.target.setText(name)
+    try:
+        widget.search()
+        http.complete((FEEDBACK / (label + '-aliases.json')).read_bytes())
+        http.complete((FEEDBACK / (label + '-spectra.json')).read_bytes())
+        assert not widget.busy and widget.results.count() == expected
+        assert 'resolved as' in widget.status.text()
+        if not expected:
+            assert 'No spectra listed' in widget.status.text()
+            assert 'Other archives were not searched' in widget.status.text()
+    finally:
+        widget.close()
+
+
+def test_unsupported_only_inventory_keeps_truncation_warning(tmp_path):
+    http = FakeHttp()
+    widget = NasaArchiveBrowser(cache_root=tmp_path, http=http)
+    widget.target.setText('WASP39b')
+    try:
+        widget.search()
+        http.complete(ALIASES)
+        rows = [dict(RECORD, spec_type='Eclipse', spec_path=f'74/34/80/11/example{i}.tbl')
+                for i in range(50)]
+        http.complete(json.dumps(rows).encode())
+        assert not widget.busy and not widget.items
+        assert 'archive records exist (Eclipse)' in widget.status.text()
+        assert '50-record limit' in widget.status.text()
+    finally:
+        widget.close()
 
 
 class FakeReply(QObject):

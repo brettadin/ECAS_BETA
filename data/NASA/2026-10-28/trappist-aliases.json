@@ -1,0 +1,172 @@
+{
+    "manifest": {
+        "requested_name": "TRAPPIST-1e",
+        "resolved_name": "TRAPPIST-1 e",
+        "system_name": "TRAPPIST-1",
+        "lookup_status": "OK",
+        "compilation_date": "2026-10-27 21:17:02.191293",
+        "system_snapshot": {
+            "number_of_stars": 1,
+            "number_of_planets": 7
+        }
+    },
+    "system": {
+        "system_info": {
+            "id": "TRAPPIST-1",
+            "alias_set": {
+                "item_count": 2,
+                "default_name": "TRAPPIST-1",
+                "aliases": [
+                    "TOI-6838",
+                    "TRAPPIST-1"
+                ]
+            }
+        },
+        "objects": {
+            "stellar_set": {
+                "item_count": 1,
+                "stars": {
+                    "TRAPPIST-1": {
+                        "is_host": "True",
+                        "alias_set": {
+                            "item_count": 9,
+                            "default_name": "TRAPPIST-1",
+                            "aliases": [
+                                "TOI-6838",
+                                "Gaia DR3 2635476908753563008",
+                                "K2-112",
+                                "TRAPPIST-1",
+                                "EPIC 246199087",
+                                "2MASS J23062928-0502285",
+                                "WISE J230630.02-050234.1",
+                                "TIC 278892590",
+                                "Gaia DR2 2635476908753563008"
+                            ]
+                        }
+                    }
+                }
+            },
+            "planet_set": {
+                "item_count": 7,
+                "planets": {
+                    "TRAPPIST-1 b": {
+                        "alias_set": {
+                            "item_count": 10,
+                            "default_name": "TRAPPIST-1 b",
+                            "aliases": [
+                                "TOI-6838.01",
+                                "TOI-6838 b",
+                                "Gaia DR3 2635476908753563008 b",
+                                "K2-112 b",
+                                "TRAPPIST-1 b",
+                                "EPIC 246199087 b",
+                                "2MASS J23062928-0502285 b",
+                                "WISE J230630.02-050234.1 b",
+                                "TIC 278892590 b",
+                                "Gaia DR2 2635476908753563008 b"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 c": {
+                        "alias_set": {
+                            "item_count": 9,
+                            "default_name": "TRAPPIST-1 c",
+                            "aliases": [
+                                "TOI-6838 c",
+                                "Gaia DR3 2635476908753563008 c",
+                                "K2-112 c",
+                                "TRAPPIST-1 c",
+                                "EPIC 246199087 c",
+                                "2MASS J23062928-0502285 c",
+                                "WISE J230630.02-050234.1 c",
+                                "TIC 278892590 c",
+                                "Gaia DR2 2635476908753563008 c"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 d": {
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "TRAPPIST-1 d",
+                            "aliases": [
+                                "Gaia DR3 2635476908753563008 d",
+                                "K2-112 d",
+                                "TRAPPIST-1 d",
+                                "EPIC 246199087 d",
+                                "2MASS J23062928-0502285 d",
+                                "WISE J230630.02-050234.1 d",
+                                "TIC 278892590 d",
+                                "Gaia DR2 2635476908753563008 d"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 e": {
+                        "requested_object": "True",
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "TRAPPIST-1 e",
+                            "aliases": [
+                                "Gaia DR3 2635476908753563008 e",
+                                "K2-112 e",
+                                "TRAPPIST-1 e",
+                                "EPIC 246199087 e",
+                                "2MASS J23062928-0502285 e",
+                                "WISE J230630.02-050234.1 e",
+                                "TIC 278892590 e",
+                                "Gaia DR2 2635476908753563008 e"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 f": {
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "TRAPPIST-1 f",
+                            "aliases": [
+                                "Gaia DR3 2635476908753563008 f",
+                                "K2-112 f",
+                                "TRAPPIST-1 f",
+                                "EPIC 246199087 f",
+                                "2MASS J23062928-0502285 f",
+                                "WISE J230630.02-050234.1 f",
+                                "TIC 278892590 f",
+                                "Gaia DR2 2635476908753563008 f"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 g": {
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "TRAPPIST-1 g",
+                            "aliases": [
+                                "Gaia DR3 2635476908753563008 g",
+                                "K2-112 g",
+                                "TRAPPIST-1 g",
+                                "EPIC 246199087 g",
+                                "2MASS J23062928-0502285 g",
+                                "WISE J230630.02-050234.1 g",
+                                "TIC 278892590 g",
+                                "Gaia DR2 2635476908753563008 g"
+                            ]
+                        }
+                    },
+                    "TRAPPIST-1 h": {
+                        "alias_set": {
+                            "item_count": 8,
+                            "default_name": "TRAPPIST-1 h",
+                            "aliases": [
+                                "Gaia DR3 2635476908753563008 h",
+                                "Gaia DR2 2635476908753563008 h",
+                                "K2-112 h",
+                                "TRAPPIST-1 h",
+                                "EPIC 246199087 h",
+                                "2MASS J23062928-0502285 h",
+                                "WISE J230630.02-050234.1 h",
+                                "TIC 278892590 h"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

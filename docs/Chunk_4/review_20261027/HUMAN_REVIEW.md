@@ -1,5 +1,40 @@
 # NASA transmission workflow — human review handoff
 
+## Manual review confirmation — 2026-10-28
+
+User stated: "Manual review is complete, please continue". Record the manual gate
+as complete based on that confirmation. No individual checklist outcomes, screenshots
+or new empirical scientific validation were supplied. Historical pending statements
+below describe earlier checkpoints. Real-data validation remains deferred; newly
+written Chunk 5 robustness/method/eligibility work still needs independent review.
+
+## Update — 2026-10-28
+
+The review branch has since been integrated with master (`6c90ce5`) and merged
+through PR #1 (`2de79c7`). The publication-time text below is retained as history.
+Human feedback has arrived and is recorded in the development plan. The merge
+introduced a CSV dispatch NameError; its repair and new regression results are
+required before accepting the merged baseline. The earlier 281-test evidence
+belongs to `7a4061a`. Targeted independent re-review and final manual acceptance
+remain open; merge status alone does not satisfy them.
+
+Local follow-up: the CSV regression is repaired and name resolution/empty-inventory
+messages are implemented. Full local suite: 308 passed, 1 skipped. Actual offscreen
+searches verified all four names from the human feedback. See PROJECT_STATE and
+the implementation log for scope and evidence; these changes are not yet published
+or independently accepted. Projects and the requested link/layout work were still
+open at that checkpoint.
+
+Subsequent local increment: project creation/selection, source/provenance attachment,
+offline reopening after source/cache removal, NASA-relative link presentation and
+compact action/result layout are now implemented. Latest full suite: 341 passed,
+one skipped (5.50 s). Repeated attachments create distinct records; existing rows
+without attachments remain readable. New records bind parsed values, raw source
+bytes and provenance with integrity checks. No database table migration or rewrite
+of existing project data was performed. These changes remain unpublished and
+require independent review and normal-desktop human acceptance. Offscreen layout
+geometry was inspected, but missing rendered glyphs prevented typography validation.
+
 This review branch publishes the locally tested ECAS version based on
 `6da2dccfe966b9b75dc118aba3d55e606319b579`. At publication preparation, GitHub master
 was `5deb2673e3db3a626cb67040f09ac0bf48a38df4`, one newer commit containing CSV

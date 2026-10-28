@@ -1,0 +1,7 @@
+{
+  "source_url": "https://www.exomol.com/xsec/12C-16O2/",
+  "original_page_sha256": "33a855b9bdf6e7a1ca0c09b1ac438d42550d0ce02334810d63a94f7e91692059",
+  "stored_sha256": "e8216d35678f3281dd62a033fd802b76c5b0304378179e1707a4791461c95c88",
+  "transformation": "Anonymous CSRF field replaced with 64 synthetic S characters; never usable session state",
+  "purpose": "protocol regression fixture, not an unmodified raw product"
+}

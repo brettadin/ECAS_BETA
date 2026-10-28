@@ -1,0 +1,38 @@
+[
+  {
+    "name": "WASP39b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=WASP39b",
+    "started_utc": "2026-10-28T04:16:55.782003+00:00",
+    "status": 200,
+    "bytes": 2758,
+    "sha256": "0854559dbe0c04c24d1c298b5bc92a9a296399c93b4e9ac649c9edb7d18e5d13",
+    "finished_utc": "2026-10-28T04:16:59.315398+00:00"
+  },
+  {
+    "name": "TRAPPIST-1e",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=TRAPPIST-1e",
+    "started_utc": "2026-10-28T04:16:59.315420+00:00",
+    "status": 200,
+    "bytes": 7207,
+    "sha256": "b34d85cc01edce7d76aeb00d28a1736897d42c2263773f5f1d3d4c01c90c7153",
+    "finished_utc": "2026-10-28T04:17:02.608581+00:00"
+  },
+  {
+    "name": "Kepler-452b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=Kepler-452b",
+    "started_utc": "2026-10-28T04:17:02.608608+00:00",
+    "status": 200,
+    "bytes": 2576,
+    "sha256": "a0b6922d4c08917f749f85894b64fbc9533ab56b4b661fc9604a4ae0c8936fca",
+    "finished_utc": "2026-10-28T04:17:06.218605+00:00"
+  },
+  {
+    "name": "Proxima Centauri b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=Proxima+Centauri+b",
+    "started_utc": "2026-10-28T04:17:06.218631+00:00",
+    "status": 200,
+    "bytes": 9341,
+    "sha256": "b230aa248e8196d354fdb7f53df77b92407f478290e30be34ae2ef79b8528f5a",
+    "finished_utc": "2026-10-28T04:17:09.581871+00:00"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/Chunk_5/eligibility_contract.py",
+    "sha256": "30a927b85da1b9a829a2520398a6b6978f197d34eb5e50942acfe0b3f789334b"
+  },
+  {
+    "path": "tests/test_comparison_eligibility.py",
+    "sha256": "8d47b8e2bf3361012db7942f9315428f7630396ef0c6ef193180aab4b77332e9"
+  },
+  {
+    "path": "docs/Chunk_5/ELIGIBILITY_CONTRACT_V1.md",
+    "sha256": "3ba06f6954883601b3d1930c83f628f06d3961b674ad12cb509aa182df2d864c"
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "url": "https://www.exomol.com/results/12C-16O2_4000-4010_500K_1.000000.sigma",
+  "started_utc": "2026-10-28T07:12:24.504516+00:00",
+  "finished_utc": "2026-10-28T07:12:24.815012+00:00",
+  "http_status": 200,
+  "bytes": 308,
+  "sha256": "d323b5dd2f11c87a3cd6c0dc041fd625f00d56ec05cc2f2f2fb756cb01ea9fab",
+  "content_type": null,
+  "authentication": "none",
+  "cookies_sent": false,
+  "redirects_followed": false,
+  "request": {
+    "url": "https://www.exomol.com/xsec/12C-16O2/",
+    "method": "POST",
+    "parameters": {
+      "dnu": "1",
+      "numin": "4000",
+      "numax": "4010",
+      "T": "500",
+      "spoon_feed": "on"
+    },
+    "started_utc": "2026-10-28T07:11:18.233190+00:00",
+    "finished_utc": "2026-10-28T07:11:18.806282+00:00",
+    "http_status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "location": null,
+    "content_disposition": null,
+    "bytes": 11127,
+    "raw_sha256": "badc77e418bddcf300154261f1b8abf39dbd755fdbfd78c298c0d5ebf69a5414",
+    "anonymous_csrf": true,
+    "authentication": "none",
+    "email_supplied": false,
+    "redirects_followed": false
+  },
+  "pressure_bar": 0,
+  "broadening": "doppler_only",
+  "dataset": "UCL-4000",
+  "licence_url": "https://creativecommons.org/licenses/by-sa/4.0/"
+}

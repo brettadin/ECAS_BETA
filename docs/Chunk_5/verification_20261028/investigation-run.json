@@ -1,0 +1,19 @@
+{
+  "command": [
+    "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\docs\\Chunk_5\\comparison_investigation.py"
+  ],
+  "environment_keys": [
+    "APPDATA",
+    "HOME",
+    "LOCALAPPDATA",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "exit_code": 0
+}

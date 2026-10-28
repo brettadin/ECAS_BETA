@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/Chunk_5/comparison_investigation.py",
+    "sha256": "7fdc360ab65ef743a72f9ce56d6bc144f540b1366890c9f72a160b4f1d933b6e"
+  },
+  {
+    "path": "tests/test_comparison_investigation.py",
+    "sha256": "afe3c72acf08c5521aaa076675922e9e7acd887aafa731296e84e20d87a62646"
+  },
+  {
+    "path": "docs/Chunk_5/verification_20261028/investigation-report.json",
+    "sha256": "30b69cb36f933243badb0d14a0f9beb69ce3cb850120a75cbd4b0cbb0f7c1238"
+  }
+]
