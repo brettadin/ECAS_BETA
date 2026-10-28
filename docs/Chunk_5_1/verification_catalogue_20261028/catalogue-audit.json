@@ -1,0 +1,496 @@
+{
+  "version": "20260605",
+  "source_sha256": "3bc26ed45c5483839ee7a17ce4b135bdd5b2230147b6c261e07102884ffe646c",
+  "molecule_count": 102,
+  "isotope_count": 242,
+  "dataset_count": 250,
+  "warnings": [
+    "Provider version label 20221307 is not a valid calendar date; retained unchanged",
+    "Provider version label 20192207 is not a valid calendar date; retained unchanged"
+  ],
+  "product_availability": "not_checked",
+  "spectral_units_and_conditions": "not_in_master_index",
+  "searches": {
+    "Water": {
+      "total_matches": 5,
+      "formulas": [
+        "H2O"
+      ],
+      "truncated": false,
+      "entries": [
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-DYCDLGHISA-N",
+          "isotopologue": "1H-2H-16O",
+          "isotope_formula": "(1H)(2H)(16O)",
+          "dataset": "VTT",
+          "version": "20160726",
+          "definition_url": "https://www.exomol.com/db/H2O/1H-2H-16O/VTT/1H-2H-16O__VTT.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-BJUDXGSMSA-N",
+          "isotopologue": "1H2-15O",
+          "isotope_formula": "(1H)2(15O)",
+          "dataset": "VoTe-15",
+          "version": "20231030",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-15O/VoTe-15/1H2-15O__VoTe-15.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+          "isotopologue": "1H2-16O",
+          "isotope_formula": "(1H)2(16O)",
+          "dataset": "POKAZATEL",
+          "version": "20230621",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-16O/POKAZATEL/1H2-16O__POKAZATEL.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-OUBTZVSYSA-N",
+          "isotopologue": "1H2-17O",
+          "isotope_formula": "(1H)2(17O)",
+          "dataset": "HotWat78",
+          "version": "20230919",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-17O/HotWat78/1H2-17O__HotWat78.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-NJFSPNSNSA-N",
+          "isotopologue": "1H2-18O",
+          "isotope_formula": "(1H)2(18O)",
+          "dataset": "HotWat78",
+          "version": "20230919",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-18O/HotWat78/1H2-18O__HotWat78.def"
+        }
+      ]
+    },
+    "H2O": {
+      "total_matches": 5,
+      "formulas": [
+        "H2O"
+      ],
+      "truncated": false,
+      "entries": [
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-DYCDLGHISA-N",
+          "isotopologue": "1H-2H-16O",
+          "isotope_formula": "(1H)(2H)(16O)",
+          "dataset": "VTT",
+          "version": "20160726",
+          "definition_url": "https://www.exomol.com/db/H2O/1H-2H-16O/VTT/1H-2H-16O__VTT.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-BJUDXGSMSA-N",
+          "isotopologue": "1H2-15O",
+          "isotope_formula": "(1H)2(15O)",
+          "dataset": "VoTe-15",
+          "version": "20231030",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-15O/VoTe-15/1H2-15O__VoTe-15.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+          "isotopologue": "1H2-16O",
+          "isotope_formula": "(1H)2(16O)",
+          "dataset": "POKAZATEL",
+          "version": "20230621",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-16O/POKAZATEL/1H2-16O__POKAZATEL.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-OUBTZVSYSA-N",
+          "isotopologue": "1H2-17O",
+          "isotope_formula": "(1H)2(17O)",
+          "dataset": "HotWat78",
+          "version": "20230919",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-17O/HotWat78/1H2-17O__HotWat78.def"
+        },
+        {
+          "formula": "H2O",
+          "names": [
+            "Water",
+            "Oxidane",
+            "Hydrogen oxide",
+            "Dihydrogen monoxide",
+            "Hydrogen monoxide",
+            "Dihydrogen oxide",
+            "Hydrogen hydroxide",
+            "Hydric acid",
+            "Hydrohydroxic acid",
+            "Hydroxic acid",
+            "Hydrol"
+          ],
+          "inchi_key": "XLYOFNOQVPJJNP-NJFSPNSNSA-N",
+          "isotopologue": "1H2-18O",
+          "isotope_formula": "(1H)2(18O)",
+          "dataset": "HotWat78",
+          "version": "20230919",
+          "definition_url": "https://www.exomol.com/db/H2O/1H2-18O/HotWat78/1H2-18O__HotWat78.def"
+        }
+      ]
+    },
+    "CO2": {
+      "total_matches": 13,
+      "formulas": [
+        "CO2"
+      ],
+      "truncated": false,
+      "entries": [
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-UHFFFAOYSA-N",
+          "isotopologue": "12C-16O2",
+          "isotope_formula": "(12C)(16O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/12C-16O2/Dozen/12C-16O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-UHFFFAOYSA-N",
+          "isotopologue": "12C-16O2",
+          "isotope_formula": "(12C)(16O)2",
+          "dataset": "UCL-4000",
+          "version": "20200630",
+          "definition_url": "https://www.exomol.com/db/CO2/12C-16O2/UCL-4000/12C-16O2__UCL-4000.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-SUEIGJEOSA-N",
+          "isotopologue": "12C-17O2",
+          "isotope_formula": "(12C)(17O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/12C-17O2/Dozen/12C-17O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-FTOQCNSHSA-N",
+          "isotopologue": "12C-18O2",
+          "isotope_formula": "(12C)(18O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/12C-18O2/Dozen/12C-18O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-OUBTZVSYSA-N",
+          "isotopologue": "13C-16O2",
+          "isotope_formula": "(13C)(16O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/13C-16O2/Dozen/13C-16O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-VMIGTVKRSA-N",
+          "isotopologue": "13C-17O2",
+          "isotope_formula": "(13C)(17O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/13C-17O2/Dozen/13C-17O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-UKEFCNGDSA-N",
+          "isotopologue": "13C-18O2",
+          "isotope_formula": "(13C)(18O)2",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/13C-18O2/Dozen/13C-18O2__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-VQEHIDDOSA-N",
+          "isotopologue": "16O-12C-17O",
+          "isotope_formula": "(16O)(12C)(17O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/16O-12C-17O/Dozen/16O-12C-17O__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-HQMMCQRPSA-N",
+          "isotopologue": "16O-12C-18O",
+          "isotope_formula": "(16O)(12C)(18O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/16O-12C-18O/Dozen/16O-12C-18O__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-ZDOIIHCHSA-N",
+          "isotopologue": "16O-13C-17O",
+          "isotope_formula": "(16O)(13C)(17O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/16O-13C-17O/Dozen/16O-13C-17O__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-RGIGPVFXSA-N",
+          "isotopologue": "16O-13C-18O",
+          "isotope_formula": "(16O)(13C)(18O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/16O-13C-18O/Dozen/16O-13C-18O__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-UAMPCSKOSA-N",
+          "isotopologue": "17O-12C-18O",
+          "isotope_formula": "(17O)(12C)(18O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/17O-12C-18O/Dozen/17O-12C-18O__Dozen.def"
+        },
+        {
+          "formula": "CO2",
+          "names": [
+            "Carbon dioxide"
+          ],
+          "inchi_key": "CURLTUGMZLYLDI-UMGOXHPOSA-N",
+          "isotopologue": "17O-13C-18O",
+          "isotope_formula": "(17O)(13C)(18O)",
+          "dataset": "Dozen",
+          "version": "20260115",
+          "definition_url": "https://www.exomol.com/db/CO2/17O-13C-18O/Dozen/17O-13C-18O__Dozen.def"
+        }
+      ]
+    },
+    "12C-16O": {
+      "total_matches": 2,
+      "formulas": [
+        "CO"
+      ],
+      "truncated": false,
+      "entries": [
+        {
+          "formula": "CO",
+          "names": [
+            "Carbon monoxide"
+          ],
+          "inchi_key": "UGFAIRIUMAVXCW-ZCWHFVSRSA-N",
+          "isotopologue": "12C-16O",
+          "isotope_formula": "(12C)(16O)",
+          "dataset": "4thplus",
+          "version": "20260530",
+          "definition_url": "https://www.exomol.com/db/CO/12C-16O/4thplus/12C-16O__4thplus.def"
+        },
+        {
+          "formula": "CO",
+          "names": [
+            "Carbon monoxide"
+          ],
+          "inchi_key": "UGFAIRIUMAVXCW-ZCWHFVSRSA-N",
+          "isotopologue": "12C-16O",
+          "isotope_formula": "(12C)(16O)",
+          "dataset": "Li2015",
+          "version": "20170101",
+          "definition_url": "https://www.exomol.com/db/CO/12C-16O/Li2015/12C-16O__Li2015.def"
+        }
+      ]
+    },
+    "Phosphine": {
+      "total_matches": 2,
+      "formulas": [
+        "PF3",
+        "PH3"
+      ],
+      "truncated": false,
+      "entries": [
+        {
+          "formula": "PF3",
+          "names": [
+            "Phosphine",
+            "Phosphorus trifluoride"
+          ],
+          "inchi_key": "WKFBZNUBXWCCHG-UHFFFAOYSA-N",
+          "isotopologue": "31P-19F3",
+          "isotope_formula": "(31P)(19F)3",
+          "dataset": "MCYTY",
+          "version": "20250807",
+          "definition_url": "https://www.exomol.com/db/PF3/31P-19F3/MCYTY/31P-19F3__MCYTY.def"
+        },
+        {
+          "formula": "PH3",
+          "names": [
+            "Phosphine",
+            "Phosphane",
+            "Phosphamine",
+            "Phosphorus trihydride",
+            "Phosphorated hydrogen"
+          ],
+          "inchi_key": "XYFCBTPGUUZFHI-UHFFFAOYSA-N",
+          "isotopologue": "31P-1H3",
+          "isotope_formula": "(31P)(1H)3",
+          "dataset": "SAlTY",
+          "version": "20170131",
+          "definition_url": "https://www.exomol.com/db/PH3/31P-1H3/SAlTY/31P-1H3__SAlTY.def"
+        }
+      ]
+    },
+    "synthetic-nonexistent-molecule": {
+      "total_matches": 0,
+      "formulas": [],
+      "truncated": false,
+      "entries": []
+    }
+  }
+}

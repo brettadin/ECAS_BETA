@@ -1,0 +1,414 @@
+.FFFFFFFF...F......                                                      [100%]
+================================== FAILURES ===================================
+_________ test_selected_schema_reaches_importer_and_display[0-False] __________
+
+window = <ecas.ui.main_window.ECASWindow(0x197db7aff80) at 0x00000197DAFC4900>
+tmp_path = WindowsPath('C:/AI-Projects/Bwett AI Project UwU/ECAS_BETA/.venv/checks/pytest-merge-before/test_selected_schema_reaches_i0')
+via_dialog = False, schema_index = 0
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    @pytest.mark.parametrize("schema_index", [0, 1])
+    def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+        """Both entry points must use the importer's real keyword contract."""
+        path = str(tmp_path / "synthetic.csv")
+        window.spectrum_schema_selector.setCurrentIndex(schema_index)
+        schema = main_window.WASP39B_SCHEMA if schema_index else None
+>       with patch.object(main_window, "import_spectrum_csv", autospec=True,
+                          return_value=sentinel.spectrum) as importer, \
+             patch.object(window, "_display_spectrum") as display, \
+             patch.object(main_window.QFileDialog, "getOpenFileName",
+                          return_value=(path, "CSV files (*.csv)")):
+
+tests\test_main_window.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x00000197DAE5B770>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'ecas.ui.main_window' from 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\ecas\\ui\\main_window.py'> does not have the attribute 'import_spectrum_csv'
+
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1480: AttributeError
+__________ test_selected_schema_reaches_importer_and_display[0-True] __________
+
+window = <ecas.ui.main_window.ECASWindow(0x197dbbe2170) at 0x00000197FFDA9F40>
+tmp_path = WindowsPath('C:/AI-Projects/Bwett AI Project UwU/ECAS_BETA/.venv/checks/pytest-merge-before/test_selected_schema_reaches_i1')
+via_dialog = True, schema_index = 0
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    @pytest.mark.parametrize("schema_index", [0, 1])
+    def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+        """Both entry points must use the importer's real keyword contract."""
+        path = str(tmp_path / "synthetic.csv")
+        window.spectrum_schema_selector.setCurrentIndex(schema_index)
+        schema = main_window.WASP39B_SCHEMA if schema_index else None
+>       with patch.object(main_window, "import_spectrum_csv", autospec=True,
+                          return_value=sentinel.spectrum) as importer, \
+             patch.object(window, "_display_spectrum") as display, \
+             patch.object(main_window.QFileDialog, "getOpenFileName",
+                          return_value=(path, "CSV files (*.csv)")):
+
+tests\test_main_window.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x00000197FFD19450>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'ecas.ui.main_window' from 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\ecas\\ui\\main_window.py'> does not have the attribute 'import_spectrum_csv'
+
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1480: AttributeError
+_________ test_selected_schema_reaches_importer_and_display[1-False] __________
+
+window = <ecas.ui.main_window.ECASWindow(0x197db876860) at 0x00000197DAF26680>
+tmp_path = WindowsPath('C:/AI-Projects/Bwett AI Project UwU/ECAS_BETA/.venv/checks/pytest-merge-before/test_selected_schema_reaches_i2')
+via_dialog = False, schema_index = 1
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    @pytest.mark.parametrize("schema_index", [0, 1])
+    def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+        """Both entry points must use the importer's real keyword contract."""
+        path = str(tmp_path / "synthetic.csv")
+        window.spectrum_schema_selector.setCurrentIndex(schema_index)
+        schema = main_window.WASP39B_SCHEMA if schema_index else None
+>       with patch.object(main_window, "import_spectrum_csv", autospec=True,
+                          return_value=sentinel.spectrum) as importer, \
+             patch.object(window, "_display_spectrum") as display, \
+             patch.object(main_window.QFileDialog, "getOpenFileName",
+                          return_value=(path, "CSV files (*.csv)")):
+
+tests\test_main_window.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x00000197FFD19D10>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'ecas.ui.main_window' from 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\ecas\\ui\\main_window.py'> does not have the attribute 'import_spectrum_csv'
+
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1480: AttributeError
+__________ test_selected_schema_reaches_importer_and_display[1-True] __________
+
+window = <ecas.ui.main_window.ECASWindow(0x197db877280) at 0x000001978C570440>
+tmp_path = WindowsPath('C:/AI-Projects/Bwett AI Project UwU/ECAS_BETA/.venv/checks/pytest-merge-before/test_selected_schema_reaches_i3')
+via_dialog = True, schema_index = 1
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    @pytest.mark.parametrize("schema_index", [0, 1])
+    def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+        """Both entry points must use the importer's real keyword contract."""
+        path = str(tmp_path / "synthetic.csv")
+        window.spectrum_schema_selector.setCurrentIndex(schema_index)
+        schema = main_window.WASP39B_SCHEMA if schema_index else None
+>       with patch.object(main_window, "import_spectrum_csv", autospec=True,
+                          return_value=sentinel.spectrum) as importer, \
+             patch.object(window, "_display_spectrum") as display, \
+             patch.object(main_window.QFileDialog, "getOpenFileName",
+                          return_value=(path, "CSV files (*.csv)")):
+
+tests\test_main_window.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x00000197FFDE4510>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'ecas.ui.main_window' from 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\ecas\\ui\\main_window.py'> does not have the attribute 'import_spectrum_csv'
+
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1480: AttributeError
+______________ test_cancelled_dialog_preserves_existing_display _______________
+
+window = <ecas.ui.main_window.ECASWindow(0x197dbc74670) at 0x00000197FFCBC1C0>
+
+    def test_cancelled_dialog_preserves_existing_display(window):
+        window.spectrum_status.setText("Existing dataset")
+        with patch.object(main_window.QFileDialog, "getOpenFileName",
+                          return_value=("", "")), \
+>            patch.object(main_window, "import_spectrum_csv", autospec=True) as importer, \
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+             patch.object(window, "_clear_spectrum_display") as clear, \
+             patch.object(window, "_display_spectrum") as display:
+
+tests\test_main_window.py:59: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x00000197FFDA1A30>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'ecas.ui.main_window' from 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\ecas\\ui\\main_window.py'> does not have the attribute 'import_spectrum_csv'
+
+C:\Users\Blake\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:1480: AttributeError
+__ test_bundled_archive_imports_into_table_and_plot_without_database[False] ___
+
+window = <ecas.ui.main_window.ECASWindow(0x197db634040) at 0x000001978C5B3E00>
+via_dialog = False
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    def test_bundled_archive_imports_into_table_and_plot_without_database(window, via_dialog):
+        """Exercise the actual file importer and display, not mocked spectrum data."""
+        from pathlib import Path
+        path = str(Path(__file__).resolve().parents[1] / "data" / "WASP-39b" /
+                   "table_WASP-39-b-Feinstein-et-al.-2023.csv")
+        window.spectrum_schema_selector.setCurrentIndex(1)
+        with patch.object(main_window.QMessageBox, "warning") as warning, \
+             patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+            if via_dialog:
+                window._import_csv()
+            else:
+>               window._import_csv_from_path(path)
+
+tests\test_main_window.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ui\main_window.py:402: in _import_csv_from_path
+    spectrum, details = self._read_spectrum_file(path, selected_schema)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ecas.ui.main_window.ECASWindow(0x197db634040) at 0x000001978C5B3E00>
+path = 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\data\\WASP-39b\\table_WASP-39-b-Feinstein-et-al.-2023.csv'
+schema = {'wavelength': 'centralwavelng', 'signal': 'pl_trandep'}
+
+    def _read_spectrum_file(self, path, schema):
+        if Path(path).suffix.lower() == ".tbl":
+            details = import_transmission_table(path)
+            return details.spectrum, details
+>       return import_spectrum_csv(path, archive_schema=schema), None
+               ^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'import_spectrum_csv' is not defined
+
+ecas\ui\main_window.py:423: NameError
+___ test_bundled_archive_imports_into_table_and_plot_without_database[True] ___
+
+window = <ecas.ui.main_window.ECASWindow(0x197db5f65d0) at 0x000001978C548180>
+via_dialog = True
+
+    @pytest.mark.parametrize("via_dialog", [False, True])
+    def test_bundled_archive_imports_into_table_and_plot_without_database(window, via_dialog):
+        """Exercise the actual file importer and display, not mocked spectrum data."""
+        from pathlib import Path
+        path = str(Path(__file__).resolve().parents[1] / "data" / "WASP-39b" /
+                   "table_WASP-39-b-Feinstein-et-al.-2023.csv")
+        window.spectrum_schema_selector.setCurrentIndex(1)
+        with patch.object(main_window.QMessageBox, "warning") as warning, \
+             patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+            if via_dialog:
+>               window._import_csv()
+
+tests\test_main_window.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ui\main_window.py:380: in _import_csv
+    spectrum, details = self._read_spectrum_file(file_name, selected_schema)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ecas.ui.main_window.ECASWindow(0x197db5f65d0) at 0x000001978C548180>
+path = 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\data\\WASP-39b\\table_WASP-39-b-Feinstein-et-al.-2023.csv'
+schema = {'wavelength': 'centralwavelng', 'signal': 'pl_trandep'}
+
+    def _read_spectrum_file(self, path, schema):
+        if Path(path).suffix.lower() == ".tbl":
+            details = import_transmission_table(path)
+            return details.spectrum, details
+>       return import_spectrum_csv(path, archive_schema=schema), None
+               ^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'import_spectrum_csv' is not defined
+
+ecas\ui\main_window.py:423: NameError
+________ test_bundled_archive_requires_explicit_schema_in_generic_mode ________
+
+window = <ecas.ui.main_window.ECASWindow(0x1978caf15b0) at 0x000001978C54AB80>
+
+    def test_bundled_archive_requires_explicit_schema_in_generic_mode(window):
+        from pathlib import Path
+        path = Path(__file__).resolve().parents[1] / "data" / "WASP-39b" / "table_WASP-39-b-Feinstein-et-al.-2023.csv"
+        with patch.object(main_window.QMessageBox, "warning") as warning:
+>           window._import_csv_from_path(str(path))
+
+tests\test_main_window.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ui\main_window.py:402: in _import_csv_from_path
+    spectrum, details = self._read_spectrum_file(path, selected_schema)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ecas.ui.main_window.ECASWindow(0x1978caf15b0) at 0x000001978C54AB80>
+path = 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\data\\WASP-39b\\table_WASP-39-b-Feinstein-et-al.-2023.csv'
+schema = None
+
+    def _read_spectrum_file(self, path, schema):
+        if Path(path).suffix.lower() == ".tbl":
+            details = import_transmission_table(path)
+            return details.spectrum, details
+>       return import_spectrum_csv(path, archive_schema=schema), None
+               ^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'import_spectrum_csv' is not defined
+
+ecas\ui\main_window.py:423: NameError
+_______________ test_import_csv_displays_warnings_in_status_bar _______________
+
+tmp_path = WindowsPath('C:/AI-Projects/Bwett AI Project UwU/ECAS_BETA/.venv/checks/pytest-merge-before/test_import_csv_displays_warni0')
+
+    def test_import_csv_displays_warnings_in_status_bar(tmp_path):
+        """Test that warnings from spectrum import are shown in status bar."""
+        app = QApplication.instance() or QApplication([])
+        window = ECASWindow()
+    
+        # Create a CSV with missing uncertainty values (generates a warning)
+        csv_path = tmp_path / "with_warnings.csv"
+        csv_path.write_text(
+            "wavelength,signal,uncertainty\n"
+            "400,12.5,0.2\n"
+            "401,13.1,\n"  # missing uncertainty
+            "402,14.0,0.3\n",
+            encoding="utf-8",
+        )
+    
+>       window._import_csv_from_path(str(csv_path))
+
+tests\test_main_window.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ecas\ui\main_window.py:402: in _import_csv_from_path
+    spectrum, details = self._read_spectrum_file(path, selected_schema)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ecas.ui.main_window.ECASWindow(0x197db877af0) at 0x00000197FFE63080>
+path = 'C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\pytest-merge-before\\test_import_csv_displays_warni0\\with_warnings.csv'
+schema = None
+
+    def _read_spectrum_file(self, path, schema):
+        if Path(path).suffix.lower() == ".tbl":
+            details = import_transmission_table(path)
+            return details.spectrum, details
+>       return import_spectrum_csv(path, archive_schema=schema), None
+               ^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'import_spectrum_csv' is not defined
+
+ecas\ui\main_window.py:423: NameError
+=========================== short test summary info ===========================
+FAILED tests/test_main_window.py::test_selected_schema_reaches_importer_and_display[0-False]
+FAILED tests/test_main_window.py::test_selected_schema_reaches_importer_and_display[0-True]
+FAILED tests/test_main_window.py::test_selected_schema_reaches_importer_and_display[1-False]
+FAILED tests/test_main_window.py::test_selected_schema_reaches_importer_and_display[1-True]
+FAILED tests/test_main_window.py::test_cancelled_dialog_preserves_existing_display
+FAILED tests/test_main_window.py::test_bundled_archive_imports_into_table_and_plot_without_database[False]
+FAILED tests/test_main_window.py::test_bundled_archive_imports_into_table_and_plot_without_database[True]
+FAILED tests/test_main_window.py::test_bundled_archive_requires_explicit_schema_in_generic_mode
+FAILED tests/test_main_window.py::test_import_csv_displays_warnings_in_status_bar
+9 failed, 10 passed in 2.95s

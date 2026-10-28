@@ -1,0 +1,24 @@
+{
+  "started_utc": "2026-10-28T07:24:35.735609+00:00",
+  "finished_utc": "2026-10-28T07:24:36.673482+00:00",
+  "status": "Reference downloaded, validated and saved for offline reopening. No molecular detection or comparison was performed.",
+  "cache": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\reference-product-live-b032bcd6",
+  "offscreen": true,
+  "human_acceptance": false,
+  "scientific_validation": false,
+  "points": 11,
+  "sha256": "d323b5dd2f11c87a3cd6c0dc041fd625f00d56ec05cc2f2f2fb756cb01ea9fab",
+  "settings": {
+    "minimum": 4000,
+    "maximum": 4010,
+    "temperature": 500,
+    "spacing": "1.000000"
+  },
+  "pressure_bar": 0.0,
+  "broadening": "doppler_only",
+  "offline_points": 11,
+  "offline_product_client_created": false,
+  "offline_catalogue_client_created": false,
+  "offline_equal": true,
+  "success": true
+}

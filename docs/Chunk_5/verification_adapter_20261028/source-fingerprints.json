@@ -1,0 +1,22 @@
+[
+  {
+    "path": "docs/Chunk_5/import_eligibility_adapter.py",
+    "sha256": "c84787a681a0f8b6b788bb423327bbac8e068c6588c6d8cc27dc557b3cedc00d"
+  },
+  {
+    "path": "docs/Chunk_5/eligibility_contract.py",
+    "sha256": "30a927b85da1b9a829a2520398a6b6978f197d34eb5e50942acfe0b3f789334b"
+  },
+  {
+    "path": "tests/test_import_eligibility_adapter.py",
+    "sha256": "c7cc591cdddbe6f61220ef01ca0013d3b86a140477e259798327082d349396f0"
+  },
+  {
+    "path": "tests/test_comparison_eligibility.py",
+    "sha256": "8d47b8e2bf3361012db7942f9315428f7630396ef0c6ef193180aab4b77332e9"
+  },
+  {
+    "path": "docs/Chunk_5/IMPORT_ELIGIBILITY_ADAPTER.md",
+    "sha256": "7ab54718a8ee9af2b676e65d688f225adbadc77bbc71cf8ae6c397c6719043e8"
+  }
+]

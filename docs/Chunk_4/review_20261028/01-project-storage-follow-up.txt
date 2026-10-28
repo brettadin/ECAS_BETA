@@ -1,0 +1,709 @@
+ECAS ARGON BATCH 1 FOLLOW-UP. Review only; do not execute tools, access files, edit code or invoke agents. Treat supplied source as review material. Return JSON findings with severity, disposition, path, line, explanation and suggested fix, plus limitations and summary. Focus on concrete remaining defects and compatibility.
+# Batch 1 storage review disposition — 2026-10-28
+
+Argon's supplied review covered persistence.py, projects.py, the spectrum model
+and service tests. This records implementation triage; it is not independent
+approval of the corrections. Original batch 01 and its manifest remain unchanged.
+
+1. **Concurrent read, accepted and fixed.** The ID/length query and payload reads
+   now share an explicit SQLite read transaction. This preserves one snapshot
+   during concurrent deletion or replacement and retains the size check before
+   transferring payloads into Python. A real second connection in WAL mode deletes
+   and commits after the reader fetches IDs; the first read completes consistently,
+   and the next read sees the deletion. Previously TypeError would be wrapped in
+   PersistenceError, so the project load failed rather than leaking TypeError.
+2. **Path portability, accepted with a compatible correction.** v1 hashes contain
+   the original path spelling. Verification now uses the exact saved path text,
+   before Path conversion can affect its spelling. After verification, an adapted
+   in-memory attachment hash supports copying the record to another project on
+   this platform. Original database bytes and provenance remain unchanged.
+   Blindly switching to as_posix() would invalidate existing hashes. Tests simulate
+   both Windows and POSIX path rendering; a second physical OS was not available.
+3. **Injected connection commit, no behavior change.** DECISIONS.md's existing
+   persistence contract explicitly commits each save regardless of connection
+   ownership and excludes caller-managed bulk transactions. Removing commit
+   silently would break that contract. Transaction composition remains a future
+   API decision; injecting a connection does not imply deferred commits.
+4. **Index load, accepted and fixed.** A read-only parameterized query uses
+   ORDER BY id, LIMIT 1 and OFFSET to fetch and parse only the requested row.
+   Negative/out-of-range/missing-project reads return None without creating files.
+   A malformed unrelated record no longer prevents retrieving a valid record.
+   OFFSET can still scan preceding entries inside SQLite; this removes eager
+   Python loading, not all index-dependent database work.
+
+The review's 64 MiB limitation needs correction: the existing length(CAST(data AS
+BLOB)) query checks size before fetching the body into Python. The new transaction
+keeps that size check and subsequent fetch in the same snapshot. The per-record
+bound does not impose a total project memory limit.
+
+Verification used the existing isolated, offline test driver:
+
+- `.venv/Scripts/python.exe -I -B .venv/checks/run_checks.py project-review-focused`
+  — 39 passed, 1 skipped (0.85 s).
+- `.venv/Scripts/python.exe -I -B .venv/checks/run_checks.py project-review-full`
+  — 345 passed, 1 skipped (5.74 s).
+
+The skip remains Windows directory-symlink privileges. Logs and exact commands
+are in ../verification_20261028/project-review-*. No downloads, model calls,
+credentials, commits or pushes. Argon follow-up and normal desktop human review
+remain open. Follow-up source snapshot: 01-project-storage-follow-up.txt.
+
+FILE ecas/persistence.py - COMPLETE
+1: """Persistence layer for ECAS spectrum data.
+2: 
+3: This module provides storage and retrieval of SpectrumData objects using SQLite,
+4: storing each spectrum as a separate JSON document.
+5: 
+6: Storage scheme:
+7:     projects/<project_id>/data.sqlite
+8: 
+9: Each row in the database stores one spectrum's complete SpectrumData as JSON.
+10: """
+11: 
+12: import json
+13: import re
+14: import sqlite3
+15: from pathlib import Path
+16: from typing import Optional, List
+17: from ecas.models.spectrum import SpectrumData
+18: 
+19: 
+20: # Project ID validation pattern - alphanumeric + underscore/hyphen only
+21: PROJECT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
+22: 
+23: 
+24: class PersistenceError(Exception):
+25:     """Base exception for persistence layer errors."""
+26: 
+27:     pass
+28: 
+29: 
+30: class InvalidProjectIdError(PersistenceError):
+31:     """Raised when a project ID is invalid."""
+32: 
+33:     pass
+34: 
+35: 
+36: class DatabaseNotFoundError(PersistenceError):
+37:     """Raised when the expected database file is missing."""
+38: 
+39:     pass
+40: 
+41: 
+42: def validate_project_id(project_id: str, base_path: Path) -> Path:
+43:     """Validate a project ID and ensure its path stays within base_path.
+44: 
+45:     Raises:
+46:         InvalidProjectIdError: If the ID is invalid or the resolved path
+47:             escapes the approved projects directory.
+48:     """
+49:     if not isinstance(project_id, str) or not project_id:
+50:         raise InvalidProjectIdError("Project ID must be a non-empty string.")
+51: 
+52:     if not PROJECT_ID_PATTERN.fullmatch(project_id):
+53:         raise InvalidProjectIdError(
+54:             "Project ID may contain only letters, numbers, underscores, "
+55:             "and hyphens, and must begin with a letter or number."
+56:         )
+57: 
+58:     try:
+59:         resolved_base = Path(base_path).resolve()
+60:         project_path = (resolved_base / project_id).resolve()
+61: 
+62:         if not project_path.is_relative_to(resolved_base):
+63:             raise InvalidProjectIdError(
+64:                 "Project path must remain inside the projects directory."
+65:             )
+66: 
+67:         return project_path
+68: 
+69:     except (OSError, RuntimeError, TypeError, ValueError) as exc:
+70:         raise InvalidProjectIdError(
+71:             f"Could not validate project path: {exc}"
+72:         ) from exc
+73: 
+74: 
+75: def get_project_database(project_id: str, projects_dir: Path) -> Path:
+76:     """Get the path to a project's SQLite database.
+77: 
+78:     Args:
+79:         project_id: Validated project identifier
+80:         projects_dir: Base directory for all projects
+81: 
+82:     Returns:
+83:         Absolute path to the project's data.sqlite file
+84: 
+85:     Raises:
+86:         InvalidProjectIdError: If project_id is invalid
+87:     """
+88:     validated_path = validate_project_id(project_id, projects_dir)
+89:     database_path = validated_path / "data.sqlite"
+90:     return database_path
+91: 
+92: 
+93: def _get_connection(database_path: Path, create_if_missing: bool = True) -> sqlite3.Connection:
+94:     """Get a SQLite connection to the project's database.
+95: 
+96:     Args:
+97:         database_path: Absolute path to the SQLite database file
+98:         create_if_missing: Whether to create the database if it doesn't exist
+99: 
+100:     Returns:
+101:         An open SQLite3 connection object
+102:     """
+103:     # Ensure the directory exists
+104:     database_path.parent.mkdir(parents=True, exist_ok=True)
+105: 
+106:     conn = sqlite3.connect(str(database_path))
+107:     return conn
+108: 
+109: 
+110: def _initialize_schema(conn: sqlite3.Connection) -> None:
+111:     """Create or initialize the spectrum storage schema.
+112: 
+113:     Args:
+114:         conn: Open SQLite connection
+115:     """
+116:     # Create schema if not exists
+117:     conn.execute("""
+118:         CREATE TABLE IF NOT EXISTS spectra (
+119:             id INTEGER PRIMARY KEY AUTOINCREMENT,
+120:             project_id TEXT NOT NULL,
+121:             data JSON NOT NULL,
+122:             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+123:         )
+124:     """)
+125: 
+126:     # Create index for faster project-based queries
+127:     conn.execute("""
+128:         CREATE INDEX IF NOT EXISTS idx_spectra_project_id ON spectra(project_id)
+129:     """)
+130: 
+131: 
+132: def _to_spectrums_dict(data_dict: dict) -> SpectrumData:
+133:     """Deserialize a dictionary back to SpectrumData."""
+134:     warnings = data_dict.get("warnings", ())
+135:     if not isinstance(warnings, tuple):
+136:         warnings = tuple(warnings) if warnings else ()
+137: 
+138:     return SpectrumData(
+139:         source_file=Path(data_dict["source_file"]),
+140:         rows=tuple(data_dict["rows"]),
+141:         columns=tuple(data_dict["columns"]),
+142:         axis_unit=data_dict.get("axis_unit"),
+143:         signal_unit=data_dict.get("signal_unit"),
+144:         signal_type=data_dict.get("signal_type"),
+145:         warnings=warnings,
+146:     )
+147: 
+148: 
+149: def save_spectrum_to_database(
+150:     spectrum: SpectrumData,
+151: 
+152:     project_id: str,
+153:     projects_dir: Path,
+154:     database_if_exists: Optional[sqlite3.Connection] = None,
+155:     *, attachment: Optional[dict] = None,
+156: ) -> int:
+157:     """Save a spectrum to its project's SQLite database.
+158: 
+159:     Args:
+160:         spectrum: The SpectrumData object to persist
+161:         project_id: Validated project identifier
+162:         projects_dir: Base directory for all projects
+163:         database_if_exists: Optional existing connection (for performance)
+164:         attachment: Optional versioned project source/provenance envelope. Older
+165:             readers can still load the SpectrumData fields from the same row.
+166: 
+167:     Returns:
+168:         The auto-incremented primary key of the inserted row
+169: 
+170:     Raises:
+171:         PersistenceError: If saving fails
+172:         InvalidProjectIdError: If project_id is invalid
+173:     """
+174:     database_path = get_project_database(project_id, projects_dir)
+175: 
+176:     if database_if_exists is None:
+177:         conn = _get_connection(database_path, create_if_missing=True)
+178:         try:
+179:             # Initialize schema on first write to this database
+180:             _initialize_schema(conn)
+181: 
+182:             # Serialize SpectrumData to JSON
+183:             data_json = json.dumps({
+184:                 "source_file": str(spectrum.source_file),
+185:                 "rows": spectrum.rows,
+186:                 "columns": spectrum.columns,
+187:                 "axis_unit": spectrum.axis_unit,
+188:                 "signal_unit": spectrum.signal_unit,
+189:                 "signal_type": spectrum.signal_type,
+190:                 "warnings": spectrum.warnings,
+191:                 **({"attachment": attachment} if attachment is not None else {}),
+192:             })
+193: 
+194:             # Insert the spectrum as JSON
+195:             cursor = conn.execute(
+196:                 """INSERT INTO spectra (project_id, data) VALUES (?, ?)""",
+197:                 (project_id, data_json),
+198:             )
+199:             conn.commit()
+200: 
+201:             return cursor.lastrowid
+202: 
+203: 
+204:         finally:
+205:             conn.close()
+206: 
+207:     else:
+208:         # Use provided connection
+209:         _initialize_schema(database_if_exists)
+210:         data_json = json.dumps({
+211:             "source_file": str(spectrum.source_file),
+212:             "rows": spectrum.rows,
+213:             "columns": spectrum.columns,
+214:             "axis_unit": spectrum.axis_unit,
+215:             "signal_unit": spectrum.signal_unit,
+216:             "signal_type": spectrum.signal_type,
+217:             "warnings": spectrum.warnings,
+218:             **({"attachment": attachment} if attachment is not None else {}),
+219:         })
+220:         cursor = database_if_exists.execute(
+221:             """INSERT INTO spectra (project_id, data) VALUES (?, ?)""",
+222:             (project_id, data_json),
+223:         )
+224:         database_if_exists.commit()
+225: 
+226:         return cursor.lastrowid
+227: 
+228: 
+229: def load_spectra_from_database(project_id: str, projects_dir: Path) -> List[SpectrumData]:
+230:     """Load all spectra from a project's SQLite database.
+231: 
+232:     Args:
+233:         project_id: Validated project identifier
+234:         projects_dir: Base directory for all projects
+235: 
+236:     Returns:
+237:         List of SpectrumData objects for this project
+238: 
+239:     Raises:
+240:         PersistenceError: If loading fails
+241:         InvalidProjectIdError: If project_id is invalid
+242:     """
+243:     database_path = get_project_database(project_id, projects_dir)
+244: 
+245:     # Check if database exists
+246:     if not database_path.exists():
+247:         return []
+248: 
+249:     conn = _get_connection(database_path, create_if_missing=False)
+250:     try:
+251:         # Load all spectra for this project
+252:         cursor = conn.execute(
+253:             """SELECT data FROM spectra WHERE project_id = ?""",
+254:             (project_id,)
+255:         )
+256: 
+257:         spectra = []
+258:         for row in cursor.fetchall():
+259:             data_dict = json.loads(row[0])
+260:             spectrum_dict: dict = data_dict
+261: 
+262:             spectrum = _to_spectrums_dict(spectrum_dict)
+263:             spectra.append(spectrum)
+264: 
+265:         return spectra
+266: 
+267:     finally:
+268:         conn.close()
+269: 
+270: 
+271: def load_spectrum_by_index(project_id: str, projects_dir: Path, index: int) -> Optional[SpectrumData]:
+272:     """Load a specific spectrum from a project's database by zero-based index.
+273: 
+274:     Args:
+275:         project_id: Validated project identifier
+276:         projects_dir: Base directory for all projects
+277:         index: Zero-based index of the spectrum to load (0 = first spectrum in DB)
+278: 
+279:     Returns:
+280:         The SpectrumData object at the specified index, or None if not found/empty
+281:     """
+282:     database = _checked_project_database(project_id, projects_dir)
+283:     if index < 0 or not database.exists():
+284:         return None
+285:     conn = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+286:     try:
+287:         row = conn.execute(
+288:             'SELECT data FROM spectra WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?',
+289:             (project_id, index),
+290:         ).fetchone()
+291:         return _to_spectrums_dict(json.loads(row[0])) if row else None
+292:     finally:
+293:         conn.close()
+294: 
+295: 
+296: def clear_project_database(project_id: str, projects_dir: Path) -> None:
+297:     """Clear all spectra from a project's database.
+298: 
+299:     WARNING: This deletes all data for the project!
+300: 
+301:     Args:
+302:         project_id: Validated project identifier
+303:         projects_dir: Base directory for all projects
+304:     """
+305:     database_path = get_project_database(project_id, projects_dir)
+306: 
+307:     if not database_path.exists():
+308:         raise DatabaseNotFoundError(f"No database exists for project '{project_id}'")
+309: 
+310:     conn = _get_connection(database_path, create_if_missing=True)
+311:     try:
+312:         # Drop all data but keep schema
+313:         conn.execute("DELETE FROM spectra")
+314:         conn.commit()
+315:     finally:
+316:         conn.close()
+317: 
+318: 
+319: def count_spectra(project_id: str, projects_dir: Path) -> int:
+320:     """Count the number of spectra stored for a project.
+321: 
+322:     Args:
+323:         project_id: Validated project identifier
+324:         projects_dir: Base directory for all projects
+325: 
+326:     Returns:
+327:         Number of spectra in the project's database (0 if no database exists)
+328:     """
+329:     database_path = get_project_database(project_id, projects_dir)
+330: 
+331:     if not database_path.exists():
+332:         return 0
+333: 
+334:     conn = _get_connection(database_path, create_if_missing=False)
+335:     try:
+336:         cursor = conn.execute("SELECT COUNT(*) FROM spectra")
+337:         count = cursor.fetchone()[0]
+338:         return count
+339:     finally:
+340:         conn.close()
+341: 
+342: 
+343: def _checked_project_database(project_id: str, projects_dir: Path) -> Path:
+344:     """New project-library operations reject direct links before opening files."""
+345:     database = get_project_database(project_id, projects_dir)
+346:     folder = Path(projects_dir) / project_id
+347:     if folder.is_symlink() or folder.is_junction() or database.is_symlink() or database.is_junction():
+348:         raise PersistenceError('Linked project folders/databases are unsupported')
+349:     return database
+350: 
+351: 
+352: def create_project(project_id: str, projects_dir: Path) -> None:
+353:     database = _checked_project_database(project_id, projects_dir)
+354:     try:
+355:         database.parent.mkdir(parents=True, exist_ok=False)
+356:         conn = _get_connection(database)
+357:         try:
+358:             _initialize_schema(conn)
+359:             conn.commit()
+360:         finally:
+361:             conn.close()
+362:     except (OSError, sqlite3.Error) as error:
+363:         raise PersistenceError(f'Could not create project (existing names are not overwritten): {error}') from error
+364: 
+365: 
+366: def list_project_ids(projects_dir: Path) -> List[str]:
+367:     root = Path(projects_dir)
+368:     if not root.exists():
+369:         return []
+370:     result = []
+371:     for folder in root.iterdir():
+372:         try:
+373:             database = _checked_project_database(folder.name, root)
+374:             if database.is_file():
+375:                 result.append(folder.name)
+376:         except PersistenceError:
+377:             continue
+378:     return sorted(result, key=str.casefold)
+379: 
+380: 
+381: def load_spectrum_records(project_id: str, projects_dir: Path) -> List[tuple]:
+382:     """Read stable IDs plus JSON envelopes, including older attachment-free rows.
+383: 
+384:     Opening in read-only mode avoids creating/repairing a missing project on read.
+385:     The 64 MiB per-row guard is an application memory bound, not scientific validation.
+386:     """
+387:     database = _checked_project_database(project_id, projects_dir)
+388:     if not database.exists():
+389:         return []
+390:     try:
+391:         conn = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+392:         try:
+393:             # Keep size checks and subsequent reads in the same snapshot, even
+394:             # when another connection deletes or replaces a row between reads.
+395:             conn.execute('BEGIN')
+396:             identifiers = conn.execute('SELECT id, length(CAST(data AS BLOB)) FROM spectra WHERE project_id = ? ORDER BY id', (project_id,)).fetchall()
+397:             rows = []
+398:             for identifier, size in identifiers:
+399:                 if size > 64 * 1024 * 1024:
+400:                     raise PersistenceError('Saved spectrum exceeds 64 MiB record limit')
+401:                 raw = conn.execute('SELECT data FROM spectra WHERE id = ? AND project_id = ?', (identifier, project_id)).fetchone()[0]
+402:                 rows.append((identifier, json.loads(raw)))
+403:             return rows
+404:         finally:
+405:             conn.close()
+406:     except (sqlite3.Error, ValueError, TypeError) as error:
+407:         raise PersistenceError(f'Could not read project: {error}') from error
+END FILE
+FILE ecas/projects.py - COMPLETE
+1: """Project attachment use cases; SQL stays in persistence and UI stays separate."""
+2: import base64
+3: from dataclasses import dataclass
+4: from hashlib import sha256
+5: import json
+6: import sqlite3
+7: from pathlib import Path
+8: 
+9: from ecas import persistence
+10: from ecas.ingestion.import_manager import import_spectrum
+11: from ecas.ingestion.nasa_archive import read_cached
+12: from ecas.ingestion.nasa_table import TransmissionTable, import_transmission_table
+13: from ecas.models.spectrum import SpectrumData
+14: 
+15: MAX_SOURCE_BYTES = 16 * 1024 * 1024
+16: 
+17: 
+18: def _source_bytes(source):
+19:     with source.open('rb') as stream:
+20:         raw = stream.read(MAX_SOURCE_BYTES + 1)
+21:     if len(raw) > MAX_SOURCE_BYTES:
+22:         raise ValueError('Project source exceeds 16 MiB limit')
+23:     return raw
+24: 
+25: 
+26: def _payload(spectrum):
+27:     return dict(source_file=str(spectrum.source_file), rows=spectrum.rows,
+28:                 columns=spectrum.columns, axis_unit=spectrum.axis_unit,
+29:                 signal_unit=spectrum.signal_unit, signal_type=spectrum.signal_type,
+30:                 warnings=spectrum.warnings)
+31: 
+32: 
+33: def _digest(spectrum, attachment, *, source_file=None):
+34:     payload = _payload(spectrum)
+35:     if source_file is not None:
+36:         payload['source_file'] = source_file
+37:     return sha256(json.dumps(dict(spectrum=payload, attachment=attachment),
+38:                              sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+39: 
+40: 
+41: def _verified(spectrum, attachment, *, source_file=None):
+42:     if not isinstance(attachment, dict) or attachment.get('schema') != 'ecas-project-source-v1':
+43:         raise ValueError('Unsupported project source record')
+44:     unsigned = {key: value for key, value in attachment.items() if key != 'integrity_sha256'}
+45:     if _digest(spectrum, unsigned, source_file=source_file) != attachment.get('integrity_sha256'):
+46:         raise ValueError('Saved spectrum or provenance changed')
+47:     raw = base64.b64decode(attachment['source_bytes'], validate=True)
+48:     if len(raw) > MAX_SOURCE_BYTES or sha256(raw).hexdigest() != attachment['source_sha256']:
+49:         raise ValueError('Saved source failed integrity validation')
+50:     # v1 hashes include the original path spelling. Verify that exact persisted
+51:     # spelling before adapting the envelope to this platform's Path rendering.
+52:     # This keeps old databases valid and allows verified copies between projects.
+53:     if source_file is not None and source_file != str(spectrum.source_file):
+54:         return dict(unsigned, integrity_sha256=_digest(spectrum, unsigned))
+55:     return attachment
+56: 
+57: 
+58: @dataclass(frozen=True)
+59: class ProjectSpectrum:
+60:     record_id: int
+61:     spectrum: SpectrumData
+62:     attachment: dict | None
+63: 
+64:     @property
+65:     def details(self):
+66:         if self.attachment is None or 'table_metadata' not in self.attachment['provenance']:
+67:             return None
+68:         data = self.attachment['provenance']
+69:         return TransmissionTable(self.spectrum, tuple(map(tuple, data['table_metadata'])),
+70:                                  tuple(map(tuple, data['column_units'])), self.attachment['source_sha256'])
+71: 
+72:     @property
+73:     def import_schema(self):
+74:         return self.attachment['provenance'].get('import_schema') if self.attachment else None
+75: 
+76: 
+77: class ProjectStore:
+78:     def __init__(self, root):
+79:         self.root = Path(root)
+80:         if self.root.is_symlink() or self.root.is_junction():
+81:             raise persistence.PersistenceError('Linked project roots are unsupported')
+82: 
+83:     def projects(self):
+84:         return persistence.list_project_ids(self.root)
+85: 
+86:     def create(self, name):
+87:         persistence.create_project(name, self.root)
+88: 
+89:     def attach(self, name, spectrum, schema=None, existing_attachment=None, *, expected_source_sha256=None):
+90:         """Snapshot a validated local source, or copy a verified saved attachment.
+91: 
+92:         The original path remains origin metadata. Reopening uses saved values and
+93:         source bytes, so neither the cache nor the original file is a dependency.
+94:         """
+95:         try:
+96:             database = persistence._checked_project_database(name, self.root)
+97:             if not database.is_file():
+98:                 raise ValueError('Create or select an existing project first')
+99:             if existing_attachment is not None:
+100:                 attachment = _verified(spectrum, existing_attachment)
+101:             else:
+102:                 source = spectrum.source_file
+103:                 raw = _source_bytes(source)
+104:                 if expected_source_sha256 is not None and sha256(raw).hexdigest() != expected_source_sha256:
+105:                     raise ValueError('Source changed since import; reimport it before attaching')
+106:                 provenance = dict(original_path=str(source), import_schema=schema)
+107:                 if source.suffix.lower() == '.tbl':
+108:                     details = import_transmission_table(source)
+109:                     parsed = details.spectrum
+110:                     if sha256(raw).hexdigest() != details.source_sha256:
+111:                         raise ValueError('Source changed while attaching')
+112:                     provenance.update(import_schema=None, table_metadata=details.metadata, column_units=details.column_units)
+113:                     if source.name == 'source.tbl' and (source.parent / 'record.json').exists():
+114:                         record, _ = read_cached(source.parent)
+115:                         metadata = (source.parent / 'metadata.json').read_bytes()
+116:                         if record['sha256'] != details.source_sha256 or sha256(metadata).hexdigest() != record['metadata_sha256']:
+117:                             raise ValueError('Cache provenance changed while attaching')
+118:                         provenance.update(cache_record=record, metadata_bytes=base64.b64encode(metadata).decode('ascii'))
+119:                 else:
+120:                     parsed = import_spectrum(source, archive_schema=schema)
+121:                     if _source_bytes(source) != raw:
+122:                         raise ValueError('Source changed while attaching')
+123:                 if parsed != spectrum:
+124:                     raise ValueError('Source no longer matches the displayed spectrum; reimport it first')
+125:                 attachment = dict(schema='ecas-project-source-v1', source_name=source.name,
+126:                                   source_sha256=sha256(raw).hexdigest(), source_bytes=base64.b64encode(raw).decode('ascii'),
+127:                                   provenance=provenance)
+128:                 attachment['integrity_sha256'] = _digest(spectrum, attachment)
+129:             size = len(json.dumps(dict(_payload(spectrum), attachment=attachment), allow_nan=False).encode())
+130:             if size > 64 * 1024 * 1024:
+131:                 raise ValueError('Project spectrum exceeds 64 MiB record limit')
+132:             return persistence.save_spectrum_to_database(spectrum, name, self.root, attachment=attachment)
+133:         except (OSError, ValueError, KeyError, TypeError, sqlite3.Error) as error:
+134:             raise persistence.PersistenceError(f'Could not attach spectrum: {error}') from error
+135: 
+136:     def spectra(self, name):
+137:         try:
+138:             result = []
+139:             for identifier, data in persistence.load_spectrum_records(name, self.root):
+140:                 spectrum = persistence._to_spectrums_dict(data)
+141:                 attachment = _verified(spectrum, data['attachment'], source_file=data['source_file']) if 'attachment' in data else None
+142:                 result.append(ProjectSpectrum(identifier, spectrum, attachment))
+143:             return result
+144:         except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
+145:             raise persistence.PersistenceError(f'Could not validate project spectra: {error}') from error
+END FILE
+FILE tests/test_project_review_regressions.py - COMPLETE
+1: """Storage review regressions: snapshots, selective reads and portable v1 hashes."""
+2: from dataclasses import replace
+3: import json
+4: from pathlib import PurePosixPath, PureWindowsPath
+5: import sqlite3
+6: from unittest.mock import patch
+7: 
+8: import pytest
+9: 
+10: from ecas import persistence
+11: from ecas.ingestion.import_manager import import_spectrum
+12: from ecas.projects import ProjectStore, _digest
+13: 
+14: 
+15: def csv_source(tmp_path):
+16:     source = tmp_path / 'spectrum.csv'
+17:     source.write_bytes(b'wavelength,signal\n1,2\n2,3\n')
+18:     return source, import_spectrum(source)
+19: 
+20: 
+21: def test_record_reads_keep_snapshot_during_concurrent_delete(tmp_path):
+22:     _, spectrum = csv_source(tmp_path)
+23:     store = ProjectStore(tmp_path / 'projects')
+24:     store.create('research')
+25:     identifier = store.attach('research', spectrum)
+26:     connect = sqlite3.connect
+27:     writer = connect(store.root / 'research/data.sqlite')
+28:     writer.execute('PRAGMA journal_mode=WAL')
+29: 
+30:     class Cursor:
+31:         def __init__(self, cursor): self.cursor = cursor
+32:         def fetchall(self):
+33:             rows = self.cursor.fetchall()
+34:             writer.execute('DELETE FROM spectra WHERE id = ?', (identifier,))
+35:             writer.commit()
+36:             return rows
+37: 
+38:     class Reader:
+39:         def __init__(self, *args, **kwargs): self.conn = connect(*args, **kwargs)
+40:         def execute(self, sql, args=()):
+41:             cursor = self.conn.execute(sql, args)
+42:             return Cursor(cursor) if sql.startswith('SELECT id, length') else cursor
+43:         def close(self): self.conn.close()
+44: 
+45:     try:
+46:         with patch('ecas.persistence.sqlite3.connect', Reader):
+47:             loaded = store.spectra('research')
+48:         assert [item.record_id for item in loaded] == [identifier]
+49:         assert loaded[0].spectrum == spectrum
+50:         assert store.spectra('research') == []
+51:     finally:
+52:         writer.close()
+53: 
+54: 
+55: def test_index_read_only_parses_selected_row_and_keeps_id_order(tmp_path):
+56:     _, spectrum = csv_source(tmp_path)
+57:     root = tmp_path / 'projects'
+58:     persistence.save_spectrum_to_database(spectrum, 'research', root)
+59:     persistence.save_spectrum_to_database(spectrum, 'research', root)
+60:     database = root / 'research/data.sqlite'
+61:     with sqlite3.connect(database) as conn:
+62:         conn.execute("UPDATE spectra SET data = 'invalid JSON' WHERE id = 1")
+63:     # An unrelated malformed row must not be fetched or parsed.
+64:     assert persistence.load_spectrum_by_index('research', root, 1) == spectrum
+65:     assert persistence.load_spectrum_by_index('research', root, 2) is None
+66:     assert persistence.load_spectrum_by_index('research', root, -1) is None
+67:     assert persistence.load_spectrum_by_index('missing', root, 0) is None
+68:     assert not (root / 'missing').exists()
+69: 
+70: 
+71: @pytest.mark.parametrize(('saved_path', 'destination_path'), [
+72:     ('/observations/planet.csv', PureWindowsPath),
+73:     (r'C:\observations\planet.csv', PurePosixPath),
+74: ])
+75: def test_v1_path_spelling_verified_before_platform_conversion_and_copy(tmp_path, saved_path, destination_path):
+76:     _, spectrum = csv_source(tmp_path)
+77:     store = ProjectStore(tmp_path / 'projects')
+78:     store.create('first')
+79:     store.create('second')
+80:     store.attach('first', spectrum)
+81:     database = store.root / 'first/data.sqlite'
+82:     with sqlite3.connect(database) as conn:
+83:         data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
+84:         data['source_file'] = saved_path
+85:         unsigned = {k: v for k, v in data['attachment'].items() if k != 'integrity_sha256'}
+86:         data['attachment']['integrity_sha256'] = _digest(spectrum, unsigned, source_file=saved_path)
+87:         conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
+88:     convert = persistence._to_spectrums_dict
+89: 
+90:     def on_destination(data):
+91:         return replace(convert(data), source_file=destination_path(data['source_file']))
+92: 
+93:     with patch('ecas.persistence._to_spectrums_dict', on_destination):
+94:         loaded = store.spectra('first')[0]
+95:         store.attach('second', loaded.spectrum, existing_attachment=loaded.attachment)
+96:         copied = store.spectra('second')[0]
+97:     assert copied.spectrum == loaded.spectrum
+98:     assert copied.attachment == loaded.attachment
+99:     # Adapting the in-memory envelope must not rewrite the original database.
+100:     with sqlite3.connect(database) as conn:
+101:         assert json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0]) == data
+END FILE

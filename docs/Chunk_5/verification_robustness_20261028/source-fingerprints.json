@@ -1,0 +1,26 @@
+[
+  {
+    "path": "docs/Chunk_5/robustness_investigation.py",
+    "sha256": "2b189070ff899b0f08e8daec224eb50cea91adc70d218b0aa69a7ed602bfe172"
+  },
+  {
+    "path": "docs/Chunk_5/template_investigation.py",
+    "sha256": "6229f6d973583e2e194ddc00767ce76a4d3578c25e0104fa3e1a0f6c43047798"
+  },
+  {
+    "path": "docs/Chunk_5/comparison_investigation.py",
+    "sha256": "900c1ac2723ddffadf2f3575dcf4312237ec6a7b5b9eca5980e18207b5e2f7d5"
+  },
+  {
+    "path": "tests/test_robustness_investigation.py",
+    "sha256": "8556fcd764aa85ed97a132189392498e33c86f73051c603306742b6db43b4de7"
+  },
+  {
+    "path": "docs/Chunk_5/INITIAL_METHOD_DECISION.md",
+    "sha256": "85c9157f7bd9066618ecf58f4af60975b99a233806999b359d98b947a6ed0112"
+  },
+  {
+    "path": "docs/Chunk_5/verification_robustness_20261028/robustness-report.json",
+    "sha256": "63ce9f64693a885fca7120aba9005e9e0fdbde9f4e17bdea57c7f62951abc967"
+  }
+]

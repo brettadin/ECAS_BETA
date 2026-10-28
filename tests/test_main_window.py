@@ -32,6 +32,22 @@ def test_schema_selector_defaults_to_generic(window):
     assert layout.indexOf(selector) < layout.indexOf(import_button)
 
 
+@pytest.mark.parametrize('via_dialog', [False, True])
+def test_empty_import_error_still_has_visible_explanation(window, tmp_path, via_dialog):
+    path = str(tmp_path / 'synthetic.csv')
+    with patch.object(window, '_read_spectrum_file', side_effect=main_window.SpectrumImportError()), \
+         patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(path, '')), \
+         patch.object(main_window.QMessageBox, 'warning') as warning:
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(path)
+    warning.assert_called_once()
+    assert 'No further error details were provided' in warning.call_args.args[2]
+    assert window.current_spectrum is None
+    assert window.statusBar().currentMessage() == 'Import failed'
+
+
 @pytest.mark.parametrize("via_dialog", [False, True])
 @pytest.mark.parametrize("schema_index", [0, 1])
 def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
@@ -39,7 +55,7 @@ def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dial
     path = str(tmp_path / "synthetic.csv")
     window.spectrum_schema_selector.setCurrentIndex(schema_index)
     schema = main_window.WASP39B_SCHEMA if schema_index else None
-    with patch.object(main_window, "import_spectrum_csv", autospec=True,
+    with patch.object(main_window, "import_spectrum", autospec=True,
                       return_value=sentinel.spectrum) as importer, \
          patch.object(window, "_display_spectrum") as display, \
          patch.object(main_window.QFileDialog, "getOpenFileName",
@@ -56,7 +72,7 @@ def test_cancelled_dialog_preserves_existing_display(window):
     window.spectrum_status.setText("Existing dataset")
     with patch.object(main_window.QFileDialog, "getOpenFileName",
                       return_value=("", "")), \
-         patch.object(main_window, "import_spectrum_csv", autospec=True) as importer, \
+         patch.object(main_window, "import_spectrum", autospec=True) as importer, \
          patch.object(window, "_clear_spectrum_display") as clear, \
          patch.object(window, "_display_spectrum") as display:
         window._import_csv()
@@ -133,6 +149,44 @@ def test_main_window_has_expected_navigation():
     assert window.pages.count() == 5
 
     window.close()
+
+
+@pytest.mark.parametrize('via_dialog', [False, True])
+def test_generic_csv_uses_manager_and_displays_real_values(window, tmp_path, via_dialog):
+    source = tmp_path / 'generic.csv'
+    source.write_text('wavelength,signal\n1.0,2.0\n2.0,3.0\n', encoding='utf-8')
+    with patch.object(main_window.QMessageBox, 'warning') as warning, \
+         patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(str(source), '')):
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(str(source))
+    warning.assert_not_called()
+    assert window.current_spectrum.rows[0] == {'wavelength': 1.0, 'signal': 2.0}
+    assert window.spectrum_table.rowCount() == 2
+    assert window.spectra_plot._current_spectrum is window.current_spectrum
+    assert window.current_spectrum_details is None
+
+
+@pytest.mark.parametrize('via_dialog', [False, True])
+def test_manager_format_rejection_clears_previous_table_metadata(window, tmp_path, via_dialog):
+    from pathlib import Path
+    window._import_csv_from_path(str(Path(__file__).resolve().parents[1] /
+                                    'data/NASA/2026-10-27/feinstein-2023.tbl'))
+    assert window.current_spectrum_details is not None
+    source = tmp_path / 'unsupported.txt'
+    source.write_text('wavelength,signal\n1.0,2.0\n', encoding='utf-8')
+    with patch.object(main_window.QMessageBox, 'warning') as warning, \
+         patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(str(source), '')):
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(str(source))
+    warning.assert_called_once()
+    assert 'only CSV files are supported' in warning.call_args.args[2]
+    assert window.current_spectrum is None and window.current_spectrum_details is None
+    assert window.spectrum_table.rowCount() == 0
+    assert window.spectra_plot._current_spectrum is None
 
 
 def test_import_csv_displays_warnings_in_status_bar(tmp_path):

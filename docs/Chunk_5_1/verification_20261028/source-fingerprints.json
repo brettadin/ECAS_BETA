@@ -1,0 +1,14 @@
+[
+  {
+    "path": "ecas/ingestion/exomol_cross_section.py",
+    "sha256": "126675acc66fa157fd2e392f6e55cf107ad74c3f47e1546c8712eed007267709"
+  },
+  {
+    "path": "tests/test_exomol_cross_section.py",
+    "sha256": "51f517568245ba3dda1d2bc50862f56d868e03027b4633beacde2e86e55b88b2"
+  },
+  {
+    "path": "docs/Chunk_5_1/PROVIDER_INVESTIGATION.md",
+    "sha256": "e91ef46e8b005a8a3c9315b7d11ec56f51e310c37560466e1f499e3939b14397"
+  }
+]

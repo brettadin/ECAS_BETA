@@ -1,0 +1,77 @@
+{
+  "stage": "chunk5-robustness-v1",
+  "kind": "synthetic_not_observed",
+  "seeds": {
+    "correct_calibration": 20261101,
+    "diagonal_calibration": 20261102,
+    "holdout": 20261103
+  },
+  "trials_per_noise_case": 2000,
+  "numpy_version": "2.5.4",
+  "settings": {
+    "true_ar1_rho": 0.65,
+    "sigma": 0.01,
+    "assumed_wrong_rho": 0,
+    "continuum_slope_percent_per_micron": 0.04,
+    "calibration_quantile": 0.95,
+    "quantile_method": "higher"
+  },
+  "correct_threshold": 8.995482428569233,
+  "diagonal_threshold": 8.709193743405404,
+  "correct_noise_holdout": {
+    "count": 105,
+    "trials": 2000,
+    "fraction": 0.0525,
+    "binomial_standard_error": 0.004987171041783107
+  },
+  "wrong_noise_holdout": {
+    "count": 1476,
+    "trials": 2000,
+    "fraction": 0.738,
+    "binomial_standard_error": 0.009832497139587684
+  },
+  "omitted_slope_holdout": {
+    "count": 803,
+    "trials": 2000,
+    "fraction": 0.4015,
+    "binomial_standard_error": 0.010961244226820238
+  },
+  "feature_cases_noiseless": {
+    "on_grid": {
+      "true_center": 1.5,
+      "selected_center": 1.5,
+      "boundary_candidate": false,
+      "absolute_center_error": 0.0,
+      "best_residual_quadratic": 3.552713678800501e-15,
+      "best_improvement": 24.783173950336458,
+      "injected_amplitude": 0.06,
+      "fitted_amplitude": 0.06000000000000092
+    },
+    "between_grid_centers": {
+      "true_center": 1.52,
+      "selected_center": 1.5,
+      "boundary_candidate": false,
+      "absolute_center_error": 0.020000000000000018,
+      "best_residual_quadratic": 7.636466667239397,
+      "best_improvement": 17.146707283096248,
+      "injected_amplitude": 0.06,
+      "fitted_amplitude": 0.049907194247054316
+    },
+    "outside_search_grid": {
+      "true_center": 0.99,
+      "selected_center": 1.1,
+      "boundary_candidate": true,
+      "absolute_center_error": 0.1100000000000001,
+      "best_residual_quadratic": 14.970973308528839,
+      "best_improvement": 0.3419210038195449,
+      "injected_amplitude": 0.06,
+      "fitted_amplitude": -0.007050343866663303
+    }
+  },
+  "limitations": [
+    "No covariance or continuum estimated from data",
+    "Omitted slope is a deliberately misspecified null, not a valid false-positive calibration",
+    "Boundary hit is a warning heuristic, not proof of absent template coverage",
+    "No real data or physical species; thresholds not transferable"
+  ]
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "path": "ecas/ingestion/exomol_catalogue.py",
+    "sha256": "f3eec1714a1225a3712d88c7f104f910345e2995b40ca4a6dfc1fe4b3831064c"
+  },
+  {
+    "path": "tests/test_exomol_catalogue.py",
+    "sha256": "b2fd6219f3743bd2ae708dd5a2ce29e94ca9ff81c1c15b6e330181d8c4c822f8"
+  },
+  {
+    "path": "data/ExoMol/2026-10-28/exomol.all",
+    "sha256": "3bc26ed45c5483839ee7a17ce4b135bdd5b2230147b6c261e07102884ffe646c"
+  },
+  {
+    "path": "docs/Chunk_5_1/verification_catalogue_20261028/catalogue-audit.json",
+    "sha256": "38b134438c43cf2c5aefdf078401875e536ac81dc54d7c78556bcab33b685cc5"
+  }
+]

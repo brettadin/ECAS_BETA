@@ -1,0 +1,22 @@
+[
+  {
+    "path": "docs/Chunk_5/template_investigation.py",
+    "sha256": "6229f6d973583e2e194ddc00767ce76a4d3578c25e0104fa3e1a0f6c43047798"
+  },
+  {
+    "path": "docs/Chunk_5/comparison_investigation.py",
+    "sha256": "900c1ac2723ddffadf2f3575dcf4312237ec6a7b5b9eca5980e18207b5e2f7d5"
+  },
+  {
+    "path": "tests/test_template_investigation.py",
+    "sha256": "f21a5d9a1212486055aa2047762241f4b205525458e105c522561766eaee4ba3"
+  },
+  {
+    "path": "tests/test_comparison_investigation.py",
+    "sha256": "734fb996ab2ec9ca04a76d4d2b6fa5a231201015366803f8a6b38dbde4e32163"
+  },
+  {
+    "path": "docs/Chunk_5/verification_template_20261028/template-report.json",
+    "sha256": "e891f1e7d719cc0ec2adb07f24fd82f97596b989ee83077e91441ebe2b5a4808"
+  }
+]

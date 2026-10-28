@@ -1,0 +1,51 @@
+[
+  {
+    "name": "WASP-39 b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27WASP-39+b%27%29+order+by+bibcode%2Cspec_path&format=json",
+    "started_utc": "2026-10-28T04:18:15.072111+00:00",
+    "status": 200,
+    "bytes": 11355,
+    "sha256": "310a2b671069ed7599326231df02b53e719677eaf33692d0543f2e8cbdf3d41d",
+    "records": 31,
+    "types": [
+      "Eclipse",
+      "Transmission"
+    ],
+    "finished_utc": "2026-10-28T04:18:16.424053+00:00"
+  },
+  {
+    "name": "TRAPPIST-1 e",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27TRAPPIST-1+e%27%29+order+by+bibcode%2Cspec_path&format=json",
+    "started_utc": "2026-10-28T04:18:16.424298+00:00",
+    "status": 200,
+    "bytes": 2241,
+    "sha256": "768f51ba00021022580307c62c3f8517546d8258111acc2b5c41870d1d09c2fb",
+    "records": 6,
+    "types": [
+      "Transmission"
+    ],
+    "finished_utc": "2026-10-28T04:18:17.776361+00:00"
+  },
+  {
+    "name": "Kepler-452 b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27Kepler-452+b%27%29+order+by+bibcode%2Cspec_path&format=json",
+    "started_utc": "2026-10-28T04:18:17.776558+00:00",
+    "status": 200,
+    "bytes": 4,
+    "sha256": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865",
+    "records": 0,
+    "types": [],
+    "finished_utc": "2026-10-28T04:18:18.935460+00:00"
+  },
+  {
+    "name": "Proxima Cen b",
+    "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27Proxima+Cen+b%27%29+order+by+bibcode%2Cspec_path&format=json",
+    "started_utc": "2026-10-28T04:18:18.935766+00:00",
+    "status": 200,
+    "bytes": 4,
+    "sha256": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865",
+    "records": 0,
+    "types": [],
+    "finished_utc": "2026-10-28T04:18:20.263438+00:00"
+  }
+]

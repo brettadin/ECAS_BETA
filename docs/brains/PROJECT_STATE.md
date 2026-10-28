@@ -1,7 +1,135 @@
 # ECAS - Project State Document
 
-**Last Updated:** 2026-10-27
+**Last Updated:** 2026-10-28
 **Version:** 1.0 (Beta)
+
+**Current review checkpoint:** `docs/REVIEW_CHECKPOINT_20261028.md` describes the
+publication snapshot and new local recovery bundle. Latest full verification:
+538 passed, 1 skipped; new Chunk 5.1 work still needs review.
+
+**Earlier recovery checkpoint:** `docs/Chunk_4/HANDOFF_CHECKPOINT_20261028.md` describes
+the reviewed baseline. Local ignored `.checkpoints/reviewed-20261028.zip` contains
+199 hash-verified files with a sibling manifest; it precedes Chunk 5 investigation.
+It is a file snapshot, not a commit or backup of private project databases.
+
+**Current phase: Chunk 5.1.** User confirmed independent review complete and
+authorized continuation on 2026-10-28. Existing Chunk 5 design/prototype checkpoint
+is recorded reviewed on that confirmation, without invented report details.
+Provider comparison and initial ExoMol two-column zero-pressure cross-section parser
+are in `docs/Chunk_5_1/PROVIDER_INVESTIGATION.md`. Catalogue parsing and offline
+name/formula/isotope/dataset search use an anonymous 189391-byte public capture.
+Comparisons hosts catalogue search, explicit refresh/cancel and atomic cache.
+Bounded CO2 / 12C-16O2 / UCL-4000 product retrieval, separate reference table,
+provenance cache and offline reopening are now implemented. Actual Qt download
+and offline reopening passed an approved live check: 11 calculated points, 500 K,
+4000–4010 cm^-1, zero pressure, Doppler-only. Other catalogue entries remain
+unsupported for retrieval. See `docs/Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md`.
+New parser/catalogue/UI/cache/network work awaits independent review and fresh
+desktop visual acceptance; earlier confirmation is not extended to later screens.
+Explicit observation/reference pairing and production comparison remain pending.
+Real-data scientific validation stays deferred; successful retrieval establishes
+workflow behavior, not atmospheric validity or molecular presence.
+
+**Chunk 5 foundation:** Source audit, draft comparison-input requirements and
+same-grid and response/uncertainty experiments are implemented outside application code.
+See `docs/Chunk_5/COMPARISON_INPUT_CONTRACT_DRAFT.md` and `IMPLEMENTATION_LOG.md` in
+that folder. A limited initial method is now documented in
+`docs/Chunk_5/INITIAL_METHOD_DECISION.md`: compatible-observable overlay plus explicit
+response handling and residual inspection; weighted diagnostics only with established
+error/covariance conventions. No production comparison integration; initial ExoMol
+reference access is separate and described above.
+Noise/continuum mismatch and off-grid behavior have synthetic evidence. User's
+independent-review completion includes the existing research import adapter
+(`docs/Chunk_5/IMPORT_ELIGIBILITY_ADAPTER.md`). It
+preserves imported values/unknowns and explicitly records metadata label mappings;
+no existing application path has been switched to the contract.
+The source-reviewed prototype is documented in `docs/Chunk_5/ELIGIBILITY_CONTRACT_V1.md`. It is
+outside the application and does not change existing import, storage or UI behavior.
+Research-only fitted templates and separate calibration/holdout null trials are now
+implemented; see `docs/Chunk_5/MODEL_COMPARISON_PROTOTYPE.md`. Physical modelling
+itself remains unimplemented; empirical validation and general provider/product
+support remain open, following the bounded ExoMol implementation above.
+Analytic binning/LSF, asymmetric-error and fixed-covariance examples are recorded in
+`docs/Chunk_5/RESPONSE_AND_UNCERTAINTY_EXPERIMENT.md`. This increment awaits independent
+review at that earlier checkpoint; user subsequently confirmed completion. User confirmed manual
+review complete on 2026-10-28; the manual acceptance gate is recorded complete on
+that confirmation, without inventing per-test desktop results. User explicitly
+deferred real-data validation; it is not an immediate gate to
+this research, and no empirical validity is claimed.
+
+**Chunk 5 review:** Argon Batch 1 response/uncertainty and Batch 2 fitted-template
+reviews returned zero findings for their supplied snapshots. Batch 3 contract/claims
+review also returned zero findings. All three research batch reviews are complete
+for their supplied snapshots. Subsequent foundation review completion is recorded on user confirmation;
+real-data validation remains deferred. Review scope does not include app/NASA/SQLite
+integration validation.
+Covariance estimation is not implemented.
+Eligibility source-only review also returned zero findings; exact grid equality
+remains deliberate v1 policy. That review did not include the tests or the later
+robustness/method-decision work; the later user review-completion confirmation is recorded above.
+Synthetic response and fixed noise examples are not empirical instrument/noise validation. No code corrections
+or test reruns were needed for those receipts; no production comparison is accepted.
+
+**Current reconciliation baseline:** GitHub master `2de79c7` merged PR #1 after
+integration commit `6c90ce5`. The local work branch is
+`codex/roadmap-reconciliation-20261028`, based on that merged master. Integration
+is no longer outstanding. Inspection plus an in-memory method diagnostic found
+CSV GUI dispatch referencing an unimported `import_spectrum_csv` symbol at that merge.
+The CSV route is now repaired locally through the import manager, preserving NASA
+.tbl import. Fresh verification: 289 passed/1 skipped after this repair, then
+341 passed/1 skipped after project attachment, integrity and link/layout work (5.50 s),
+then 345 passed/1 skipped after Argon batch 1 storage corrections (5.74 s).
+Reviewed application baseline: 357 passed/1 skipped after batch 4 (6.24 s).
+Latest with Chunk 5.1 product retrieval/cache/UI tests: 538 passed/1 skipped (7.20 s),
+exit 0. Logs and exact commands: docs/Chunk_5_1/verification_product_20261028/.
+All four original Argon batches are triaged. Batch 4's P1/P2 entries explicitly
+describe non-defects; the P3 fallback is fixed in both import entry points.
+See docs/Chunk_4/review_20261028/04-aliases-csv-disposition.md.
+Argon batch 3 found no functional links/layout defect; optional removal of
+click-time URL validation was declined. See review_20261028/03-links-layout-disposition.md
+under docs/Chunk_4. Argon Batch 1, Batch 2 and Batch 4 correction re-reviews returned
+no findings and are complete for their supplied snapshots. All four original
+batches and necessary correction reviews are recorded; no confirmed review defects
+remain unresolved. User-confirmed manual review is now complete. These re-review
+receipts required no code changes or test reruns.
+Missing-record and unplottable-project feedback are fixed. Absolute-link validation
+and importer file-error wrapping were verified; their reported defects were not
+present. Triage: `docs/Chunk_4/review_20261028/02-project-interface-disposition.md`.
+Read snapshots, portable v1 hash verification and selective index loading are fixed;
+the documented injected-connection commit contract is retained. See
+`docs/Chunk_4/review_20261028/01-project-storage-disposition.md` for triage and follow-up.
+User authorized checkpoint, commit and push for GitHub review on 2026-10-28.
+The publication uses the current review branch; no merge into master is authorized.
+The 281/1-skipped records below apply to `7a4061a`, not to the merged revision.
+
+**Name resolution:** NASA alias lookup now precedes spectral metadata search.
+The actual offscreen application resolved WASP39b to WASP-39 b (28 transmission
+records), TRAPPIST-1e to TRAPPIST-1 e (6), Kepler-452b to Kepler-452 b (empty
+queried inventory), and Proxima Centauri b to Proxima Cen b (empty queried
+inventory). Unknown, ambiguous and inconsistent identities are errors. Captures
+are under data/NASA/2026-10-28. This does not implement FITS support.
+
+Human-review feedback has been received: exact-name/zero-result search behavior,
+missing project attachment UI, relative NASA source links and minor layout issues.
+Disposition and acceptance tasks are in the development plan's Chunk 4 section.
+Manual acceptance is recorded complete on user confirmation; targeted Argon correction reviews are complete.
+Projects now supports create/select, attach displayed/cached spectra and reopen
+saved records with source bytes/provenance, even after original/cache removal.
+Legacy rows remain readable without fabricated provenance. Database tables are
+unchanged; new records optionally extend their JSON with a versioned attachment.
+Integrity checks and source limits are covered by tests; no hostile-storage or
+scientific-authenticity guarantee is implied. Comparisons now hosts the bounded
+molecular reference browser described above.
+NASA-relative links are expanded only for display and opened by explicit action.
+Buttons/search-result spacing received the requested limited layout pass; normal
+offscreen typography could not be verified because screenshots lacked glyphs.
+The later user manual-review confirmation is recorded above; no screenshot results are invented.
+A limited initial diagnostic method is documented and its earlier review completion
+is recorded above. ExoMol reference access is implemented within the stated limits;
+no atmospheric engine or production comparison is implemented.
+
+**Historical checkpoint records follow:** their counts, integration notes and
+acceptance statements describe their own revisions/dates.
 
 **Latest local verification:** 281 passed, 1 skipped on 2026-10-27. See
 `../Chunk_4/Chunk_4_implementation_log.md` for the latest online NASA/cache increment.

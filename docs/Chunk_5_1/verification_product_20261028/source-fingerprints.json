@@ -1,0 +1,77 @@
+{
+  "schema": "ecas-review-source-fingerprints-v1",
+  "created_utc": "2026-10-28T07:44:10.8742738Z",
+  "scope": "Chunk 5.1 source and tests after final passing product suite; hashes cover Windows working-file bytes, before Git text normalization",
+  "files": [
+    {
+      "path": "ecas/ingestion/exomol_catalogue.py",
+      "bytes": 6432,
+      "sha256": "f3eec1714a1225a3712d88c7f104f910345e2995b40ca4a6dfc1fe4b3831064c"
+    },
+    {
+      "path": "ecas/ingestion/exomol_catalogue_cache.py",
+      "bytes": 3071,
+      "sha256": "b5d182a39890705a5aad7602bcdfbe27cc7a7d85233ac2dd969197cbd28b5efa"
+    },
+    {
+      "path": "ecas/ingestion/exomol_cross_section.py",
+      "bytes": 5176,
+      "sha256": "126675acc66fa157fd2e392f6e55cf107ad74c3f47e1546c8712eed007267709"
+    },
+    {
+      "path": "ecas/ingestion/exomol_network.py",
+      "bytes": 4182,
+      "sha256": "72c44bef8d89093afe2cce58eca0b30667d2fa9c9903feff6ae5ed8ff7008e4d"
+    },
+    {
+      "path": "ecas/ingestion/exomol_product.py",
+      "bytes": 6768,
+      "sha256": "c18e4502892b220f59613ca3ead34264843bc95568de3ec7ac596e7371d59bbc"
+    },
+    {
+      "path": "ecas/ingestion/exomol_product_network.py",
+      "bytes": 7286,
+      "sha256": "6ea724f97f51fc4a8a96f78ab46a125d0042581b0e50027d392913d00359fd40"
+    },
+    {
+      "path": "ecas/ingestion/exomol_reference_cache.py",
+      "bytes": 5632,
+      "sha256": "27c5cf2797e1b22c1bdc32c60cced0474afddff99bf40827a1d195466c6b063f"
+    },
+    {
+      "path": "ecas/ui/molecular_browser.py",
+      "bytes": 17573,
+      "sha256": "73e8739c21d9d9bf61a52d5ce29023626f6f754cd1db54efbba666d8ec79fc54"
+    },
+    {
+      "path": "ecas/ui/main_window.py",
+      "bytes": 21112,
+      "sha256": "5f8326718b705d088a3ed51c92e2cccb2c78998e032f82ff266b8db79b39e53d"
+    },
+    {
+      "path": "tests/test_exomol_catalogue.py",
+      "bytes": 3513,
+      "sha256": "b2fd6219f3743bd2ae708dd5a2ce29e94ca9ff81c1c15b6e330181d8c4c822f8"
+    },
+    {
+      "path": "tests/test_exomol_cross_section.py",
+      "bytes": 2664,
+      "sha256": "51f517568245ba3dda1d2bc50862f56d868e03027b4633beacde2e86e55b88b2"
+    },
+    {
+      "path": "tests/test_exomol_product.py",
+      "bytes": 13775,
+      "sha256": "b8aec7115a072c08f26335ac9d15ea74f6b40a65640aa4de08af1c4f09c5d759"
+    },
+    {
+      "path": "tests/test_molecular_browser.py",
+      "bytes": 12035,
+      "sha256": "dd971bcb5859b1aa7cb7159f1bb1700507dd87d9ee7f29ce29ace82aba671129"
+    },
+    {
+      "path": "tests/test_main_window.py",
+      "bytes": 9780,
+      "sha256": "28f96f7ec8bce348422b245b15d1fad63776e7368a9c324a89b6c045f3304c63"
+    }
+  ]
+}

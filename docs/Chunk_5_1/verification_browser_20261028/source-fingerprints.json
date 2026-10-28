@@ -1,0 +1,22 @@
+[
+  {
+    "path": "ecas/ingestion/exomol_catalogue_cache.py",
+    "sha256": "b5d182a39890705a5aad7602bcdfbe27cc7a7d85233ac2dd969197cbd28b5efa"
+  },
+  {
+    "path": "ecas/ingestion/exomol_network.py",
+    "sha256": "72c44bef8d89093afe2cce58eca0b30667d2fa9c9903feff6ae5ed8ff7008e4d"
+  },
+  {
+    "path": "ecas/ui/molecular_browser.py",
+    "sha256": "cabee474c78cc920e8c24fb98c36ece48c7167cda4bb37b8fa36084d9633c4ca"
+  },
+  {
+    "path": "ecas/ui/main_window.py",
+    "sha256": "5f8326718b705d088a3ed51c92e2cccb2c78998e032f82ff266b8db79b39e53d"
+  },
+  {
+    "path": "tests/test_molecular_browser.py",
+    "sha256": "dd971bcb5859b1aa7cb7159f1bb1700507dd87d9ee7f29ce29ace82aba671129"
+  }
+]

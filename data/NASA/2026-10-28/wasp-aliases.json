@@ -1,0 +1,77 @@
+{
+    "manifest": {
+        "requested_name": "WASP39b",
+        "resolved_name": "WASP-39 b",
+        "system_name": "WASP-39",
+        "lookup_status": "OK",
+        "compilation_date": "2026-10-27 21:16:58.887028",
+        "system_snapshot": {
+            "number_of_stars": 1,
+            "number_of_planets": 1
+        }
+    },
+    "system": {
+        "system_info": {
+            "id": "WASP-39",
+            "alias_set": {
+                "item_count": 2,
+                "default_name": "WASP-39",
+                "aliases": [
+                    "WASP-39",
+                    "TOI-5675"
+                ]
+            }
+        },
+        "objects": {
+            "stellar_set": {
+                "item_count": 1,
+                "stars": {
+                    "WASP-39": {
+                        "is_host": "True",
+                        "alias_set": {
+                            "item_count": 9,
+                            "default_name": "WASP-39",
+                            "aliases": [
+                                "Gaia DR3 3643098875168270592",
+                                "Malmok",
+                                "WASP-39",
+                                "2MASS J14291840-0326403",
+                                "WISE J142918.39-032640.1",
+                                "1SWASP J142918.42-032640.1",
+                                "TOI-5675",
+                                "TIC 181949561",
+                                "Gaia DR2 3643098875168270592"
+                            ]
+                        }
+                    }
+                }
+            },
+            "planet_set": {
+                "item_count": 1,
+                "planets": {
+                    "WASP-39 b": {
+                        "requested_object": "True",
+                        "alias_set": {
+                            "item_count": 12,
+                            "default_name": "WASP-39 b",
+                            "aliases": [
+                                "WISE J142918.39-032640.1 b",
+                                "TIC 181949561.01",
+                                "Gaia DR3 3643098875168270592 b",
+                                "TOI-5675 b",
+                                "TOI-5675.01",
+                                "Bocaprins",
+                                "WASP-39 b",
+                                "2MASS J14291840-0326403 b",
+                                "WISE J142918.39-032640.1  b",
+                                "1SWASP J142918.42-032640.1 b",
+                                "TIC 181949561 b",
+                                "Gaia DR2 3643098875168270592 b"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

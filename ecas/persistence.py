@@ -151,7 +151,8 @@ def save_spectrum_to_database(
 
     project_id: str,
     projects_dir: Path,
-    database_if_exists: Optional[sqlite3.Connection] = None
+    database_if_exists: Optional[sqlite3.Connection] = None,
+    *, attachment: Optional[dict] = None,
 ) -> int:
     """Save a spectrum to its project's SQLite database.
 
@@ -160,6 +161,8 @@ def save_spectrum_to_database(
         project_id: Validated project identifier
         projects_dir: Base directory for all projects
         database_if_exists: Optional existing connection (for performance)
+        attachment: Optional versioned project source/provenance envelope. Older
+            readers can still load the SpectrumData fields from the same row.
 
     Returns:
         The auto-incremented primary key of the inserted row
@@ -185,6 +188,7 @@ def save_spectrum_to_database(
                 "signal_unit": spectrum.signal_unit,
                 "signal_type": spectrum.signal_type,
                 "warnings": spectrum.warnings,
+                **({"attachment": attachment} if attachment is not None else {}),
             })
 
             # Insert the spectrum as JSON
@@ -211,6 +215,7 @@ def save_spectrum_to_database(
             "signal_unit": spectrum.signal_unit,
             "signal_type": spectrum.signal_type,
             "warnings": spectrum.warnings,
+            **({"attachment": attachment} if attachment is not None else {}),
         })
         cursor = database_if_exists.execute(
             """INSERT INTO spectra (project_id, data) VALUES (?, ?)""",
@@ -274,10 +279,18 @@ def load_spectrum_by_index(project_id: str, projects_dir: Path, index: int) -> O
     Returns:
         The SpectrumData object at the specified index, or None if not found/empty
     """
-    spectra = load_spectra_from_database(project_id, projects_dir)
-    if 0 <= index < len(spectra):
-        return spectra[index]
-    return None
+    database = _checked_project_database(project_id, projects_dir)
+    if index < 0 or not database.exists():
+        return None
+    conn = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+    try:
+        row = conn.execute(
+            'SELECT data FROM spectra WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?',
+            (project_id, index),
+        ).fetchone()
+        return _to_spectrums_dict(json.loads(row[0])) if row else None
+    finally:
+        conn.close()
 
 
 def clear_project_database(project_id: str, projects_dir: Path) -> None:
@@ -325,3 +338,70 @@ def count_spectra(project_id: str, projects_dir: Path) -> int:
         return count
     finally:
         conn.close()
+
+
+def _checked_project_database(project_id: str, projects_dir: Path) -> Path:
+    """New project-library operations reject direct links before opening files."""
+    database = get_project_database(project_id, projects_dir)
+    folder = Path(projects_dir) / project_id
+    if folder.is_symlink() or folder.is_junction() or database.is_symlink() or database.is_junction():
+        raise PersistenceError('Linked project folders/databases are unsupported')
+    return database
+
+
+def create_project(project_id: str, projects_dir: Path) -> None:
+    database = _checked_project_database(project_id, projects_dir)
+    try:
+        database.parent.mkdir(parents=True, exist_ok=False)
+        conn = _get_connection(database)
+        try:
+            _initialize_schema(conn)
+            conn.commit()
+        finally:
+            conn.close()
+    except (OSError, sqlite3.Error) as error:
+        raise PersistenceError(f'Could not create project (existing names are not overwritten): {error}') from error
+
+
+def list_project_ids(projects_dir: Path) -> List[str]:
+    root = Path(projects_dir)
+    if not root.exists():
+        return []
+    result = []
+    for folder in root.iterdir():
+        try:
+            database = _checked_project_database(folder.name, root)
+            if database.is_file():
+                result.append(folder.name)
+        except PersistenceError:
+            continue
+    return sorted(result, key=str.casefold)
+
+
+def load_spectrum_records(project_id: str, projects_dir: Path) -> List[tuple]:
+    """Read stable IDs plus JSON envelopes, including older attachment-free rows.
+
+    Opening in read-only mode avoids creating/repairing a missing project on read.
+    The 64 MiB per-row guard is an application memory bound, not scientific validation.
+    """
+    database = _checked_project_database(project_id, projects_dir)
+    if not database.exists():
+        return []
+    try:
+        conn = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+        try:
+            # Keep size checks and subsequent reads in the same snapshot, even
+            # when another connection deletes or replaces a row between reads.
+            conn.execute('BEGIN')
+            identifiers = conn.execute('SELECT id, length(CAST(data AS BLOB)) FROM spectra WHERE project_id = ? ORDER BY id', (project_id,)).fetchall()
+            rows = []
+            for identifier, size in identifiers:
+                if size > 64 * 1024 * 1024:
+                    raise PersistenceError('Saved spectrum exceeds 64 MiB record limit')
+                raw = conn.execute('SELECT data FROM spectra WHERE id = ? AND project_id = ?', (identifier, project_id)).fetchone()[0]
+                rows.append((identifier, json.loads(raw)))
+            return rows
+        finally:
+            conn.close()
+    except (sqlite3.Error, ValueError, TypeError) as error:
+        raise PersistenceError(f'Could not read project: {error}') from error
