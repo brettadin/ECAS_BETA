@@ -150,3 +150,57 @@ For each workflow, we should record the existing entry point, relevant data and 
 The output should be a small, evidence-backed set of user journeys and requirements. Those will then inform the information architecture and low-fidelity wireframes.
 
 No code changes, branches, prototypes, or detailed visual styling are needed yet.
+
+
+# PART 2 #
+
+
+The screenshot fills the main gap from the Phase 0 review: we can now assess the actual running UI rather than relying only on the source code and documentation.
+
+## Visual review of the current ECAS build
+
+Based on the screenshot, the current application has a consistent dark theme and a functional-looking desktop layout, but it still looks like an early scientific utility rather than a polished research application.
+
+[How to use - EasyDiffraction Application](https://images.openai.com/static-rsc-4/pY7XY6EofHYbI-kWnND1IAv_nS2WP4rngSc5s8z2Nm7CMIQbNM7x-vxEaQOt1gCnLbBVqh_cyoe2Qr_VcVQItfeghmQM02XmHQLr1VshFV8yuZzN6HehVviiBokbVDrmdjWVp-CsUHLZ3066_wuG1GVDWvdddlyTOkmDqXwZq98?purpose=inline)
+
+1\. Overall layout and navigation
+
+The persistent left sidebar provides a useful foundation. Its labels and active-page states are small and visually subdued, while the main content area has substantial unused space on some pages. The navigation should be refined rather than replaced.
+
+[Genome Dashboard by Alisha Chef on Dribbble](https://images.openai.com/static-rsc-4/gAE_11JrNwB-RAPAb4c8UvjovyyPJZzSu565K5AvpKv5V9QffR-4ELEcVMZWyrS2YA94Mp_sPjCUns2MJRgxNEytISVjXp4eVIjHxsnxlu6rb-ZtT_JI3c-H17WgghFUJ6prlttcRkuxpkP9XHRNgzRPSzAer0DJsVNNCXiqjsg?purpose=inline)
+
+2\. Overview and Settings
+
+These pages are sparse and largely text-based. They need a clearer hierarchy and better grouping of information. The Overview should help users understand their workspace and identify useful next actions; Settings should organize options into meaningful sections.
+
+[Qt-Advanced-Docking-System | Advanced Docking System for Qt](https://images.openai.com/static-rsc-4/NzWeFGe8q7uF2-JsZuHELyt3ZCFcFQTkwliCVGDrv3QvKGhaLSgJw49B4KBAuO2M1Bbq7avkq8ycOBkWApZYieCdsc5SCSXQvIZ3vy-RsqorFRnP9rWnHjtD_lqJYyf-jGSsIiqjBrrNfE-nTLXXGjEXFrgkzIZIeTYMV5cdnlI?purpose=inline)
+
+3\. Spectral Data
+
+This is the strongest starting point because it already combines data selection, a spectrum plot and a table. The next design should improve the plot's prominence, readability, metadata presentation and table usability without compromising scientific precision.
+
+[Subject Index - SciGlass Next Documentation](https://images.openai.com/static-rsc-4/CBMS9DhcUQclCAnC_ARcoca9ZY_Q8m5DuKT7vCds4rlmTFxgxQtf7sX_1ou4K_lI6BcU8_nmzx4RfpsaN30IEWScEhT03IwlqWng-H9Id-B0YDsE31REpKNWD6UOQ3GPuRueo1V6CoKhn6s63Cn8vrzOaj2SR4kIhrW7u9v-Y1A?purpose=inline)
+
+4\. Projects, Molecular Reference Catalogue and Comparisons
+
+These pages contain useful functionality, but the dense text, tables and controls compete for attention. Better panel grouping, consistent spacing, clearer headings and more deliberate use of screen space should make them easier to navigate.
+
+The images above are illustrative design references, not edits of your screenshot or proposed final mockups.
+
+## What this means for the redesign
+
+I would retain the existing PySide6 application structure and focus the redesign on five priorities:
+
+1. Visual hierarchy: clearer page titles, section headings, readable text and consistent spacing.
+2. Workspace layout: more deliberate use of available space, especially on Overview and the data-heavy pages.
+3. Scientific visualization: make plots and their associated metadata easier to inspect, with appropriate prominence for the actual data.
+4. Consistent components: standardize buttons, tables, selection states, forms, panels and status messages.
+5. Workflow clarity: make it obvious how users move from finding data to importing it, inspecting it, organizing it in projects and comparing datasets.
+
+The redesign must also preserve existing scientific safeguards: source provenance, units, distinctions between observed spectra and molecular reference data, and clear indications of unsupported operations.
+
+## Recommended next step
+
+Proceed to Phase 1: capability and workflow inventory, using the `UI-Side-Project` branch. This should identify what each page needs to support before we decide on its redesigned layout.
+
+The screenshot gives us a visual baseline, so Phase 0 does not need to be reopened. No code changes are needed yet.
