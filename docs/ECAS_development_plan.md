@@ -118,26 +118,49 @@ Completion criterion: ECAS can retrieve and register a real archival dataset wit
 
 
 
-Chunk 5 — Comparison-method investigation
+## Chunk 5 — Spectral Comparison Foundations and Method Selection
 
-Choose the first comparison method based on evidence, not assumption.
-- Define what makes spectra comparable.
-- Identify representative scientific test cases and evaluation criteria.
-- Investigate candidate methods and their limitations.
-- Select and document a method before implementing the production comparison workflow.
-Completion criterion: A justified method selection with explicit constraints and tests.
+Establish the scientific and technical foundations required for defensible spectral comparison. Do not assume that simple spectral-line matching is sufficient, and do not commit to a production comparison method before investigating the available evidence.
 
+- **Define spectral comparability.** Establish the conditions under which spectra can be compared, including wavelength or wavenumber axes, units, spectral resolution, sampling, instrument characteristics, uncertainty, normalization, and relevant measurement conditions. Identify which differences can be corrected, which require explicit restrictions, and which make a comparison unsuitable.
+- **Identify representative scientific test cases.** Establish realistic cases covering compatible spectra, differing resolutions or sampling, noisy or incomplete measurements, overlapping molecular features, and incompatible datasets. Use documented reference data where available and clearly identified synthetic fixtures where necessary.
+- **Investigate candidate comparison methods.** Evaluate simple line matching alongside appropriate alternatives, such as reference-spectrum overlay, spectral correlation, peak-based comparison, and other scientifically justified methods. Assess their assumptions, sensitivity to noise and resolution, computational cost, interpretability, and suitability for the spectral data ECAS actually supports.
+- **Define evaluation criteria.** Determine how candidate methods will be tested, what constitutes a meaningful comparison, how uncertainty and spectral overlap should be handled, and how false matches or ambiguous results will be communicated.
+- **Select and document the initial method.** Choose the simplest method, or justified combination of methods, that meets the established scientific and technical requirements. Document its intended use, limitations, compatibility rules, and reasons for selection. If the evidence does not support a defensible selection, identify the unresolved questions rather than forcing a decision.
+- **Establish the comparison contract.** Define the inputs, required metadata, validation outcomes, outputs, and provenance needed by the eventual comparison workflow.
 
+**Completion criterion:** A documented, evidence-based comparison-method selection supported by explicit compatibility rules, representative test cases, evaluation criteria, and known limitations. No production comparison workflow is required in this chunk.
 
+## Chunk 5.1 — Molecular Reference Spectra and Comparison Data Integration
 
-Chunk 6 — Comparison workflow
+Establish a reliable way to discover, retrieve, cache, organize, and select molecular reference spectra so they can be used alongside observational data in ECAS. The choice of data provider and file format must be investigated rather than assumed in advance.
 
-Connect data, validation, and the selected scientific method.
-- Compare eligible spectra using the selected method.
-- Explain compatibility failures and method limitations.
-- Preserve settings and inputs needed to reproduce a result.
-- Present results without implying unsupported abundance or composition estimates.
-Completion criterion: A comparison can be reproduced from saved inputs and settings.
+- **Investigate reference-data sources and formats.** Evaluate suitable scientific databases and providers for molecular spectra, including NIST where appropriate. Investigate JCAMP-DX and other relevant formats, considering spectral coverage, units, resolution, molecular identifiers, metadata, licensing or access restrictions, download availability, and suitability for the intended comparison methods.
+- **Select an initial source and supported data representation.** Choose a practical initial source based on evidence. Define how retrieved reference spectra will be parsed and represented internally while preserving the original source data, source identifiers, units, metadata, and provenance. Clearly distinguish measured reference spectra, theoretical line lists, simulated spectra, and processed products.
+- **Implement retrieval and caching.** Provide a controlled workflow for searching available molecular reference data, retrieving selected products, caching them locally, validating cached data, and reopening cached spectra without requiring another network request. Follow established ECAS patterns where appropriate, without assuming that the existing exoplanet-data cache can be reused unchanged.
+- **Create a molecular reference catalogue.** Maintain a searchable catalogue linking molecular identities to available reference datasets and their associated spectra. Record relevant identifiers, source, spectral range, data type, units, retrieval status, and other metadata supported by the provider. A molecule may have multiple reference spectra, sources, conditions, or representations; do not treat these as interchangeable.
+- **Connect reference spectra to the comparison interface.** Make cached and otherwise eligible reference datasets discoverable in the Comparisons tab. Allow the user to select the observational or input dataset and independently select the reference dataset or datasets to compare against it.
+- **Support molecule selection.** Allow users to select individual molecules or inspect all eligible molecular references currently available. Show which reference datasets are available for each selection, and distinguish unavailable, uncached, incompatible, and successfully loaded data.
+- **Preserve scientific provenance.** Retain the source and identity of every selected reference dataset. Do not infer molecular presence from catalogue membership, a spectral overlap, or a successful retrieval.
+- **Validate the reference-data workflow.** Test searching, retrieval, parsing, caching, integrity checks, offline reopening, dataset selection, error handling, and the handling of missing or ambiguous metadata. Use real provider data where feasible and documented fixtures for reproducible edge cases.
+
+**Scope boundary:** This chunk establishes molecular reference-data access, storage, organization, and selection. It does not establish that a particular molecule is present in an exoplanet atmosphere, nor does it require a finalized scientific comparison or atmospheric projection method.
+
+**Completion criterion:** ECAS can discover and retrieve molecular reference spectra from the selected initial source, cache and reopen them with traceable provenance, catalogue the available datasets by molecule, and expose eligible reference and observational datasets for selection in the Comparisons tab. Known format and compatibility limitations are documented.
+
+## Chunk 6 — Scientific Comparison, Interpretation, and Projections
+
+Implement the comparison workflow using the method selected in Chunk 5 and the molecular reference-data functionality established in Chunk 5.1. Develop projections only to the extent justified by the available scientific inputs and validated assumptions.
+
+- **Connect datasets and validation.** Allow users to select an observational or input spectrum and one or more eligible reference datasets or molecules. Validate compatibility before comparison and explain which requirements are unmet when a comparison cannot proceed.
+- **Implement the selected comparison method.** Apply the documented method and its defined preprocessing, alignment, resolution handling, uncertainty treatment, and other required operations. Keep the implementation consistent with the method-selection record; investigate and document any necessary deviation before expanding the method.
+- **Support multiple candidates.** Where the method permits, compare a selected spectrum against individual molecules or multiple available references. Allow users to inspect results for individual candidates and compare their relative agreement without implying that the best numerical match is necessarily the correct scientific explanation.
+- **Develop projections in a staged manner.** Determine which projections are scientifically supportable from the available data and comparison method. Potential outputs may include aligned reference overlays, expected spectral features, comparison scores, or other method-justified visualizations. Any forward modelling, combined-spectrum projection, or atmospheric interpretation requiring additional physical assumptions must have those assumptions explicitly defined and validated before implementation.
+- **Explain results and limitations.** Present the data used, method applied, compatibility checks, relevant uncertainty, and known limitations. Distinguish observed measurements from reference data, modelled or projected spectra, and derived comparison results. Make ambiguous matches and unsupported conclusions explicit.
+- **Preserve reproducibility.** Save or otherwise persist the identities and versions of the input and reference datasets, source provenance, relevant preprocessing and comparison settings, method version, and other parameters required to reproduce a result. Where necessary source data or software versions are no longer available, identify the limitation rather than claiming exact reproducibility.
+- **Verify scientific and technical behavior.** Test known matches, ambiguous overlaps, incompatible datasets, altered resolution or sampling, noisy or incomplete inputs, missing metadata, and failure conditions. Include checks that prevent comparison scores or visual overlap from being presented as unsupported abundance estimates or proof of atmospheric composition.
+
+**Completion criterion:** A user can select eligible observational and molecular reference datasets, run the selected comparison method, understand compatibility failures and methodological limitations, inspect the resulting comparison or justified projection, and reproduce the analysis from preserved inputs and settings within the documented reproducibility limits. No abundance or composition estimate is presented unless a separately justified and validated method supports it.
 
 
 

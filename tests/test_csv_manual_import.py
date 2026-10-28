@@ -8,7 +8,7 @@ from ecas.ingestion.csv_importer import (
 
 
 def test_import_archive_schema_column_mapping(tmp_path):
-    """Retain archive source columns and add canonical wavelength/signal aliases."""
+    """Synthetic archive data retains source columns alongside canonical aliases."""
     path = tmp_path / "wasp.csv"
 
     # Build a valid fixture with all required source headers in their expected order.
@@ -68,18 +68,15 @@ def test_import_archive_schema_column_mapping(tmp_path):
     )
 
     spectrum = import_spectrum_csv(path, archive_schema=WASP39B_SCHEMA)
-
-    # The documented contract is 21 original source columns plus two aliases.
-    expected_columns = ("wavelength", *EXPECTED_ARCHIVE_SOURCES, "signal")
-    assert spectrum.columns == expected_columns
-    assert len(spectrum.columns) == 23
-    assert len(spectrum.rows) == 2
-
-    # Canonical aliases carry the same parsed values as their source columns.
+    
+    # Canonical aliases supplement rather than replace the source data. Compare
+    # source order independently of alias placement; the real-data regression
+    # in test_archive_csv_importer.py checks the current full output order.
+    assert len(spectrum.columns) == len(EXPECTED_ARCHIVE_SOURCES) + 2
+    assert set(spectrum.columns) == set(EXPECTED_ARCHIVE_SOURCES) | {"wavelength", "signal"}
+    assert tuple(name for name in spectrum.columns if name in EXPECTED_ARCHIVE_SOURCES) == EXPECTED_ARCHIVE_SOURCES
+    assert spectrum.row_count == 2
     for row in spectrum.rows:
+        assert set(row) == set(spectrum.columns)
         assert row["wavelength"] == row["centralwavelng"]
         assert row["signal"] == row["pl_trandep"]
-
-    # Source data remains available; aliasing must not discard original fields.
-    assert "centralwavelng" in spectrum.columns
-    assert "pl_trandep" in spectrum.columns

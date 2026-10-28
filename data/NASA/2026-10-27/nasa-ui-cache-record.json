@@ -1,0 +1,20 @@
+{
+  "schema": "ecas-nasa-spectrum-cache-v1",
+  "metadata": {
+    "pl_name": "WASP-39 b",
+    "spec_type": "Transmission",
+    "bibcode": "2023Natur.614..670F",
+    "authors": "Feinstein et al. 2023",
+    "num_datapoints": 331,
+    "instrument": "Near Infrared Imager and Slitless Spectrograph (NIRISS)",
+    "facility": "NASA 6.5m James Webb Space Telescope (JWST) Satellite Mission",
+    "minwavelng": 0.631,
+    "maxwavelng": 2.7965,
+    "spec_path": "74/34/80/11/WASP_39_b_3.11466_5078_1.tbl"
+  },
+  "source_url": "https://exoplanetarchive.ipac.caltech.edu/workspace/TMP_7zXuz1_2554356/atmospheres/tab1/data/74/34/80/11/WASP_39_b_3.11466_5078_1.tbl",
+  "retrieved_utc": "2026-10-27T23:55:52.077264+00:00",
+  "sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+  "metadata_source_url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27WASP-39+b%27%29+order+by+bibcode%2Cspec_path&format=json",
+  "metadata_sha256": "310a2b671069ed7599326231df02b53e719677eaf33692d0543f2e8cbdf3d41d"
+}

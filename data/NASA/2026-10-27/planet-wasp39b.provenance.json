@@ -1,0 +1,22 @@
+{
+  "source_url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+20+pl_name%2Chostname%2Cdiscoverymethod+from+pscomppars+where+lower%28pl_name%29%3Dlower%28%27WASP-39+b%27%29+order+by+pl_name&format=json",
+  "started_utc": "2026-10-27T23:26:37.646661+00:00",
+  "authentication": "none",
+  "max_bytes": 262144,
+  "success": true,
+  "timeout_seconds": 10,
+  "redirects_allowed": false,
+  "http_status": 200,
+  "content_type": "application/json",
+  "bytes": 82,
+  "sha256": "f3c35ec462680ae10f185db0b8f9211a06b3cf1353a5ba72efc3146ee860598e",
+  "planets": [
+    {
+      "name": "WASP-39 b",
+      "host_name": "WASP-39",
+      "discovery_method": "Transit"
+    }
+  ],
+  "possibly_truncated": false,
+  "finished_utc": "2026-10-27T23:26:39.283402+00:00"
+}

@@ -1,0 +1,6 @@
+# Preserve captured source bytes so provenance hashes survive clone/checkout.
+data/NASA/**/*.json -text whitespace=cr-at-eol
+# Column-aligned source tables intentionally retain whitespace from NASA.
+data/NASA/**/*.tbl -text -whitespace
+# Preserve captured diagnostic output, including traceback blank-line spacing.
+docs/Chunk_4/verification_20261027/*.log -whitespace

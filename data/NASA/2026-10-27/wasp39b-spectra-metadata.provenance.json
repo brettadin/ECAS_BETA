@@ -1,0 +1,16 @@
+{
+  "source_url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+20+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+pl_name%3D%27WASP-39+b%27+order+by+bibcode%2Cspec_path&format=json",
+  "started_utc": "2026-10-27T23:27:13.703636+00:00",
+  "success": true,
+  "authentication": "none",
+  "max_bytes": 262144,
+  "timeout_seconds": 10,
+  "redirects_allowed": false,
+  "http_status": 200,
+  "content_type": "application/json",
+  "bytes": 7288,
+  "sha256": "9a6e0052580ac88fabbc0477b3fc7edc75e9b10bf36f580778920c07ab266abd",
+  "record_count": 20,
+  "possibly_truncated": true,
+  "finished_utc": "2026-10-27T23:27:14.960724+00:00"
+}

@@ -1,0 +1,11 @@
+{
+  "source_url": "https://exoplanetarchive.ipac.caltech.edu/workspace/TMP_pkdHKM_2190999/atmospheres/tab1/data/74/34/80/11/WASP_39_b_3.11466_5078_1.tbl",
+  "started_utc": "2026-10-27T23:35:57.176943+00:00",
+  "authentication": "none",
+  "success": true,
+  "http_status": 200,
+  "content_type": null,
+  "bytes": 184828,
+  "sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+  "finished_utc": "2026-10-27T23:35:57.748043+00:00"
+}

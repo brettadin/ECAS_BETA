@@ -1,11 +1,126 @@
 
 import os
+from unittest.mock import patch, sentinel
+
+import pytest
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PySide6.QtWidgets import QApplication
 
 from ecas.ui.main_window import ECASWindow
+from ecas.ui import main_window
+
+
+@pytest.fixture
+def window():
+    app = QApplication.instance() or QApplication([])
+    widget = ECASWindow()
+    yield widget
+    widget.close()
+
+
+def test_schema_selector_defaults_to_generic(window):
+    selector = window.spectrum_schema_selector
+    assert [selector.itemText(i) for i in range(selector.count())] == [
+        "Generic / Unknown", "WASP-39 b Archive"
+    ]
+    assert selector.currentIndex() == 0
+    layout = selector.parentWidget().layout()
+    import_button = next(button for button in selector.parentWidget().findChildren(
+        main_window.QPushButton) if button.text() == "Import Spectrum")
+    assert layout.indexOf(selector) < layout.indexOf(import_button)
+
+
+@pytest.mark.parametrize("via_dialog", [False, True])
+@pytest.mark.parametrize("schema_index", [0, 1])
+def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+    """Both entry points must use the importer's real keyword contract."""
+    path = str(tmp_path / "synthetic.csv")
+    window.spectrum_schema_selector.setCurrentIndex(schema_index)
+    schema = main_window.WASP39B_SCHEMA if schema_index else None
+    with patch.object(main_window, "import_spectrum_csv", autospec=True,
+                      return_value=sentinel.spectrum) as importer, \
+         patch.object(window, "_display_spectrum") as display, \
+         patch.object(main_window.QFileDialog, "getOpenFileName",
+                      return_value=(path, "CSV files (*.csv)")):
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(path)
+    importer.assert_called_once_with(path, archive_schema=schema)
+    display.assert_called_once_with(sentinel.spectrum, schema=schema)
+
+
+def test_cancelled_dialog_preserves_existing_display(window):
+    window.spectrum_status.setText("Existing dataset")
+    with patch.object(main_window.QFileDialog, "getOpenFileName",
+                      return_value=("", "")), \
+         patch.object(main_window, "import_spectrum_csv", autospec=True) as importer, \
+         patch.object(window, "_clear_spectrum_display") as clear, \
+         patch.object(window, "_display_spectrum") as display:
+        window._import_csv()
+    importer.assert_not_called()
+    clear.assert_not_called()
+    display.assert_not_called()
+    assert window.spectrum_status.text() == "Existing dataset"
+
+
+@pytest.mark.parametrize("via_dialog", [False, True])
+def test_bundled_archive_imports_into_table_and_plot_without_database(window, via_dialog):
+    """Exercise the actual file importer and display, not mocked spectrum data."""
+    from pathlib import Path
+    path = str(Path(__file__).resolve().parents[1] / "data" / "WASP-39b" /
+               "table_WASP-39-b-Feinstein-et-al.-2023.csv")
+    window.spectrum_schema_selector.setCurrentIndex(1)
+    with patch.object(main_window.QMessageBox, "warning") as warning, \
+         patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(path)
+    warning.assert_not_called()
+    spectrum = window.current_spectrum
+    assert spectrum.row_count == 331
+    assert window.spectrum_table.rowCount() == 331
+    assert window.spectrum_table.columnCount() == 23
+    assert window.spectra_plot._current_spectrum is spectrum
+    assert spectrum.rows[0]["wavelength"] == spectrum.rows[0]["centralwavelng"]
+    assert spectrum.rows[0]["signal"] == spectrum.rows[0]["pl_trandep"]
+    assert "Imported 331 measurements" in window.statusBar().currentMessage()
+
+
+def test_bundled_archive_requires_explicit_schema_in_generic_mode(window):
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "data" / "WASP-39b" / "table_WASP-39-b-Feinstein-et-al.-2023.csv"
+    with patch.object(main_window.QMessageBox, "warning") as warning:
+        window._import_csv_from_path(str(path))
+    warning.assert_called_once()
+    assert window.current_spectrum is None
+    assert window.spectrum_table.rowCount() == 0
+    assert window.statusBar().currentMessage() == "Import failed"
+
+
+@pytest.mark.parametrize("via_dialog", [False, True])
+def test_downloaded_nasa_table_displays_source_units_and_metadata(window, via_dialog):
+    from pathlib import Path
+    path = str(Path(__file__).resolve().parents[1] / "data/NASA/2026-10-27/feinstein-2023.tbl")
+    with patch.object(main_window.QMessageBox, "warning") as warning, \
+         patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+        if via_dialog:
+            window._import_csv()
+        else:
+            window._import_csv_from_path(path)
+    warning.assert_not_called()
+    assert window.current_spectrum.row_count == 331
+    assert window.spectrum_table.columnCount() == 31
+    assert window.current_spectrum.axis_unit == "microns"
+    assert window.current_spectrum.signal_unit == "%"
+    assert dict(window.current_spectrum_details.metadata)["PL_NAME"] == "WASP-39 b"
+    with patch.object(main_window.QMessageBox, "warning"):
+        window._import_csv_from_path(str(Path(path).with_name("missing.tbl")))
+    assert window.current_spectrum is None
+    assert window.current_spectrum_details is None
 
 
 def test_main_window_has_expected_navigation():

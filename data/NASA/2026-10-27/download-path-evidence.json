@@ -1,0 +1,38 @@
+{
+  "method": "Read page onload workspace, main.js BaseURL construction and tab1.js SPEC_PATH append; scripts not executed",
+  "source_records": [
+    {
+      "source_url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/atmospheres/nph-firefly?atmospheres",
+      "started_utc": "2026-10-27T23:35:13.221468+00:00",
+      "authentication": "none",
+      "success": true,
+      "http_status": 200,
+      "content_type": "text/html",
+      "bytes": 32540,
+      "sha256": "efbc89e12e78d29cedbfaaee53205caa1495d156bf970290c19a6712e3895664",
+      "finished_utc": "2026-10-27T23:35:13.948669+00:00"
+    },
+    {
+      "source_url": "https://exoplanetarchive.ipac.caltech.edu/applications/atmospheres/js/main.js",
+      "started_utc": "2026-10-27T23:35:31.005834+00:00",
+      "authentication": "none",
+      "success": true,
+      "http_status": 200,
+      "content_type": "application/javascript",
+      "bytes": 17768,
+      "sha256": "959243ea7876dbd62dabcaee6675518f4cc5575ee3231247d991d92e5208f45b",
+      "finished_utc": "2026-10-27T23:35:31.303646+00:00"
+    },
+    {
+      "source_url": "https://exoplanetarchive.ipac.caltech.edu/applications/atmospheres/js/tab1.js?mp",
+      "started_utc": "2026-10-27T23:35:31.379063+00:00",
+      "authentication": "none",
+      "success": true,
+      "http_status": 200,
+      "content_type": "application/javascript",
+      "bytes": 48908,
+      "sha256": "07c2c611c09860b2e55d3b5c1b8cf0287e32c7b34e50c5740b91e2b8d94c50f9",
+      "finished_utc": "2026-10-27T23:35:31.686305+00:00"
+    }
+  ]
+}

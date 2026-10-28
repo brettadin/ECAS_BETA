@@ -1,0 +1,39 @@
+{
+  "started_utc": "2026-10-27T23:55:49.928782+00:00",
+  "success": true,
+  "authentication": "none",
+  "requests": [
+    {
+      "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+top+50+pl_name%2Cspec_type%2Cbibcode%2Cauthors%2Cnum_datapoints%2Cinstrument%2Cfacility%2Cminwavelng%2Cmaxwavelng%2Cspec_path+from+spectra+where+lower%28pl_name%29%3Dlower%28%27WASP-39+b%27%29+order+by+bibcode%2Cspec_path&format=json",
+      "started_monotonic": 151159.5489494,
+      "error": null,
+      "bytes": 11355,
+      "sha256": "310a2b671069ed7599326231df02b53e719677eaf33692d0543f2e8cbdf3d41d"
+    },
+    {
+      "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/atmospheres/nph-firefly?atmospheres",
+      "started_monotonic": 151160.9798297,
+      "error": null,
+      "bytes": 32540,
+      "sha256": "cf9728999992fbd12371f15958fc7eaaf3166d52585511930d5ec67350736c64"
+    },
+    {
+      "url": "https://exoplanetarchive.ipac.caltech.edu/workspace/TMP_7zXuz1_2554356/atmospheres/tab1/data/74/34/80/11/WASP_39_b_3.11466_5078_1.tbl",
+      "started_monotonic": 151161.5129653,
+      "error": null,
+      "bytes": 184828,
+      "sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2"
+    }
+  ],
+  "mode": "offscreen actual ECASWindow",
+  "transmission_results": 28,
+  "row_count": 331,
+  "columns": 31,
+  "axis_unit": "microns",
+  "signal_unit": "%",
+  "cache_path": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\nasa-ui-live-cache\\entry-5f33040eb6784f36a9d702b7acbf302d\\source.tbl",
+  "source_sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+  "offline_reopen_verified": true,
+  "status": "Verified cached spectrum sent to display; no network request made.",
+  "finished_utc": "2026-10-27T23:55:52.189857+00:00"
+}
