@@ -6,6 +6,10 @@ The project is being developed incrementally, with an emphasis on scientific int
 
 > **Project status:** ECAS is under active development. The current application, verified capabilities, outstanding work, and known limitations are recorded in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md). Architectural proposals and long-term goals must not be interpreted as implemented functionality.
 
+For this NASA workflow review branch, start with the
+[human review handoff](docs/Chunk_4/review_20261027/HUMAN_REVIEW.md), including test
+evidence, Argon follow-up status and the newer GitHub master commit still to integrate.
+
 ## Contents
 
 - [Project goals](#project-goals)
@@ -124,24 +128,94 @@ cd ECAS_BETA
 
 ### 2. Inspect the project configuration
 
-Before installing dependencies, inspect the repository for its dependency and environment configuration, such as `requirements.txt`, `pyproject.toml`, or other setup files.
+Runtime dependencies are recorded in `requirements.txt`; test dependencies are
+in `requirements-test.txt`. These versions were verified locally on Windows AMD64
+with Python 3.14.5; this is not a claim of compatibility with every Python version.
 
-Create and activate an isolated Python environment appropriate for your platform. Install dependencies using the configuration actually maintained by the project.
+From the repository directory, create a local environment if needed. The install
+step downloads packages and should only be run with the operator's approval:
 
-Do not install an assumed dependency list without checking the repository.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
 
 ### 3. Launch the application
 
-Inspect the current entry points and project instructions to determine the supported launch command. Do not assume that similarly named entry-point files are interchangeable.
+Run from a terminal using the environment where the dependencies were installed:
+
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
+
+`main.py` is the primary entry point; `app.py` currently starts the same window.
+Opening a Python file in an editor does not launch it. Double-clicking may select
+a different Python installation instead of this environment. A terminal keeps any
+startup error visible; include its complete traceback when reporting a failure.
+
+### Import the bundled WASP-39 b example
+
+1. Open **Spectral Data** in the navigation.
+2. Select **WASP-39 b Archive** under **CSV schema** before clicking **Import Spectrum**.
+3. Open `data/WASP-39b/table_WASP-39-b-Feinstein-et-al.-2023.csv`.
+4. The table and plot should show the imported dataset (331 rows, 23 columns).
+
+This reads a local file directly; it does not depend on database retrieval or
+online archive integration. **Generic / Unknown** expects generic wavelength and
+signal columns and intentionally does not infer the archive schema. The bundled
+file's uppercase source headers are handled by the archive importer. Original
+source fields remain available alongside canonical coordinate/signal fields.
+Successful import does not establish units or scientific validity.
+
+### Import a downloaded NASA transmission table
+
+**Import Spectrum** also accepts the specifically supported NASA `.tbl` transmission
+format. The captured real product is
+`data/NASA/2026-10-27/feinstein-2023.tbl`. Select that file in **Spectral Data**;
+the CSV schema selector applies to CSV files only. The NASA table declares its
+own type and units. It displays 331 rows with wavelength in microns and transit
+depth in percent, retaining all 29 source columns plus two canonical aliases.
+
+The importer preserves signed uncertainties, nulls, source URLs and metadata.
+It supports a strict four-header, aligned IPAC transmission-table subset; other
+spectrum types, malformed rows and nonzero transit-depth flags are rejected.
+It does not convert eclipse/direct-imaging data into transmission spectra.
+The captured download URL is session-specific; the online workflow below resolves
+a fresh session instead of reusing a saved link.
+
+### Search NASA and reopen cached spectra
+
+1. Open **Spectral Data**, enter an exact NASA planet name such as `WASP-39 b`,
+   and click **Search NASA**. No request is made until you start a search.
+2. Select a transmission spectrum, then click **Download selected spectrum**.
+   The application retrieves a fresh download link, validates the table, preserves
+   the raw response and metadata, and displays it. **Cancel** stops an active request.
+3. Click **Cached spectra**, select an entry, then **Load cached spectrum** to
+   reopen it without a network request. Changed or incomplete entries are excluded.
+
+The cache is local to this checkout at `data/NASA/cache/` and is excluded from Git.
+It retains raw tables, source URLs, retrieval times, metadata responses and SHA-256
+hashes. This registration is separate from project SQLite persistence.
+
+Search is limited to 50 metadata records for the exact name; a limit warning means
+the result may be incomplete. Only the supported transmission subset can load.
+Each anonymous NASA request has a 15-second deadline and 1 MiB response cap, with
+no automatic retries, redirects, cookies or authentication. A changed NASA session
+layout stops the download with an error. There is no proxy-authentication support.
+
+The actual application workflow was tested offscreen against NASA for WASP-39 b:
+28 transmission results, a 331-row download and cache reopening with no further
+requests. Interactive testing on the friend's computer and independent Argon
+review remain pending. This verifies retrieval and display, not scientific validity.
 
 ### 4. Run the tests
 
-The project has used pytest. If pytest and the required dependencies are configured in the current environment, run the relevant test suite using the repository's documented commands.
+After approval for any needed test-dependency downloads:
 
-For example:
-
-```bash
-python -m pytest
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-test.txt
+$env:QT_QPA_PLATFORM = 'offscreen'
+.\.venv\Scripts\python.exe -B -m pytest -p no:cacheprovider -q
 ```
 
 A successful test run applies only to the tests and environment actually used. Follow the validation instructions for the current task, and report failures or unverified checks accurately.

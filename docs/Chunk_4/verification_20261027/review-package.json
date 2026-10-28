@@ -1,0 +1,31 @@
+{
+  "staged_file_count": 49,
+  "capture_hashes": {
+    "data/NASA/2026-10-27/download-path-evidence.json": "d5a04ed2373a74db9bd36b65f70067a98d3f4b6ae3213fac1bad900600f72406",
+    "data/NASA/2026-10-27/feinstein-2023.tbl": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+    "data/NASA/2026-10-27/feinstein-2023.tbl.provenance.json": "92653c27e6d6f7ec5964af535dd21a5e2a922bc866afbad6dde076ba340727ac",
+    "data/NASA/2026-10-27/nasa-ui-cache-record.json": "d4fd2e34ee3ab412175d3f5538a5a70ad0f0350362e11ec4bfc0c48b4c958e49",
+    "data/NASA/2026-10-27/nasa-ui-live-result.json": "d17b93c94fa79283c8302c18e4592fb9e520e11db0096bbc561fd85f616596c2",
+    "data/NASA/2026-10-27/planet-wasp39b.json": "f3c35ec462680ae10f185db0b8f9211a06b3cf1353a5ba72efc3146ee860598e",
+    "data/NASA/2026-10-27/planet-wasp39b.provenance.json": "ee491344ec04c7679bce3f338ae9a61c751277be78eba81fc678c3da853484af",
+    "data/NASA/2026-10-27/wasp39b-spectra-metadata-top50.json": "310a2b671069ed7599326231df02b53e719677eaf33692d0543f2e8cbdf3d41d",
+    "data/NASA/2026-10-27/wasp39b-spectra-metadata.json": "9a6e0052580ac88fabbc0477b3fc7edc75e9b10bf36f580778920c07ab266abd",
+    "data/NASA/2026-10-27/wasp39b-spectra-metadata.provenance.json": "cb2f24414ed43c138e444496fe387e62b1bf8776a61ce60b8ba388c0fc36ccec"
+  },
+  "secret_pattern_scan": "no matches; heuristic, not an exhaustive certification",
+  "checkout": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\review-checkout-7b2be5fd",
+  "command": [
+    "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-m",
+    "pytest",
+    "-p",
+    "no:cacheprovider",
+    "-o",
+    "pythonpath=.",
+    "--basetemp=C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\.venv\\checks\\pytest-review-checkout-7b2be5fd",
+    "-q"
+  ],
+  "exit_code": 0
+}

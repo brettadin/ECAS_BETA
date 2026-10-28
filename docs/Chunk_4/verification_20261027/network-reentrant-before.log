@@ -1,0 +1,68 @@
+................................................FF....                   [100%]
+================================== FAILURES ===================================
+_ test_failure_callback_can_start_next_request_without_old_reply_corruption[finish-overflow-False] _
+
+deferred_abort = False, trigger = 'finish-overflow'
+
+    @pytest.mark.parametrize('deferred_abort', [False, True])
+    @pytest.mark.parametrize('trigger', ['finish-overflow', 'stream-overflow', 'cancel'])
+    def test_failure_callback_can_start_next_request_without_old_reply_corruption(deferred_abort, trigger):
+        manager = SequenceManager(deferred_abort)
+        client = PublicNasaHttp(manager=manager)
+        results = []
+    
+        def failed(raw, error):
+            results.append(('first', raw, error))
+            client.get(EVIDENCE['url'], lambda body, failure: results.append(('second', body, failure)))
+    
+        client.get(EVIDENCE['url'], failed)
+        first = manager.replies[0]
+        try:
+            if trigger == 'cancel':
+                client.cancel()
+            else:
+                first.data = b'x' * (MAX_BYTES + 1)
+                (first.finished if trigger == 'finish-overflow' else first.readyRead).emit()
+            if deferred_abort:
+                first.finished.emit()  # A delayed abort completion belongs to first.
+            second = manager.replies[1]
+>           assert len(results) == 1 and results[0][1] is None and results[0][2]
+E           AssertionError: assert (2 == 1)
+E            +  where 2 = len([('first', None, 'NASA response exceeds 1 MiB'), ('second', b'', None)])
+
+tests\test_nasa_online.py:385: AssertionError
+_ test_failure_callback_can_start_next_request_without_old_reply_corruption[finish-overflow-True] _
+
+deferred_abort = True, trigger = 'finish-overflow'
+
+    @pytest.mark.parametrize('deferred_abort', [False, True])
+    @pytest.mark.parametrize('trigger', ['finish-overflow', 'stream-overflow', 'cancel'])
+    def test_failure_callback_can_start_next_request_without_old_reply_corruption(deferred_abort, trigger):
+        manager = SequenceManager(deferred_abort)
+        client = PublicNasaHttp(manager=manager)
+        results = []
+    
+        def failed(raw, error):
+            results.append(('first', raw, error))
+            client.get(EVIDENCE['url'], lambda body, failure: results.append(('second', body, failure)))
+    
+        client.get(EVIDENCE['url'], failed)
+        first = manager.replies[0]
+        try:
+            if trigger == 'cancel':
+                client.cancel()
+            else:
+                first.data = b'x' * (MAX_BYTES + 1)
+                (first.finished if trigger == 'finish-overflow' else first.readyRead).emit()
+            if deferred_abort:
+                first.finished.emit()  # A delayed abort completion belongs to first.
+            second = manager.replies[1]
+>           assert len(results) == 1 and results[0][1] is None and results[0][2]
+E           AssertionError: assert (2 == 1)
+E            +  where 2 = len([('first', None, 'NASA response exceeds 1 MiB'), ('second', b'', None)])
+
+tests\test_nasa_online.py:385: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_nasa_online.py::test_failure_callback_can_start_next_request_without_old_reply_corruption[finish-overflow-False]
+FAILED tests/test_nasa_online.py::test_failure_callback_can_start_next_request_without_old_reply_corruption[finish-overflow-True]
+2 failed, 52 passed in 1.29s

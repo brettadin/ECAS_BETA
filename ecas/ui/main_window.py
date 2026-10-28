@@ -36,6 +36,8 @@ from ecas.ingestion.csv_importer import (
 
 # The plotting widget receives normalized SpectrumData, not raw CSV files.
 from ecas.visualization.spectra_plot import SpectraPlot
+from ecas.ingestion.nasa_table import import_transmission_table
+from ecas.ui.nasa_browser import NasaArchiveBrowser
 
 
 class ECASWindow(QMainWindow):
@@ -139,6 +141,7 @@ class ECASWindow(QMainWindow):
         self.spectrum_status = None
         self.spectra_plot = None
         self.current_spectrum = None
+        self.current_spectrum_details = None
 
         # Build each page before assembling the overall window layout.
         self._build_pages()
@@ -219,13 +222,15 @@ class ECASWindow(QMainWindow):
         # The importer does not infer wavelength units or signal semantics.
         description = QLabel(
             "Import a local CSV spectrum for inspection. "
-            "Values are displayed as imported; no units are inferred."
+            "Values are displayed as imported; no units are inferred. "
+            "For the bundled WASP-39 b example, choose WASP-39 b Archive "
+            "before importing. Local CSV import does not require a database."
         )
         description.setObjectName("subtitle")
         description.setWordWrap(True)
 
         # Clicking this button invokes the import workflow below.
-        import_button = QPushButton("Import CSV")
+        import_button = QPushButton("Import Spectrum")
         import_button.clicked.connect(self._import_csv)
 
         # Schema selector for choosing how to interpret the CSV data.
@@ -258,14 +263,17 @@ class ECASWindow(QMainWindow):
         # the spectrum and then examine its underlying imported measurements.
         layout.addWidget(title)
         layout.addWidget(description)
+        self.nasa_browser = NasaArchiveBrowser(self)
+        self.nasa_browser.spectrumReady.connect(self._import_csv_from_path)
+        layout.addWidget(self.nasa_browser)
+        # Schema selection must be visible before the import action; do not
+        # silently infer scientific meaning from a filename or failed parse.
+        layout.addWidget(schema_label)
+        layout.addWidget(self.spectrum_schema_selector)
         layout.addWidget(import_button, 0)
         layout.addWidget(self.spectrum_status)
         layout.addWidget(self.spectra_plot, 2)
         layout.addWidget(self.spectrum_table, 1)
-
-        # Add schema selector after the status label for easy access.
-        layout.addWidget(schema_label, 0)
-        layout.addWidget(self.spectrum_schema_selector, 1)
 
     def _display_spectrum(self, spectrum, schema=None):
         """Display one normalized SpectrumData object in the plot and table.
@@ -336,6 +344,7 @@ class ECASWindow(QMainWindow):
             self.spectrum_table.setColumnCount(0)
 
         self.current_spectrum = None
+        self.current_spectrum_details = None
 
         if self.spectrum_status is not None:
             self.spectrum_status.setText("No spectrum loaded.")
@@ -346,9 +355,9 @@ class ECASWindow(QMainWindow):
 
         file_name, _ = QFileDialog.getOpenFileName(
             self,
-            "Import Spectrum CSV",
+            "Import Spectrum",
             "",
-            "CSV files (*.csv);;All files (*)",
+            "Spectrum files (*.csv *.tbl);;CSV files (*.csv);;NASA IPAC tables (*.tbl);;All files (*)",
         )
 
         # Cancelling the dialog does not count as a failed import.
@@ -363,10 +372,7 @@ class ECASWindow(QMainWindow):
         )
 
         try:
-            spectrum = import_spectrum_csv(
-                file_name,
-                archive_schema=selected_schema,
-            )
+            spectrum, details = self._read_spectrum_file(file_name, selected_schema)
         except SpectrumImportError as exc:
             # Remove the old display so it cannot be mistaken for the
             # spectrum the user just attempted to import.
@@ -381,6 +387,7 @@ class ECASWindow(QMainWindow):
             return
 
         self._display_spectrum(spectrum, schema=selected_schema)
+        self.current_spectrum_details = details if self.current_spectrum is spectrum else None
 
     def _import_csv_from_path(self, path: str):
         """Import a CSV from a specified path, primarily for testing."""
@@ -393,10 +400,7 @@ class ECASWindow(QMainWindow):
         )
 
         try:
-            spectrum = import_spectrum_csv(
-                path,
-                archive_schema=selected_schema,
-            )
+            spectrum, details = self._read_spectrum_file(path, selected_schema)
         except SpectrumImportError as exc:
             # Keep failed-import behavior consistent with the file dialog.
             self._clear_spectrum_display()
@@ -410,3 +414,14 @@ class ECASWindow(QMainWindow):
             return
 
         self._display_spectrum(spectrum, schema=selected_schema)
+        self.current_spectrum_details = details if self.current_spectrum is spectrum else None
+
+    def _read_spectrum_file(self, path, schema):
+        if Path(path).suffix.lower() == ".tbl":
+            details = import_transmission_table(path)
+            return details.spectrum, details
+        return import_spectrum_csv(path, archive_schema=schema), None
+
+    def closeEvent(self, event):
+        self.nasa_browser.cancel()
+        super().closeEvent(event)
