@@ -1,11 +1,11 @@
 # ECAS Project Checkpoint — Chunk 7 & Post-Review Physics/UX Increment
 
-**Timestamp:** 2026-10-29T02:05:00-04:00  
+**Timestamp:** 2026-10-29T02:35:00-04:00  
 **Branch:** `codex/roadmap-reconciliation-20261028`  
 **Repository:** https://github.com/brettadin/ECAS_BETA  
-**Scope:** ECAS Chunk 7 Complete + Post-Review Physics, Forward Modeling, Data-Accuracy Guards, and UX Streamlining  
-**Test Suite Status:** 621 passed, 22 skipped in 15.20s (`QT_QPA_PLATFORM=offscreen`, Python 3.14.5, strict `pytest -W error`)  
-**Current Milestone State:** Checkpointed with pending UI bug triage
+**Scope:** ECAS Chunk 7 Complete + Post-Review Physics/Forward Modeling + UI Rescaling & Clean Summary Card Redesign  
+**Test Suite Status:** 622 passed, 22 skipped in 15.84s (`QT_QPA_PLATFORM=offscreen`, Python 3.14.5, strict `pytest -W error`)  
+**Current Milestone State:** Complete and verified across all 622 tests
 
 ---
 
@@ -53,6 +53,22 @@
    - Standardized case-insensitive matching for asymmetric error pairs and bandwidth headers.
    - Added float-precision noise guards to prevent false-positive systematic offset alerts on identical curves.
    - Added opt-in `@pytest.mark.live_network` test suite (`tests/test_live_network_health.py`), safely skipped offline during routine testing.
+
+### C. Plot Rescaling Squish Fix & Clean UI Summary Card Redesign
+9. **Plot Rescaling & Squish Prevention (`ResidualPlot`, `SpectraPlot`, `ReferencePlot`, `ComparisonBrowser`)**:
+   - Fixed the UI bug shown in user screenshot `media_1793254126685_94903d1e.png` where opening candidate tools caused vertical space starvation that crushed plots down to ~40px and pushed residual plots off-screen.
+   - Added `setMinimumHeight(180)` / `plot_widget.setMinimumHeight(160)` to `SpectraPlot` and `ReferencePlot`.
+   - Added `setMinimumHeight(280)` / child plot minimum heights `240px` and default 50/50 splitter sizes to `ResidualPlot`, with auto-range triggers on load.
+   - Enclosed `ComparisonBrowser` inside a resizable `QScrollArea`, ensuring that regardless of screen resolution or open toolbars, plots are never compressed into unreadable slivers.
+
+10. **Clean, Uncluttered User Interface with Toggleable Technical Details (`ComparisonBrowser`)**:
+    - Replaced the overwhelming 20+ line academic text wall in the middle of the screen with a clean `comparisonSummaryCard` frame:
+      * **Header line**: High-level status pill (`📊 Multi-candidate...`, `✓ Eligible...`, `⚠️ Blocked...`) alongside action buttons: `[Show Technical Details & Provenance]` and `[Copy Technical Details]`.
+      * **Metrics line**: Clean 1-line readout of `RMS`, `Shape RMS`, `Baseline Offset`, and `Max |r|` with unit and sample count.
+      * **Systematic offset banner**: Clean warning banner when `offset_dominates_shape` is detected.
+      * **Species sensitivity line**: Clean readout of leave-one-out $\Delta\text{RMS}$ per molecule.
+    - Preserved full scientific provenance, mathematical caveats, and raw text inside a collapsible `technicalDetailsPanel` (hidden by default) and inside a dedicated `Technical details & provenance` tab in `diagnostic_views`.
+    - Fully backwards-compatible with all test assertions and scientific boundary checks.
 
 ---
 
