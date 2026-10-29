@@ -84,7 +84,8 @@ def test_reference_cache_offline_registration_revalidation_and_atomic_failure(tm
     assert cached_references(path.parent)[0][0][0]==path
     original=path.read_bytes()
     with patch('ecas.ingestion.exomol_reference_cache.os.replace',side_effect=OSError('synthetic disk error')):
-        with pytest.raises(OSError): store_reference(path.parent,stored)
+        with pytest.raises(OSError): store_reference(path.parent,stored,catalogue_context=dict(
+            formula='CO2',isotopologue='12C-16O2',dataset='UCL-4000',version='20261028',catalogue_sha256='a'*64))
     assert path.read_bytes()==original and not list(path.parent.glob('*.tmp'))
     bad=json.loads(original); bad['request']['temperature']=600
     path.write_text(json.dumps(bad))
@@ -222,6 +223,71 @@ def select_supported(browser):
     browser.results.setCurrentRow(index)
 
 
+def test_repeated_cache_content_reuses_record_and_collapses_legacy_choices(tmp_path):
+    import shutil
+    first = store_reference(tmp_path, result())
+    original = first.read_bytes()
+    assert store_reference(tmp_path, result()) == first
+    assert first.read_bytes() == original
+    legacy = tmp_path / 'legacy-duplicate.json'
+    shutil.copyfile(first, legacy)
+    records, invalid = cached_references(tmp_path)
+    assert len(records) == 1 and invalid == 0
+    assert first.read_bytes() == original and legacy.read_bytes() == original
+    context = dict(formula='CO2', isotopologue='12C-16O2', dataset='UCL-4000',
+                   version='20261028', catalogue_sha256='a' * 64)
+    distinct = store_reference(tmp_path, result(), catalogue_context=context)
+    assert distinct not in (first, legacy)
+    assert len(cached_references(tmp_path)[0]) == 2
+    assert store_reference(tmp_path, result(), catalogue_context=context) == distinct
+
+
+def test_download_completion_redraws_immediately_and_reuses_same_cached_choice(tmp_path):
+    browser = MolecularReferenceBrowser(cache_root=tmp_path, product_http=ProductHttp())
+    try:
+        select_supported(browser)
+        for attempt in range(2):
+            browser.reference_table.clearContents()
+            browser.download_button.click()
+            browser.product_http.finish()
+            assert browser.reference_table.item(0, 0).text() == '4000.0'
+            assert browser.current_reference == result()
+            x, y = browser.reference_plot.curve.getData()
+            assert list(zip(x, y)) == list(result().product.points)
+            assert browser.reference_plot.current_product is browser.current_reference.product
+            assert browser.cached.count() == 1
+            assert load_reference(browser.cached.currentData()) == browser.current_reference
+            assert not browser.busy
+        loaded = browser.current_reference
+        settings = (browser.minimum.value(), browser.maximum.value(), browser.temperature.value(), browser.spacing.value())
+        browser.request_toggle.setChecked(False)
+        assert browser.request_panel.isHidden()
+        assert browser.current_reference is loaded
+        browser.request_toggle.setChecked(True)
+        assert not browser.request_panel.isHidden()
+        assert settings == (browser.minimum.value(), browser.maximum.value(), browser.temperature.value(), browser.spacing.value())
+    finally:
+        browser.shutdown()
+        browser.close()
+
+
+def test_catalogue_distinguishes_supported_downloads_without_hiding_other_entries(tmp_path):
+    browser = MolecularReferenceBrowser(cache_root=tmp_path)
+    try:
+        select_supported(browser)
+        assert 'Supported download' in browser.results.currentItem().text()
+        assert browser.download_button.isEnabled()
+        unsupported = next(i for i, entry in enumerate(browser.entries) if not supported_entry(entry))
+        browser.results.setCurrentRow(unsupported)
+        assert 'Catalogue only' in browser.results.currentItem().text()
+        assert not browser.download_button.isEnabled()
+        assert 'does not mean no data exist' in browser.download_button.toolTip()
+        assert browser.product_http is None
+    finally:
+        browser.shutdown()
+        browser.close()
+
+
 def test_browser_download_display_and_cached_reopen_preserve_observation(tmp_path):
     window=ECASWindow(projects_dir=tmp_path/'projects',reference_cache_dir=tmp_path/'cache')
     try:
@@ -232,8 +298,17 @@ def test_browser_download_display_and_cached_reopen_preserve_observation(tmp_pat
         assert browser.download_button.isEnabled()
         browser.download_button.click()
         assert browser.busy and not browser.search_button.isEnabled()
+        window.navigation.setCurrentRow(4)
+        assert window.navigation.currentItem().text()=='Comparisons'
+        assert browser.busy  # Navigation does not cancel or restart the request.
         browser.product_http.finish()
+        assert window.navigation.currentItem().text()=='Comparisons'
+        window.navigation.setCurrentRow(3)
+        assert window.navigation.currentItem().text()=='Molecular References'
         assert browser.reference_table.rowCount()==11 and browser.current_reference==result()
+        loaded=browser.current_reference
+        for page in (1,2,4,5,3): window.navigation.setCurrentRow(page)
+        assert browser.current_reference is loaded and browser.reference_table.rowCount()==11
         envelope=json.loads(Path(browser.cached.currentData()).read_text())
         assert envelope['catalogue_context']['version']==ENTRY.version
         assert envelope['catalogue_context']['dataset']=='UCL-4000'
@@ -264,3 +339,112 @@ def test_unsupported_selection_and_failed_replacement_do_not_corrupt_reference(t
         browser.load_reference_button.click()
         assert browser.current_reference is old and 'Could not open' in browser.status.text()
     finally: browser.shutdown(); browser.close()
+
+
+ADDITIONAL = DATA/'additional-products'
+NEW_SERVICES = [('H2O','1H2-16O','POKAZATEL',41200,5000),('CH4','12C-1H4','MM',12000,2000)]
+
+
+def additional_result(formula, isotope):
+    request=ProductRequest(4000,4010,500,'1',isotope)
+    raw=(ADDITIONAL/(formula+'-500K-4000-4010-dnu1.sigma')).read_bytes()
+    return RetrievedCrossSection(request,raw,validate_product(raw,request))
+
+
+@pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+def test_additional_captured_protocol_network_and_cache_identity(tmp_path, formula, isotope, dataset, maximum, temperature):
+    catalogue=parse_catalogue((DATA/'exomol.all').read_bytes())
+    entry=next(e for e in search_catalogue(catalogue,formula).entries if supported_entry(e))
+    result=additional_result(formula,isotope)
+    request=result.request
+    form=(ADDITIONAL/(formula+'-form-sanitized.html')).read_bytes()
+    links=(ADDITIONAL/(formula+'-product-links.html')).read_bytes()
+    assert parse_form(form,isotope).body(request)
+    assert product_url(links,request).endswith(request.product_path)
+    provenance=json.loads((ADDITIONAL/(formula+'-product-provenance.json')).read_text())
+    assert result.product.source_sha256==provenance['steps'][-1]['sha256']
+    assert result.product.provenance.molecule==formula and result.product.provenance.dataset==dataset
+    assert result.product.provenance.isotopologue==isotope and len(result.product.points)==11
+    replies=[Reply(form,headers=[(b'Set-Cookie',b'csrftoken='+b'C'*32)]),Reply(links),Reply(result.raw)]
+    manager=Manager(replies); client=PublicExomolProductHttp(manager=manager)
+    received=[]
+    client.download(entry,request,lambda *args:received.append(args))
+    for reply in replies: reply.finished.emit()
+    assert received==[(result,None)]
+    assert [r.url().toString() for _,r,_ in manager.requests]==[request.service.url,request.service.url,product_url(links,request)]
+    assert bytes(manager.requests[1][1].rawHeader('Referer')).decode()==request.service.url
+    assert bytes(manager.requests[1][1].rawHeader('Cookie'))==b'csrftoken='+b'C'*32
+    assert not manager.requests[0][1].rawHeader('Cookie') and not manager.requests[2][1].rawHeader('Cookie')
+    context=dict(formula=formula,isotopologue=isotope,dataset=dataset,version=entry.version,catalogue_sha256=catalogue.source_sha256)
+    path=store_reference(tmp_path,result,catalogue_context=context)
+    assert load_reference(path)==result
+    with pytest.raises(ValueError): store_reference(tmp_path,result,catalogue_context=dict(context,formula='CO2'))
+    # Dataset/isotope substitutions cannot inherit a service's retrieval support.
+    assert not supported_entry(replace(entry,dataset='unverified'))
+    with pytest.raises(ValueError): client.download(ENTRY,request,lambda *args:None)
+    assert len(manager.requests)==3
+    with pytest.raises(ValueError): parse_form(FORM,isotope)
+    with pytest.raises(ValueError): parse_form(form)
+    with pytest.raises(ValueError): product_url(LINKS,request)
+
+
+@pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+def test_service_specific_limits_and_changed_provider_limits(formula,isotope,dataset,maximum,temperature):
+    assert ProductRequest(maximum-1,maximum,temperature,'1',isotope).point_count==2
+    for settings in ((maximum-1,maximum+1,500,'1'),(0,1,temperature+1,'1')):
+        with pytest.raises(ValueError): ProductRequest(*settings,isotopologue=isotope)
+    form=(ADDITIONAL/(formula+'-form-sanitized.html')).read_bytes()
+    with pytest.raises(ValueError): parse_form(form.replace(str(maximum).encode(),b'99999'),isotope)
+    with pytest.raises(ValueError): parse_form(form.replace(b'zero-pressure',b'finite-pressure'),isotope)
+    with pytest.raises(ValueError): parse_form(form.replace(dataset.encode(),b'OtherData'),isotope)
+
+
+def test_unknown_reference_service_is_rejected():
+    with pytest.raises(ValueError): ProductRequest(0,1,500,'1','unverified-isotope')
+
+
+def test_original_co2_request_without_identity_field_still_reopens(tmp_path):
+    path=store_reference(tmp_path,result())
+    envelope=json.loads(path.read_text()); envelope['request'].pop('isotopologue')
+    envelope.pop('integrity_sha256')
+    envelope['integrity_sha256']=sha256(json.dumps(envelope,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+    path.write_text(json.dumps(envelope)); original=path.read_bytes()
+    assert load_reference(path)==result() and path.read_bytes()==original
+
+
+@pytest.mark.parametrize('formula,isotope,dataset,maximum,temperature',NEW_SERVICES)
+def test_additional_browser_selection_display_and_offline_reopen(tmp_path,formula,isotope,dataset,maximum,temperature):
+    expected=additional_result(formula,isotope)
+    class Http:
+        def __init__(self): self.calls=0
+        def download(self,entry,request,callback):
+            self.calls+=1
+            assert (entry.formula,entry.dataset)==(formula,dataset) and request==expected.request
+            callback(expected,None)
+        def cancel(self): pass
+    http=Http()
+    browser=MolecularReferenceBrowser(cache_root=tmp_path,product_http=http)
+    try:
+        browser.query.setText(formula); browser.search()
+        index=next(i for i,e in enumerate(browser.entries) if supported_entry(e))
+        browser.results.setCurrentRow(index)
+        assert browser.download_button.isEnabled() and str(maximum) in browser.details.text()
+        browser.download_button.click()
+        assert browser.current_reference==expected and formula in browser.reference_status.text()
+        assert dataset in browser.reference_status.text() and formula in browser.cached.currentText()
+        if temperature<5000:
+            browser.temperature.setValue(temperature+1)
+        else:
+            # Water UI already caps at its verified maximum; test an invalid grid.
+            browser.minimum.setValue(browser.maximum.value())
+        browser.download_button.click()
+        assert http.calls==1 and browser.current_reference==expected
+        assert 'settings invalid' in browser.status.text()
+    finally: browser.shutdown(); browser.close()
+    reopened=MolecularReferenceBrowser(cache_root=tmp_path)
+    try:
+        assert reopened.http is None and reopened.product_http is None
+        reopened.load_reference_button.click()
+        assert reopened.current_reference==expected and dataset in reopened.cached.currentText()
+        assert reopened.http is None and reopened.product_http is None
+    finally: reopened.shutdown(); reopened.close()

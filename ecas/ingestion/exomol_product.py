@@ -1,7 +1,8 @@
-"""Verified, bounded CO2 cross-section form protocol; no network side effects."""
+"""Verified, bounded cross-section form protocols; no network side effects."""
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
+from types import MappingProxyType
 import math
 import re
 from urllib.parse import urlencode, urlsplit
@@ -17,17 +18,49 @@ CITATIONS = ('Hill, Yurchenko & Tennyson (2013), Icarus 226, 1673–1677',
 
 
 @dataclass(frozen=True)
+class ProductService:
+    formula: str
+    isotopologue: str
+    dataset: str
+    maximum_wavenumber: int
+    maximum_temperature: int
+    dataset_phrase: str
+    citations: tuple[str, ...]
+
+    @property
+    def url(self):
+        return ORIGIN + '/xsec/' + self.isotopologue + '/'
+
+
+SERVICES = MappingProxyType({
+    '12C-16O2': ProductService('CO2','12C-16O2','UCL-4000',20000,4000,
+        'generated from the line list UCL-4000',CITATIONS),
+    '1H2-16O': ProductService('H2O','1H2-16O','POKAZATEL',41200,5000,
+        'generated from the POKAZATEL line list',
+        (CITATIONS[0],'Polyansky et al. (2018), MNRAS 480, 2597–2608, POKAZATEL',CITATIONS[2])),
+    '12C-1H4': ProductService('CH4','12C-1H4','MM',12000,2000,
+        'generated from the MM line list',
+        (CITATIONS[0],'Yurchenko et al. (2024), MNRAS 528, 3719–3729, MM',CITATIONS[2])),
+})
+
+
+@dataclass(frozen=True)
 class ProductRequest:
     minimum: int
     maximum: int
     temperature: int
     spacing: str
+    isotopologue: str = '12C-16O2'  # Missing in original v1 cache records: CO2.
 
     def __post_init__(self):
+        if not isinstance(self.isotopologue, str) or self.isotopologue not in SERVICES:
+            raise ReferenceImportError('Unsupported reference service identity')
+        service = self.service
         if any(type(v) is not int for v in (self.minimum, self.maximum, self.temperature)):
             raise ReferenceImportError('Initial service support requires whole-number limits and temperature')
-        if not 0<=self.minimum<self.maximum<=20000 or not 100<=self.temperature<=4000:
-            raise ReferenceImportError('Require 0–20000 cm^-1 and 100–4000 K')
+        if not 0<=self.minimum<self.maximum<=service.maximum_wavenumber or not 100<=self.temperature<=service.maximum_temperature:
+            raise ReferenceImportError(f'{service.formula}: require 0–{service.maximum_wavenumber} cm^-1 '
+                                       f'and 100–{service.maximum_temperature} K')
         if not isinstance(self.spacing,str) or len(self.spacing)>32 or not re.fullmatch(r'[0-9]+(?:\.[0-9]{1,6})?',self.spacing):
             raise ReferenceImportError('Require a positive decimal spacing string with at most six decimals')
         try:
@@ -42,13 +75,17 @@ class ProductRequest:
         object.__setattr__(self,'spacing',format(step,'.6f'))
 
     @property
+    def service(self):
+        return SERVICES[self.isotopologue]
+
+    @property
     def parameters(self):
         return dict(dnu=self.spacing, numin=str(self.minimum), numax=str(self.maximum),
                     T=str(self.temperature), spoon_feed='on')
 
     @property
     def product_path(self):
-        return f'/results/12C-16O2_{self.minimum}-{self.maximum}_{self.temperature}K_{Decimal(self.spacing):.6f}.sigma'
+        return f'/results/{self.isotopologue}_{self.minimum}-{self.maximum}_{self.temperature}K_{Decimal(self.spacing):.6f}.sigma'
 
     @property
     def point_count(self):
@@ -64,7 +101,8 @@ class AnonymousForm:
 
 
 def supported_entry(entry):
-    return (entry.formula, entry.isotopologue, entry.dataset) == ('CO2', '12C-16O2', 'UCL-4000')
+    service = SERVICES.get(entry.isotopologue)
+    return service is not None and (entry.formula, entry.dataset) == (service.formula, service.dataset)
 
 
 def _html(raw):
@@ -74,7 +112,10 @@ def _html(raw):
     except UnicodeError as error: raise ReferenceImportError('Product page is not UTF-8') from error
 
 
-def parse_form(raw):
+def parse_form(raw, isotopologue='12C-16O2'):
+    if not isinstance(isotopologue,str) or isotopologue not in SERVICES:
+        raise ReferenceImportError('Unsupported reference service identity')
+    service = SERVICES[isotopologue]
     class FormParser(HTMLParser):
         def __init__(self): super().__init__(); self.active=False; self.forms=[]; self.current=None; self.text=[]
         def handle_data(self, data): self.text.append(data)
@@ -92,10 +133,13 @@ def parse_form(raw):
     parser=FormParser(); parser.feed(_html(raw))
     description=' '.join(' '.join(parser.text).split())
     compact=re.sub(r'\s+','',description)
-    if ('generated from the line list UCL-4000' not in description or 'zero-pressure' not in description or
+    if (service.dataset_phrase not in description or 'zero-pressure' not in description or
         'Doppler-broadened lines only' not in description or 'cm2/molec' not in compact or 'cm-1' not in compact):
         raise ReferenceImportError('Service dataset, units or broadening description changed')
-    if len(parser.forms)!=1 or parser.forms[0][0]!=SERVICE_PATH:
+    if (f'(0-{service.maximum_wavenumber}cm-1)' not in compact or
+            f'(100-{service.maximum_temperature}K)' not in compact):
+        raise ReferenceImportError('Service temperature or wavenumber limits changed')
+    if len(parser.forms)!=1 or parser.forms[0][0]!='/xsec/'+service.isotopologue+'/':
         raise ReferenceImportError('Unsupported cross-section form action')
     fields=parser.forms[0][1]
     named=[item['name'] for item in fields if 'name' in item]
@@ -129,8 +173,9 @@ def product_url(raw, request):
 
 
 def validate_product(raw, request):
-    provenance=CrossSectionProvenance('CO2','12C-16O2','UCL-4000',float(request.temperature),
-        0.,'doppler_only',ORIGIN+request.product_path,CITATIONS,LICENCE_URL)
+    service=request.service
+    provenance=CrossSectionProvenance(service.formula,service.isotopologue,service.dataset,float(request.temperature),
+        0.,'doppler_only',ORIGIN+request.product_path,service.citations,LICENCE_URL)
     product=parse_cross_section(raw,provenance)
     if len(product.points)!=request.point_count:
         raise ReferenceImportError('Product sample count does not match requested grid')

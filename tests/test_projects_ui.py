@@ -1,4 +1,5 @@
 """Real offscreen project controls, import, persistence and reopen integration."""
+from contextlib import closing
 import json
 from pathlib import Path
 import shutil
@@ -95,6 +96,12 @@ def test_cached_nasa_selection_attach_and_reopen_after_cache_removal(tmp_path, s
         assert reopened.current_project_attachment['provenance']['cache_record']['metadata']['pl_name'] == 'WASP-39 b'
         assert reopened.current_project_attachment['provenance']['import_schema'] is None
         assert not source.exists()
+        saved_item = reopened.project_browser.spectra.item(0)
+        assert 'WASP-39 b — Feinstein et al. 2023' in saved_item.text()
+        assert '331 rows | source preserved' in saved_item.text()
+        assert 'Near Infrared Imager and Slitless Spectrograph' in saved_item.text()
+        assert 'Table publication: Feinstein et al. 2022' in saved_item.toolTip()
+        assert 'source.tbl' in saved_item.toolTip()
     finally:
         reopened.close()
 
@@ -132,10 +139,11 @@ def test_open_revalidates_database_and_refuses_changed_record(tmp_path):
         controls = window.project_browser
         controls.save_button.click()
         controls.spectra.setCurrentRow(0)
-        with sqlite3.connect(tmp_path / 'projects/research/data.sqlite') as conn:
-            data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
-            data['axis_unit'] = 'changed'
-            conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
+        with closing(sqlite3.connect(tmp_path / 'projects/research/data.sqlite')) as conn:
+            with conn:
+                data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
+                data['axis_unit'] = 'changed'
+                conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
         controls.open_button.click()
         assert 'changed' in controls.status.text()
         assert window.current_spectrum is original
@@ -188,8 +196,9 @@ def test_deleted_selected_record_reports_actionable_error(tmp_path):
         controls = window.project_browser
         controls.save_button.click()
         controls.spectra.setCurrentRow(0)
-        with sqlite3.connect(tmp_path / 'projects/research/data.sqlite') as conn:
-            conn.execute('DELETE FROM spectra')
+        with closing(sqlite3.connect(tmp_path / 'projects/research/data.sqlite')) as conn:
+            with conn:
+                conn.execute('DELETE FROM spectra')
         controls.open_button.click()
         assert 'Record no longer exists' in controls.status.text()
         assert 'refresh' in controls.status.text()

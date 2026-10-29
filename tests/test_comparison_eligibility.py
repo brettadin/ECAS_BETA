@@ -84,3 +84,38 @@ def test_valid_covariance_allowed_but_duplicate_observations_not_independent():
 
 def test_two_deterministic_models_do_not_create_weighted_evidence():
     assert assess(model(), model(), weighted=True, cross_dataset_independent=True).status == 'incompatible'
+
+
+def test_production_eligibility_service_matches_contract_and_describes_reasons():
+    from ecas.comparison.eligibility import (
+        VERSION, ComparisonInput as ProdInput, assess as prod_assess, describe_reason,
+    )
+    left = ProdInput('synthetic-observation', 'a'*64, 'observation', 'transit_depth',
+                     'microns', 'percent', 'synthetic-frame', 'synthetic-response-v1',
+                     'explicit synthetic top-hat response, not NASA', (1., 2., 3.), (2., 2.1, 2.),
+                     'independent_gaussian_1sigma', 'invented independent 1-sigma errors', (0.1, 0.1, 0.1))
+    right = replace(left, source_id='synthetic-model', source_sha256='b'*64,
+                    role='forward_model', noise_kind='deterministic_model',
+                    noise_evidence='invented deterministic curve', sigma=None)
+    eligible = prod_assess(left, right)
+    assert eligible.version == VERSION == 'ecas-comparison-eligibility-v1'
+    assert eligible.status == 'eligible' and eligible.reasons == ()
+    assert prod_assess(left, right, weighted=True, cross_dataset_independent=True).status == 'eligible'
+
+    cross_section = replace(right, role='calculated_absorption_cross_section',
+                            observable='absorption_cross_section', axis_unit='cm^-1',
+                            signal_unit='cm^2/molecule', coordinate_frame=None,
+                            response_id=None, response_evidence=None,
+                            coordinates=(4000., 4001., 4002.), values=(1e-24, 2e-24, 3e-24))
+    blocked = prod_assess(left, cross_section)
+    assert blocked.status == 'incompatible'
+    assert 'right.role.requires_physical_model_or_supported_role' in blocked.reasons
+    assert 'right.observable.unsupported_in_v1' in blocked.reasons
+    assert 'pair.observable.mismatch_explicit_transformation_required' in blocked.reasons
+    assert 'explicit physical model is needed first' in describe_reason(
+        'right.role.requires_physical_model_or_supported_role', 'observation', 'reference')
+    assert 'coordinate frame is not established' in describe_reason(
+        'right.coordinate_frame.missing', 'observation', 'reference')
+    assert 'observable differs; an explicit transformation is required' in describe_reason(
+        'pair.observable.mismatch_explicit_transformation_required', 'observation', 'reference')
+    assert describe_reason('unknown.code') == 'unknown.code'

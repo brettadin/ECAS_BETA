@@ -1,0 +1,14 @@
+{
+  "captures": [
+    {
+      "file": "long-name-aliases.json",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/Lookup/nph-aliaslookup.py?objname=55+Cancri+e",
+      "started_utc": "2026-10-28T18:20:57.931680+00:00",
+      "authentication": "none",
+      "cookies_sent": false,
+      "redirects_followed": false,
+      "error": "<urlopen error [Errno 11001] getaddrinfo failed>",
+      "finished_utc": "2026-10-28T18:20:57.938344+00:00"
+    }
+  ]
+}

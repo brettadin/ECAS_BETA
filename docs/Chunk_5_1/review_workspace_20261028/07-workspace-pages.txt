@@ -1,0 +1,1314 @@
+Review ECAS batch 7: Overview and Settings after user acceptance of the first six Argon reviews.
+Return JSON with reviewed_files, findings, limitations, summary. For actionable defects provide file, one-based line, severity and concrete trigger. Do not edit source.
+Scope: Overview workflow navigation and page-entry summary of already loaded state; Settings read-only configured data locations and existing session CSV choice synchronized with Spectral Data; scrollable pages preserving all six navigation indices and independent workspaces. Check startup ordering, plain-text display of file names, no new storage/network side effects from opening these pages, CSV dispatch from both existing import routes, no reinterpretation of loaded spectra or .tbl handling, and session reset on restart.
+The summary is explicitly refreshed on page entry, not continuously while visible. No inventory counts, storage relocation, persistent preference format, quantitative comparison, physical model or eligibility engine is introduced. New code is local and uncommitted. Human normal-desktop acceptance is open and scientific validation deferred. Earlier reviews do not cover this new increment.
+Focused verification: 121 passed, 5.82 s. Full: 571 passed, 1 skipped, 11.15 s; exit 0. Existing skip is Windows directory-symlink privileges. Automated tests use real offscreen widgets and existing captured fixtures, with no live request.
+Complete numbered snapshots follow.
+
+=== ecas/ui/workspace_pages.py ===
+    1: """Workspace guidance and existing session preferences, without storage side effects."""
+    2: from pathlib import Path
+    3: 
+    4: from PySide6.QtCore import Qt
+    5: from PySide6.QtWidgets import (
+    6:     QWidget, QVBoxLayout, QFormLayout, QLabel, QPushButton, QLineEdit, QComboBox,
+    7: )
+    8: 
+    9: 
+   10: def _text(value):
+   11:     label = QLabel(value)
+   12:     label.setTextFormat(Qt.TextFormat.PlainText)
+   13:     label.setWordWrap(True)
+   14:     label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+   15:     return label
+   16: 
+   17: 
+   18: class OverviewPage(QWidget):
+   19:     """Describe the workflow and summarize already loaded state on page entry."""
+   20: 
+   21:     def __init__(self, state_getter, navigate, parent=None):
+   22:         super().__init__(parent)
+   23:         self.state_getter = state_getter
+   24:         layout = QVBoxLayout(self)
+   25:         title = _text('ECAS workspace')
+   26:         title.setObjectName('pageTitle')
+   27:         layout.addWidget(title)
+   28:         layout.addWidget(_text(
+   29:             'Import an observation, save it in a research project, retrieve a molecular '
+   30:             'reference, then inspect the inputs separately in Comparisons.'))
+   31:         self.status = _text('No datasets loaded.')
+   32:         layout.addWidget(self.status)
+   33:         self.shortcuts = {}
+   34:         steps = (
+   35:             (2, 'Inspect an observation', 'Import CSV files or search the NASA archive for supported transmission tables.'),
+   36:             (1, 'Open research projects', 'Save observations with their available source provenance and reopen saved records offline.'),
+   37:             (3, 'Find molecular references', 'Search ExoMol; retrieve supported CO2, H2O or CH4 cross sections, or reopen cached products.'),
+   38:             (4, 'Inspect selected inputs', 'Add observation snapshots and independently select cached references. Choices last for this session.'),
+   39:             (5, 'View settings and data locations', 'Check storage paths and choose how local CSV files are interpreted.'),
+   40:         )
+   41:         for index, caption, description in steps:
+   42:             button = QPushButton(caption)
+   43:             button.clicked.connect(lambda checked=False, page=index: navigate(page))
+   44:             self.shortcuts[index] = button
+   45:             layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)
+   46:             layout.addWidget(_text(description))
+   47:         layout.addWidget(_text(
+   48:             'Calculated cross sections are reference products, not transit-depth predictions '
+   49:             'or molecular detections. Comparison calculations and atmospheric modelling '
+   50:             'are not available. Successful retrieval does not establish scientific compatibility.'))
+   51:         layout.addStretch()
+   52: 
+   53:     def refresh(self):
+   54:         # The caller supplies strings from existing in-memory state only.
+   55:         self.status.setText(self.state_getter())
+   56: 
+   57: 
+   58: class SettingsPage(QWidget):
+   59:     """Mirror the existing CSV choice and expose configured locations read-only."""
+   60: 
+   61:     def __init__(self, schema_selector, locations, parent=None):
+   62:         super().__init__(parent)
+   63:         layout = QVBoxLayout(self)
+   64:         title = _text('Settings')
+   65:         title.setObjectName('pageTitle')
+   66:         layout.addWidget(title)
+   67:         layout.addWidget(_text(
+   68:             'CSV interpretation applies to the next CSV import from either import entry '
+   69:             'point. It does not change already loaded or saved spectra, and does not '
+   70:             'affect NASA .tbl imports. This choice lasts for the current session.'))
+   71:         form = QFormLayout()
+   72:         self.csv_schema = QComboBox()
+   73:         self.csv_schema.addItems([schema_selector.itemText(i) for i in range(schema_selector.count())])
+   74:         self.csv_schema.setCurrentIndex(schema_selector.currentIndex())
+   75:         self.csv_schema.currentIndexChanged.connect(schema_selector.setCurrentIndex)
+   76:         schema_selector.currentIndexChanged.connect(self.csv_schema.setCurrentIndex)
+   77:         form.addRow('CSV schema:', self.csv_schema)
+   78:         layout.addLayout(form)
+   79:         layout.addWidget(_text(
+   80:             'Active data locations (read-only). Select a path to copy it. '
+   81:             'This page does not move, delete or scan stored data.'))
+   82:         paths = QFormLayout()
+   83:         self.location_fields = {}
+   84:         for name, path in locations.items():
+   85:             field = QLineEdit(str(Path(path).absolute()))
+   86:             field.setReadOnly(True)
+   87:             field.setToolTip(field.text())
+   88:             self.location_fields[name] = field
+   89:             paths.addRow(name + ':', field)
+   90:         layout.addLayout(paths)
+   91:         layout.addWidget(_text(
+   92:             'Projects retain saved observations and available source provenance. '
+   93:             'NASA and ExoMol caches retain downloaded products for offline reopening. '
+   94:             'Observation choices in Comparisons are held in memory and are lost when '
+   95:             'the application closes; save observations in Projects for later use.'))
+   96:         layout.addWidget(_text(
+   97:             'Online access: explicit search, refresh and download actions use the supported '
+   98:             'public archive services without an account. Offline reopening needs no new '
+   99:             'request. Page changes preserve active requests; use the browser cancellation '
+  100:             'controls to stop a pending request.'))
+  101:         layout.addStretch()
+
+=== ecas/ui/main_window.py ===
+    1: 
+    2: """
+    3: ECAS main application window.
+    4: 
+    5: This module is responsible for the desktop interface: navigation, page layouts,
+    6: and presenting imported spectral data. The actual CSV parsing and validation
+    7: are handled by ecas.ingestion.csv_importer so that scientific data processing
+    8: does not become tied to the user interface.
+    9: """
+   10: 
+   11: from pathlib import Path
+   12: from PySide6.QtCore import Qt, QUrl
+   13: from PySide6.QtGui import QDesktopServices, QColor
+   14: 
+   15: from PySide6.QtWidgets import (
+   16:     QFileDialog,
+   17:     QHBoxLayout,
+   18:     QLabel,
+   19:     QListWidget,
+   20:     QMainWindow,
+   21:     QMessageBox,
+   22:     QPushButton,
+   23:     QStackedWidget,
+   24:     QTableWidget,
+   25:     QTableWidgetItem,
+   26:     QVBoxLayout,
+   27:     QWidget,
+   28:     QComboBox,
+   29:     QScrollArea,
+   30: )
+   31: 
+   32: # Reuse the ingestion module rather than duplicating CSV validation here.
+   33: # SpectrumImportError represents an expected problem with the input file.
+   34: from ecas.ingestion.csv_importer import (
+   35:     SpectrumImportError,
+   36:     WASP39B_SCHEMA,
+   37: )
+   38: from ecas.ingestion.import_manager import import_spectrum
+   39: 
+   40: # The plotting widget receives normalized SpectrumData, not raw CSV files.
+   41: from ecas.visualization.spectra_plot import SpectraPlot
+   42: from ecas.ingestion.nasa_table import import_transmission_table
+   43: from ecas.ui.nasa_browser import NasaArchiveBrowser
+   44: from ecas.ui.project_browser import ProjectBrowser
+   45: from ecas.projects import ProjectStore
+   46: from ecas.ui.source_links import source_link
+   47: from ecas.ui.molecular_browser import MolecularReferenceBrowser
+   48: from ecas.ui.comparison_browser import ComparisonBrowser
+   49: from ecas.ui.workspace_pages import OverviewPage, SettingsPage
+   50: 
+   51: 
+   52: class ECASWindow(QMainWindow):
+   53:     """Main ECAS window and coordinator for its interface."""
+   54: 
+   55:     def __init__(self, *, projects_dir=None, reference_cache_dir=None):
+   56:         """Initialize the window, navigation, pages, and status bar."""
+   57:         super().__init__()
+   58: 
+   59:         # Window identity and initial dimensions.
+   60:         # The minimum size prevents the interface from becoming too cramped.
+   61:         # Start the title with ECAS to identify the application consistently.
+   62:         self.setWindowTitle("ECAS — Exoplanetary Characterization & Astrochemistry Suite")
+   63:         self.resize(1200, 800)
+   64:         self.setMinimumSize(900, 600)
+   65: 
+   66:         # Qt stylesheets use CSS-like rules to control the appearance of widgets.
+   67:         # Object-specific rules, such as QLabel#pageTitle, apply only to widgets
+   68:         # assigned the matching object name below.
+   69:         self.setStyleSheet("""
+   70:             QMainWindow, QWidget {
+   71:                 background-color: #20242b;
+   72:                 color: #d8dee9;
+   73:                 font-family: "Segoe UI";
+   74:                 font-size: 10pt;
+   75:             }
+   76: 
+   77:             QListWidget {
+   78:                 background-color: #181b21;
+   79:                 border: none;
+   80:                 padding: 8px;
+   81:                 outline: none;
+   82:             }
+   83: 
+   84:             QListWidget::item {
+   85:                 padding: 12px;
+   86:                 border-radius: 4px;
+   87:             }
+   88: 
+   89:             QListWidget::item:selected {
+   90:                 background-color: #394352;
+   91:                 color: #ffffff;
+   92:             }
+   93: 
+   94:             QLabel#pageTitle {
+   95:                 font-size: 20pt;
+   96:                 font-weight: 600;
+   97:                 color: #eceff4;
+   98:             }
+   99: 
+  100:             QLabel#subtitle {
+  101:                 color: #9aa6b5;
+  102:                 font-size: 10pt;
+  103:             }
+  104: 
+  105:             QPushButton {
+  106:                 background-color: #394352;
+  107:                 border: 1px solid #4c596b;
+  108:                 border-radius: 4px;
+  109:                 padding: 9px 14px;
+  110:             }
+  111: 
+  112:             QPushButton:hover {
+  113:                 background-color: #46556a;
+  114:             }
+  115: 
+  116:             QTableWidget {
+  117:                 background-color: #181b21;
+  118:                 alternate-background-color: #222832;
+  119:                 gridline-color: #394352;
+  120:                 border: 1px solid #394352;
+  121:             }
+  122: 
+  123:             QHeaderView::section {
+  124:                 background-color: #2b323d;
+  125:                 padding: 7px;
+  126:                 border: none;
+  127:             }
+  128:         """)
+  129: 
+  130:         # The navigation list acts as the menu on the left side of the window.
+  131:         # Its row order must match the page order in self.pages below.
+  132:         self.navigation = QListWidget()
+  133:         self.navigation.addItems([
+  134:             "Overview",
+  135:             "Projects",
+  136:             "Spectral Data",
+  137:             "Molecular References",
+  138:             "Comparisons",
+  139:             "Settings",
+  140:         ])
+  141:         self.navigation.setFixedWidth(200)
+  142: 
+  143:         # QStackedWidget holds multiple pages but displays only one at a time.
+  144:         # These attributes are initialized here so other methods can access
+  145:         # the spectral table, its status label, and the most recently imported
+  146:         # dataset.
+  147:         self.pages = QStackedWidget()
+  148:         # These widgets and the dataset reference are populated by the
+  149:         # Spectral Data page builder.
+  150:         self.spectrum_table = None
+  151:         self.spectrum_status = None
+  152:         self.spectra_plot = None
+  153:         self.current_spectrum = None
+  154:         self.current_spectrum_details = None
+  155:         self.current_spectrum_schema = None
+  156:         self.current_project_attachment = None
+  157:         self.project_store = ProjectStore(projects_dir if projects_dir is not None
+  158:                                           else Path(__file__).resolve().parents[2] / 'projects')
+  159:         self.project_browser = None
+  160:         self.reference_cache_dir = reference_cache_dir
+  161: 
+  162:         # Build each page before assembling the overall window layout.
+  163:         self._build_pages()
+  164: 
+  165:         # The horizontal layout places navigation on the left and the selected
+  166:         # page on the right. The stretch factor of 1 lets the page area expand.
+  167:         body = QWidget()
+  168:         body_layout = QHBoxLayout(body)
+  169:         body_layout.setContentsMargins(0, 0, 0, 0)
+  170:         body_layout.setSpacing(0)
+  171:         body_layout.addWidget(self.navigation)
+  172:         body_layout.addWidget(self.pages, 1)
+  173: 
+  174:         self.setCentralWidget(body)
+  175: 
+  176:         # Connect navigation changes to page changes.
+  177:         # For example, selecting row 2 displays page index 2: Spectral Data.
+  178:         self.navigation.currentRowChanged.connect(
+  179:             self.pages.setCurrentIndex
+  180:         )
+  181:         self.navigation.currentRowChanged.connect(self._refresh_workspace_summary)
+  182: 
+  183:         # Select the Overview page when ECAS first opens.
+  184:         self.navigation.setCurrentRow(0)
+  185: 
+  186:         # The status bar gives brief feedback about the current application
+  187:         # state, such as whether a dataset has been loaded successfully.
+  188:         self.statusBar().showMessage("Ready — no dataset loaded")
+  189: 
+  190:     def _build_pages(self):
+  191:         """Create the pages and add them to the stacked page container."""
+  192:         # Keep the navigation and page order aligned.
+  193:         # Overview summarizes loaded state; Settings mirrors existing preferences.
+  194:         definitions = [
+  195:             ("ECAS workspace", "Scientific analysis workspace."),
+  196:             ("Projects", "Create and manage research projects."),
+  197:             ("", ""),
+  198:             ("Molecular References", "Search and manage molecular reference data."),
+  199:             ("Comparisons", "Inspect independently selected inputs."),
+  200:             ("Settings", "Application preferences and data locations."),
+  201:         ]
+  202: 
+  203:         for index, (heading, description) in enumerate(definitions):
+  204:             # Each page is a separate widget with its own vertical layout.
+  205:             page = QWidget()
+  206:             layout = QVBoxLayout(page)
+  207:             layout.setContentsMargins(32, 28, 32, 28)
+  208:             layout.setSpacing(12)
+  209: 
+  210:             if index == 0:
+  211:                 self.overview_page = OverviewPage(
+  212:                     self._workspace_summary, self.navigation.setCurrentRow, self)
+  213:                 layout.addWidget(self.overview_page)
+  214:             elif index == 1:
+  215:                 self.project_browser = ProjectBrowser(self.project_store, self)
+  216:                 self.project_browser.saveRequested.connect(self._save_to_project)
+  217:                 self.project_browser.spectrumReady.connect(self._open_project_spectrum)
+  218:                 layout.addWidget(self.project_browser)
+  219:             elif index == 2:
+  220:                 # Index 2 corresponds to "Spectral Data" in the navigation.
+  221:                 # Its controls are created in a separate method to keep this
+  222:                 # page-building loop easy to maintain.
+  223:                 self._build_spectral_page(layout)
+  224:             elif index == 3:
+  225:                 self.reference_browser = MolecularReferenceBrowser(self, cache_root=self.reference_cache_dir)
+  226:                 layout.addWidget(self.reference_browser)
+  227:             elif index == 4:
+  228:                 self.comparison_browser = ComparisonBrowser(
+  229:                     self._comparison_observation, self.reference_browser.cache_root, self)
+  230:                 layout.addWidget(self.comparison_browser)
+  231:             elif index == 5:
+  232:                 self.settings_page = SettingsPage(self.spectrum_schema_selector, {
+  233:                     'Research projects': self.project_store.root,
+  234:                     'NASA cache': self.nasa_browser.cache_root,
+  235:                     'ExoMol catalogue cache': self.reference_browser.cache_root,
+  236:                     'ExoMol reference cache': self.reference_browser.cache_root / 'references',
+  237:                 }, self)
+  238:                 layout.addWidget(self.settings_page)
+  239:             else:
+  240:                 # The remaining pages currently contain headings and
+  241:                 # descriptions only; they are not fully implemented yet.
+  242:                 title = QLabel(heading)
+  243:                 title.setObjectName("pageTitle")
+  244: 
+  245:                 subtitle = QLabel(description)
+  246:                 subtitle.setObjectName("subtitle")
+  247:                 subtitle.setWordWrap(True)
+  248: 
+  249:                 layout.addWidget(title)
+  250:                 layout.addWidget(subtitle)
+  251:                 layout.addStretch()
+  252: 
+  253:             # Adding pages in this order is what links their indices to the
+  254:             # matching rows in the navigation list.
+  255:             if index in (0, 5):
+  256:                 scroll = QScrollArea()
+  257:                 scroll.setWidgetResizable(True)
+  258:                 scroll.setWidget(page)
+  259:                 self.pages.addWidget(scroll)
+  260:             else:
+  261:                 self.pages.addWidget(page)
+  262: 
+  263:     def _refresh_workspace_summary(self, index):
+  264:         if index == 0:
+  265:             self.overview_page.refresh()
+  266: 
+  267:     def _workspace_summary(self):
+  268:         """Summarize loaded state without opening files, caches or project databases."""
+  269:         spectrum = self.current_spectrum
+  270:         observation = (f'{spectrum.source_file.name} — {spectrum.row_count} rows'
+  271:                        if spectrum is not None else 'none loaded')
+  272:         reference = self.reference_browser.current_reference
+  273:         if reference is None:
+  274:             reference_text = 'none loaded'
+  275:         else:
+  276:             product = reference.product
+  277:             reference_text = (f'{product.provenance.molecule} / {product.provenance.dataset}; '
+  278:                               f'{reference.request.temperature} K; {len(product.points)} points')
+  279:         comparison = self.comparison_browser
+  280:         selected_observation = ('selected' if comparison.current_observation is not None else 'not selected')
+  281:         selected_reference = ('selected' if comparison.current_reference is not None else 'not selected')
+  282:         return (f'Current observation: {observation}\n'
+  283:                 f'Molecular References display: {reference_text}\n'
+  284:                 f'Comparisons: {comparison.observation_selector.count()} session observation choices; '
+  285:                 f'observation {selected_observation}; reference {selected_reference}.\n'
+  286:                 'This summary updates when Overview is opened; it is not a stored-data inventory.')
+  287: 
+  288:     def _comparison_observation(self):
+  289:         """Return the loaded input without rereading files or asserting provenance."""
+  290:         source_hash = (self.current_spectrum_details.source_sha256
+  291:                        if self.current_spectrum_details is not None else None)
+  292:         return self.current_spectrum, source_hash
+  293: 
+  294:     def _build_spectral_page(self, layout):
+  295:         """Create the controls used to import and inspect a spectrum."""
+  296:         title = QLabel("Spectral Data")
+  297:         title.setObjectName("pageTitle")
+  298: 
+  299:         # Be explicit about the current importer's scope: local CSV files.
+  300:         # The importer does not infer wavelength units or signal semantics.
+  301:         description = QLabel(
+  302:             "Import a local CSV spectrum for inspection. "
+  303:             "Values are displayed as imported; no units are inferred. "
+  304:             "For the bundled WASP-39 b example, choose WASP-39 b Archive "
+  305:             "before importing. Local CSV import does not require a database."
+  306:         )
+  307:         description.setObjectName("subtitle")
+  308:         description.setWordWrap(True)
+  309: 
+  310:         # Clicking this button invokes the import workflow below.
+  311:         import_button = QPushButton("Import Spectrum")
+  312:         import_button.clicked.connect(self._import_csv)
+  313: 
+  314:         # Schema selector for choosing how to interpret the CSV data.
+  315:         schema_label = QLabel("CSV schema:")
+  316:         schema_label.setObjectName("schemaLabel")
+  317: 
+  318:         self.spectrum_schema_selector = QComboBox()
+  319:         self.spectrum_schema_selector.addItems(["Generic / Unknown", "WASP-39 b Archive"])
+  320:         self.spectrum_schema_selector.setCurrentIndex(0)  # Default: Generic/Unknown
+  321: 
+  322:         # This label reports whether a dataset is loaded and, if so, its
+  323:         # filename and number of imported rows.
+  324:         self.spectrum_status = QLabel("No spectrum loaded.")
+  325:         self.spectrum_status.setWordWrap(True)
+  326: 
+  327:         # The table presents validated values for inspection.
+  328:         # Create the plot widget once and reuse it for subsequent imports.
+  329:         # Each successful load replaces the previous plotted dataset.
+  330:         self.spectra_plot = SpectraPlot()
+  331: 
+  332:         # The table presents validated values without permitting edits.
+  333:         self.spectrum_table = QTableWidget()
+  334:         self.spectrum_table.setAlternatingRowColors(True)
+  335:         self.spectrum_table.setEditTriggers(
+  336:             QTableWidget.EditTrigger.NoEditTriggers
+  337:         )
+  338:         self.spectrum_table.setSortingEnabled(False)
+  339:         self.spectrum_table.itemDoubleClicked.connect(self._open_source_link)
+  340: 
+  341:         # Place the plot above the table so users can inspect the shape of
+  342:         # the spectrum and then examine its underlying imported measurements.
+  343:         layout.addWidget(title)
+  344:         layout.addWidget(description)
+  345:         self.nasa_browser = NasaArchiveBrowser(self)
+  346:         self.nasa_browser.spectrumReady.connect(self._import_csv_from_path)
+  347:         layout.addWidget(self.nasa_browser)
+  348:         # Schema selection must be visible before the import action; do not
+  349:         # silently infer scientific meaning from a filename or failed parse.
+  350:         layout.addWidget(schema_label)
+  351:         layout.addWidget(self.spectrum_schema_selector)
+  352:         layout.addWidget(import_button, 0, Qt.AlignmentFlag.AlignLeft)
+  353:         layout.addWidget(self.spectrum_status)
+  354:         layout.addWidget(self.spectra_plot, 2)
+  355:         layout.addWidget(self.spectrum_table, 1)
+  356: 
+  357:     def _display_spectrum(self, spectrum, schema=None, *, nasa_source=False):
+  358:         """Display one normalized SpectrumData object in the plot and table.
+  359: 
+  360:         Args:
+  361:             spectrum: The SpectrumData object to display.
+  362:             schema: Optional schema dict for archive handling. Defaults to None (generic).
+  363:             nasa_source: Resolve NASA-relative source links for display only.
+  364:         """
+  365: 
+  366:         # Load the plot first. If the data cannot be plotted, do not leave
+  367:         # the table showing a dataset that the plot failed to display.
+  368:         if not self.spectra_plot.load_spectrum(spectrum, schema=schema):
+  369:             self._clear_spectrum_display()
+  370:             self.spectrum_status.setText(
+  371:                 "The imported spectrum has no valid plottable measurements."
+  372:             )
+  373:             self.statusBar().showMessage("Spectrum could not be plotted")
+  374:             return
+  375: 
+  376:         rows = spectrum.rows
+  377:         columns = list(spectrum.columns)
+  378: 
+  379:         # Replace the previous table contents without modifying SpectrumData.
+  380:         self.spectrum_table.clearContents()
+  381:         self.spectrum_table.setRowCount(0)
+  382:         self.spectrum_table.setColumnCount(len(columns))
+  383:         self.spectrum_table.setHorizontalHeaderLabels(columns)
+  384:         self.spectrum_table.setRowCount(len(rows))
+  385: 
+  386:         for row_index, row in enumerate(rows):
+  387:             for column_index, column in enumerate(columns):
+  388:                 # Missing values remain blank rather than being changed to zero.
+  389:                 value = row[column]
+  390:                 item = QTableWidgetItem(
+  391:                     "" if value is None else str(value)
+  392:                 )
+  393:                 if column.endswith('_url'):
+  394:                     link = source_link(value, nasa_source=nasa_source)
+  395:                     if link:
+  396:                         item.setText(link)
+  397:                         item.setData(Qt.ItemDataRole.UserRole, link)
+  398:                         item.setToolTip(f'Original source value: {value}\nDouble-click to open this source link.')
+  399:                         item.setForeground(QColor('#81a1c1'))
+  400:                         font = item.font()
+  401:                         font.setUnderline(True)
+  402:                         item.setFont(font)
+  403:                 self.spectrum_table.setItem(
+  404:                     row_index, column_index, item
+  405:                 )
+  406: 
+  407:         self.spectrum_table.resizeColumnsToContents()
+  408:         self.current_spectrum = spectrum
+  409:         self.current_spectrum_schema = schema
+  410:         self.current_project_attachment = None
+  411:         self.project_browser.set_spectrum_available(True)
+  412: 
+  413:         # Report the imported dataset and any warnings supplied by the importer.
+  414:         source_name = spectrum.source_file.name
+  415:         self.spectrum_status.setText(
+  416:             f"Loaded: {source_name} — {spectrum.row_count} rows"
+  417:         )
+  418: 
+  419:         status_message = (
+  420:             f"Imported {spectrum.row_count} measurements."
+  421:         )
+  422:         if spectrum.warnings:
+  423:             status_message += " " + ", ".join(spectrum.warnings)
+  424: 
+  425:         self.statusBar().showMessage(status_message)
+  426: 
+  427:     def _clear_spectrum_display(self):
+  428:         """Clear the table, plot, and dataset reference together."""
+  429: 
+  430:         # All three views must agree about whether a dataset is loaded.
+  431:         if self.spectra_plot is not None:
+  432:             self.spectra_plot.clear()
+  433: 
+  434:         if self.spectrum_table is not None:
+  435:             self.spectrum_table.clearContents()
+  436:             self.spectrum_table.setRowCount(0)
+  437:             self.spectrum_table.setColumnCount(0)
+  438: 
+  439:         self.current_spectrum = None
+  440:         self.current_spectrum_details = None
+  441:         self.current_spectrum_schema = None
+  442:         self.current_project_attachment = None
+  443:         if self.project_browser is not None:
+  444:             self.project_browser.set_spectrum_available(False)
+  445: 
+  446:         if self.spectrum_status is not None:
+  447:             self.spectrum_status.setText("No spectrum loaded.")
+  448: 
+  449: 
+  450:     def _selected_import_schema(self):
+  451:         """Return the schema selected in the import controls."""
+  452:         if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive":
+  453:             return WASP39B_SCHEMA
+  454:         return None
+  455: 
+  456:     def _import_csv(self):
+  457:         """Open a file dialog and import a CSV spectrum."""
+  458:         file_name, _ = QFileDialog.getOpenFileName(
+  459:             self,
+  460:             "Import Spectrum",
+  461:             "",
+  462:             "Spectrum files (*.csv *.tbl);;CSV files (*.csv);;NASA IPAC tables (*.tbl);;All files (*)",
+  463:         )
+  464: 
+  465:         # Cancelling the dialog does not count as a failed import.
+  466:         if not file_name:
+  467:             return
+  468: 
+  469:         # Map the schema selector text to the appropriate schema dict.
+  470:         selected_schema = (
+  471:             WASP39B_SCHEMA
+  472:             if self.spectrum_schema_selector.currentText() == "WASP-39 b Archive"
+  473:             else None
+  474:         )
+  475: 
+  476:         try:
+  477:             spectrum, details = self._read_spectrum_file(file_name, selected_schema)
+  478:         except SpectrumImportError as exc:
+  479:             # Remove the old display so it cannot be mistaken for the
+  480:             # spectrum the user just attempted to import.
+  481:             self._clear_spectrum_display()
+  482: 
+  483:             QMessageBox.warning(
+  484:                 self,
+  485:                 "Spectrum Import Failed",
+  486:                 str(exc) or 'The spectrum could not be imported. No further error details were provided.',
+  487:             )
+  488:             self.statusBar().showMessage("Import failed")
+  489:             return
+  490: 
+  491:         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
+  492:         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
+  493: 
+  494:     def _import_csv_from_path(self, path: str):
+  495:         """Import a CSV from a specified path."""
+  496:         selected_schema = self._selected_import_schema()
+  497: 
+  498:         try:
+  499:             spectrum, details = self._read_spectrum_file(path, selected_schema)
+  500:         except SpectrumImportError as exc:
+  501:             # Remove the old display so it cannot be mistaken for the
+  502:             # spectrum the user just attempted to import.
+  503:             self._clear_spectrum_display()
+  504: 
+  505:             QMessageBox.warning(
+  506:                 self,
+  507:                 "Spectrum Import Failed",
+  508:                 str(exc) or 'The spectrum could not be imported. No further error details were provided.',
+  509:             )
+  510:             self.statusBar().showMessage("Import failed")
+  511:             return
+  512: 
+  513:         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
+  514:         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
+  515: 
+  516:     def _read_spectrum_file(self, path, schema):
+  517:         if Path(path).suffix.lower() == ".tbl":
+  518:             details = import_transmission_table(path)
+  519:             return details.spectrum, details
+  520:         return import_spectrum(path, archive_schema=schema), None
+  521: 
+  522:     def closeEvent(self, event):
+  523:         self.nasa_browser.cancel()
+  524:         self.reference_browser.shutdown()
+  525:         super().closeEvent(event)
+  526: 
+  527:     def _save_to_project(self, name):
+  528:         if self.current_spectrum is None:
+  529:             self.project_browser.fail('Load a spectrum in Spectral Data first')
+  530:             return
+  531:         try:
+  532:             identifier = self.project_store.attach(name, self.current_spectrum,
+  533:                 self.current_spectrum_schema, self.current_project_attachment,
+  534:                 expected_source_sha256=(self.current_spectrum_details.source_sha256
+  535:                                         if self.current_spectrum_details is not None else None))
+  536:             self.project_browser.reload()
+  537:             self.project_browser.status.setText(f'Added spectrum {identifier} to {name}; source bytes and provenance preserved.')
+  538:         except Exception as error:
+  539:             self.project_browser.fail(error)
+  540: 
+  541:     def _open_project_spectrum(self, record):
+  542:         try:
+  543:             self._display_spectrum(record.spectrum, schema=record.import_schema, nasa_source=record.details is not None)
+  544:             if self.current_spectrum is record.spectrum:
+  545:                 self.current_spectrum_details = record.details
+  546:                 self.current_project_attachment = record.attachment
+  547:                 self.navigation.setCurrentRow(2)
+  548:             else:
+  549:                 self.project_browser.fail('Spectrum could not be plotted: no valid plottable measurements.')
+  550:         except Exception as error:
+  551:             self._clear_spectrum_display()
+  552:             self.project_browser.fail(error)
+  553: 
+  554:     def _open_source_link(self, item):
+  555:         link = item.data(Qt.ItemDataRole.UserRole)
+  556:         if link and source_link(link):
+  557:             if not QDesktopServices.openUrl(QUrl(link)):
+  558:                 self.statusBar().showMessage('Could not open the source link in a browser.')
+
+=== tests/test_workspace_pages.py ===
+    1: """Integration checks for workspace guidance and the shared CSV preference."""
+    2: from pathlib import Path
+    3: from unittest.mock import patch, sentinel
+    4: 
+    5: import pytest
+    6: from PySide6.QtCore import Qt
+    7: from PySide6.QtWidgets import QApplication, QScrollArea
+    8: 
+    9: from ecas.ui import main_window
+   10: from ecas.ui.main_window import ECASWindow
+   11: from ecas.ingestion.exomol_product import ProductRequest, validate_product
+   12: from ecas.ingestion.exomol_product_network import RetrievedCrossSection
+   13: from ecas.ingestion.exomol_reference_cache import store_reference
+   14: 
+   15: 
+   16: @pytest.fixture(scope='session', autouse=True)
+   17: def app():
+   18:     instance = QApplication.instance() or QApplication([])
+   19:     yield instance
+   20: 
+   21: 
+   22: @pytest.fixture
+   23: def window(tmp_path, app):
+   24:     widget = ECASWindow(projects_dir=tmp_path / 'projects', reference_cache_dir=tmp_path / 'cache')
+   25:     yield widget
+   26:     widget.close()
+   27: 
+   28: 
+   29: def test_overview_shortcuts_preserve_independent_loaded_inputs(window, tmp_path):
+   30:     source = tmp_path / 'observation.csv'
+   31:     source.write_text('wavelength,signal\n1,2\n2,3\n', encoding='utf-8')
+   32:     window._import_csv_from_path(str(source))
+   33:     observation = window.current_spectrum
+   34:     window.comparison_browser.add_current_observation()
+   35:     root = Path(__file__).resolve().parents[1]
+   36:     raw = (root / 'data/ExoMol/2026-10-28/CO2-12C-16O2-500K-4000-4010-dnu1.sigma').read_bytes()
+   37:     request = ProductRequest(4000, 4010, 500, '1')
+   38:     reference = RetrievedCrossSection(request, raw, validate_product(raw, request))
+   39:     window.reference_browser._show_reference(reference)
+   40:     store_reference(window.reference_browser.cache_root / 'references', reference)
+   41:     window.comparison_browser.refresh_references()
+   42:     window.comparison_browser.reference_selector.setCurrentIndex(0)
+   43:     snapshot = window.comparison_browser.current_observation
+   44:     source.unlink()
+   45:     for index, button in window.overview_page.shortcuts.items():
+   46:         window.navigation.setCurrentRow(index)
+   47:         window.navigation.setCurrentRow(0)
+   48:         button.click()
+   49:         assert window.navigation.currentRow() == index
+   50:         assert window.pages.currentIndex() == index
+   51:     window.navigation.setCurrentRow(0)
+   52:     summary = window.overview_page.status.text()
+   53:     assert 'observation.csv — 2 rows' in summary
+   54:     assert 'CO2 / UCL-4000; 500 K; 11 points' in summary
+   55:     assert '1 session observation choices; observation selected; reference selected' in summary
+   56:     assert window.current_spectrum is observation
+   57:     assert window.comparison_browser.current_observation is snapshot
+   58:     assert window.comparison_browser.current_reference == reference
+   59:     assert window.reference_browser.current_reference is reference
+   60:     assert window.reference_browser.http is None and window.reference_browser.product_http is None
+   61:     window._clear_spectrum_display()
+   62:     window.navigation.setCurrentRow(2)
+   63:     window.navigation.setCurrentRow(0)
+   64:     assert 'Current observation: none loaded' in window.overview_page.status.text()
+   65:     assert '1 session observation choices; observation selected' in window.overview_page.status.text()
+   66: 
+   67: 
+   68: @pytest.mark.parametrize('via_dialog', [False, True])
+   69: def test_settings_csv_choice_reaches_existing_import_dispatch(window, tmp_path, via_dialog):
+   70:     window.settings_page.csv_schema.setCurrentIndex(1)
+   71:     assert window.spectrum_schema_selector.currentIndex() == 1
+   72:     source = str(tmp_path / 'test.csv')
+   73:     with patch.object(main_window, 'import_spectrum', return_value=sentinel.spectrum) as importer, \
+   74:          patch.object(window, '_display_spectrum') as display, \
+   75:          patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(source, '')):
+   76:         if via_dialog:
+   77:             window._import_csv()
+   78:         else:
+   79:             window._import_csv_from_path(source)
+   80:     importer.assert_called_once_with(source, archive_schema=main_window.WASP39B_SCHEMA)
+   81:     display.assert_called_once_with(sentinel.spectrum, schema=main_window.WASP39B_SCHEMA)
+   82:     window.spectrum_schema_selector.setCurrentIndex(0)
+   83:     assert window.settings_page.csv_schema.currentIndex() == 0
+   84: 
+   85: 
+   86: def test_settings_paths_and_navigation_do_not_scan_or_write_data(window, tmp_path):
+   87:     files_before = sorted(tmp_path.rglob('*'))
+   88:     fields = window.settings_page.location_fields
+   89:     assert fields['Research projects'].text() == str(window.project_store.root.absolute())
+   90:     assert fields['NASA cache'].text() == str(window.nasa_browser.cache_root.absolute())
+   91:     assert fields['ExoMol catalogue cache'].text() == str(window.reference_browser.cache_root.absolute())
+   92:     assert fields['ExoMol reference cache'].text() == str((window.reference_browser.cache_root / 'references').absolute())
+   93:     assert all(field.isReadOnly() for field in fields.values())
+   94:     with patch.object(window.project_store, 'projects') as projects, \
+   95:          patch('ecas.ui.molecular_browser.cached_references') as cache, \
+   96:          patch('ecas.ui.comparison_browser.cached_references') as comparison_cache:
+   97:         window.navigation.setCurrentRow(5)
+   98:         window.navigation.setCurrentRow(0)
+   99:         projects.assert_not_called()
+  100:         cache.assert_not_called()
+  101:         comparison_cache.assert_not_called()
+  102:     assert sorted(tmp_path.rglob('*')) == files_before
+  103:     assert window.current_spectrum is None
+  104:     assert 'none loaded' in window.overview_page.status.text()
+  105:     assert window.overview_page.status.textFormat() == Qt.TextFormat.PlainText
+  106:     assert isinstance(window.pages.widget(0), QScrollArea)
+  107:     assert isinstance(window.pages.widget(5), QScrollArea)
+  108: 
+  109: 
+  110: def test_csv_preference_does_not_reinterpret_loaded_table_or_persist(window, tmp_path):
+  111:     root = Path(__file__).resolve().parents[1]
+  112:     window.settings_page.csv_schema.setCurrentIndex(1)
+  113:     window._import_csv_from_path(str(root / 'data/NASA/2026-10-27/feinstein-2023.tbl'))
+  114:     observation, details = window.current_spectrum, window.current_spectrum_details
+  115:     assert details is not None
+  116:     window.settings_page.csv_schema.setCurrentIndex(0)
+  117:     assert window.current_spectrum is observation and window.current_spectrum_details is details
+  118:     window.settings_page.csv_schema.setCurrentIndex(1)
+  119:     reopened = ECASWindow(projects_dir=tmp_path / 'projects', reference_cache_dir=tmp_path / 'cache')
+  120:     try:
+  121:         assert reopened.settings_page.csv_schema.currentIndex() == 0
+  122:         assert reopened.spectrum_schema_selector.currentIndex() == 0
+  123:     finally:
+  124:         reopened.close()
+
+=== tests/test_main_window.py ===
+    1: 
+    2: import os
+    3: from unittest.mock import patch, sentinel
+    4: 
+    5: import pytest
+    6: 
+    7: os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    8: 
+    9: from PySide6.QtWidgets import QApplication
+   10: 
+   11: from ecas.ui.main_window import ECASWindow
+   12: from ecas.ui import main_window
+   13: 
+   14: 
+   15: @pytest.fixture
+   16: def window():
+   17:     app = QApplication.instance() or QApplication([])
+   18:     widget = ECASWindow()
+   19:     yield widget
+   20:     widget.close()
+   21: 
+   22: 
+   23: def test_schema_selector_defaults_to_generic(window):
+   24:     selector = window.spectrum_schema_selector
+   25:     assert [selector.itemText(i) for i in range(selector.count())] == [
+   26:         "Generic / Unknown", "WASP-39 b Archive"
+   27:     ]
+   28:     assert selector.currentIndex() == 0
+   29:     layout = selector.parentWidget().layout()
+   30:     import_button = next(button for button in selector.parentWidget().findChildren(
+   31:         main_window.QPushButton) if button.text() == "Import Spectrum")
+   32:     assert layout.indexOf(selector) < layout.indexOf(import_button)
+   33: 
+   34: 
+   35: @pytest.mark.parametrize('via_dialog', [False, True])
+   36: def test_empty_import_error_still_has_visible_explanation(window, tmp_path, via_dialog):
+   37:     path = str(tmp_path / 'synthetic.csv')
+   38:     with patch.object(window, '_read_spectrum_file', side_effect=main_window.SpectrumImportError()), \
+   39:          patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(path, '')), \
+   40:          patch.object(main_window.QMessageBox, 'warning') as warning:
+   41:         if via_dialog:
+   42:             window._import_csv()
+   43:         else:
+   44:             window._import_csv_from_path(path)
+   45:     warning.assert_called_once()
+   46:     assert 'No further error details were provided' in warning.call_args.args[2]
+   47:     assert window.current_spectrum is None
+   48:     assert window.statusBar().currentMessage() == 'Import failed'
+   49: 
+   50: 
+   51: @pytest.mark.parametrize("via_dialog", [False, True])
+   52: @pytest.mark.parametrize("schema_index", [0, 1])
+   53: def test_selected_schema_reaches_importer_and_display(window, tmp_path, via_dialog, schema_index):
+   54:     """Both entry points must use the importer's real keyword contract."""
+   55:     path = str(tmp_path / "synthetic.csv")
+   56:     window.spectrum_schema_selector.setCurrentIndex(schema_index)
+   57:     schema = main_window.WASP39B_SCHEMA if schema_index else None
+   58:     with patch.object(main_window, "import_spectrum", autospec=True,
+   59:                       return_value=sentinel.spectrum) as importer, \
+   60:          patch.object(window, "_display_spectrum") as display, \
+   61:          patch.object(main_window.QFileDialog, "getOpenFileName",
+   62:                       return_value=(path, "CSV files (*.csv)")):
+   63:         if via_dialog:
+   64:             window._import_csv()
+   65:         else:
+   66:             window._import_csv_from_path(path)
+   67:     importer.assert_called_once_with(path, archive_schema=schema)
+   68:     display.assert_called_once_with(sentinel.spectrum, schema=schema)
+   69: 
+   70: 
+   71: def test_cancelled_dialog_preserves_existing_display(window):
+   72:     window.spectrum_status.setText("Existing dataset")
+   73:     with patch.object(main_window.QFileDialog, "getOpenFileName",
+   74:                       return_value=("", "")), \
+   75:          patch.object(main_window, "import_spectrum", autospec=True) as importer, \
+   76:          patch.object(window, "_clear_spectrum_display") as clear, \
+   77:          patch.object(window, "_display_spectrum") as display:
+   78:         window._import_csv()
+   79:     importer.assert_not_called()
+   80:     clear.assert_not_called()
+   81:     display.assert_not_called()
+   82:     assert window.spectrum_status.text() == "Existing dataset"
+   83: 
+   84: 
+   85: @pytest.mark.parametrize("via_dialog", [False, True])
+   86: def test_bundled_archive_imports_into_table_and_plot_without_database(window, via_dialog):
+   87:     """Exercise the actual file importer and display, not mocked spectrum data."""
+   88:     from pathlib import Path
+   89:     path = str(Path(__file__).resolve().parents[1] / "data" / "WASP-39b" /
+   90:                "table_WASP-39-b-Feinstein-et-al.-2023.csv")
+   91:     window.spectrum_schema_selector.setCurrentIndex(1)
+   92:     with patch.object(main_window.QMessageBox, "warning") as warning, \
+   93:          patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+   94:         if via_dialog:
+   95:             window._import_csv()
+   96:         else:
+   97:             window._import_csv_from_path(path)
+   98:     warning.assert_not_called()
+   99:     spectrum = window.current_spectrum
+  100:     assert spectrum.row_count == 331
+  101:     assert window.spectrum_table.rowCount() == 331
+  102:     assert window.spectrum_table.columnCount() == 23
+  103:     assert window.spectra_plot._current_spectrum is spectrum
+  104:     assert spectrum.rows[0]["wavelength"] == spectrum.rows[0]["centralwavelng"]
+  105:     assert spectrum.rows[0]["signal"] == spectrum.rows[0]["pl_trandep"]
+  106:     assert "Imported 331 measurements" in window.statusBar().currentMessage()
+  107: 
+  108: 
+  109: def test_bundled_archive_requires_explicit_schema_in_generic_mode(window):
+  110:     from pathlib import Path
+  111:     path = Path(__file__).resolve().parents[1] / "data" / "WASP-39b" / "table_WASP-39-b-Feinstein-et-al.-2023.csv"
+  112:     with patch.object(main_window.QMessageBox, "warning") as warning:
+  113:         window._import_csv_from_path(str(path))
+  114:     warning.assert_called_once()
+  115:     assert window.current_spectrum is None
+  116:     assert window.spectrum_table.rowCount() == 0
+  117:     assert window.statusBar().currentMessage() == "Import failed"
+  118: 
+  119: 
+  120: @pytest.mark.parametrize("via_dialog", [False, True])
+  121: def test_downloaded_nasa_table_displays_source_units_and_metadata(window, via_dialog):
+  122:     from pathlib import Path
+  123:     path = str(Path(__file__).resolve().parents[1] / "data/NASA/2026-10-27/feinstein-2023.tbl")
+  124:     with patch.object(main_window.QMessageBox, "warning") as warning, \
+  125:          patch.object(main_window.QFileDialog, "getOpenFileName", return_value=(path, "")):
+  126:         if via_dialog:
+  127:             window._import_csv()
+  128:         else:
+  129:             window._import_csv_from_path(path)
+  130:     warning.assert_not_called()
+  131:     assert window.current_spectrum.row_count == 331
+  132:     assert window.spectrum_table.columnCount() == 31
+  133:     assert window.current_spectrum.axis_unit == "microns"
+  134:     assert window.current_spectrum.signal_unit == "%"
+  135:     assert dict(window.current_spectrum_details.metadata)["PL_NAME"] == "WASP-39 b"
+  136:     with patch.object(main_window.QMessageBox, "warning"):
+  137:         window._import_csv_from_path(str(Path(path).with_name("missing.tbl")))
+  138:     assert window.current_spectrum is None
+  139:     assert window.current_spectrum_details is None
+  140: 
+  141: 
+  142: def test_main_window_has_expected_navigation():
+  143:     app = QApplication.instance() or QApplication([])
+  144: 
+  145:     window = ECASWindow()
+  146: 
+  147:     assert window.windowTitle().startswith("ECAS")
+  148:     assert [window.navigation.item(i).text() for i in range(window.navigation.count())] == [
+  149:         'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Comparisons', 'Settings']
+  150:     assert window.pages.count() == window.navigation.count()
+  151:     for index in range(window.navigation.count()):
+  152:         window.navigation.setCurrentRow(index)
+  153:         assert window.pages.currentIndex() == index
+  154: 
+  155:     window.close()
+  156: 
+  157: 
+  158: def test_comparisons_explains_pending_work_and_has_no_reference_controls(window):
+  159:     window.navigation.setCurrentRow(4)
+  160:     page = window.pages.currentWidget()
+  161:     descriptions = ' '.join(label.text() for label in page.findChildren(main_window.QLabel))
+  162:     assert 'Select inputs independently' in descriptions
+  163:     assert 'No overlay, residual, score or detection is produced' in descriptions
+  164:     assert not page.findChildren(main_window.MolecularReferenceBrowser)
+  165:     assert window.pages.widget(3).isAncestorOf(window.reference_browser)
+  166:     assert window.reference_browser.http is None and window.reference_browser.product_http is None
+  167: 
+  168: 
+  169: @pytest.mark.parametrize('via_dialog', [False, True])
+  170: def test_generic_csv_uses_manager_and_displays_real_values(window, tmp_path, via_dialog):
+  171:     source = tmp_path / 'generic.csv'
+  172:     source.write_text('wavelength,signal\n1.0,2.0\n2.0,3.0\n', encoding='utf-8')
+  173:     with patch.object(main_window.QMessageBox, 'warning') as warning, \
+  174:          patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(str(source), '')):
+  175:         if via_dialog:
+  176:             window._import_csv()
+  177:         else:
+  178:             window._import_csv_from_path(str(source))
+  179:     warning.assert_not_called()
+  180:     assert window.current_spectrum.rows[0] == {'wavelength': 1.0, 'signal': 2.0}
+  181:     assert window.spectrum_table.rowCount() == 2
+  182:     assert window.spectra_plot._current_spectrum is window.current_spectrum
+  183:     assert window.current_spectrum_details is None
+  184: 
+  185: 
+  186: @pytest.mark.parametrize('via_dialog', [False, True])
+  187: def test_manager_format_rejection_clears_previous_table_metadata(window, tmp_path, via_dialog):
+  188:     from pathlib import Path
+  189:     window._import_csv_from_path(str(Path(__file__).resolve().parents[1] /
+  190:                                     'data/NASA/2026-10-27/feinstein-2023.tbl'))
+  191:     assert window.current_spectrum_details is not None
+  192:     source = tmp_path / 'unsupported.txt'
+  193:     source.write_text('wavelength,signal\n1.0,2.0\n', encoding='utf-8')
+  194:     with patch.object(main_window.QMessageBox, 'warning') as warning, \
+  195:          patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(str(source), '')):
+  196:         if via_dialog:
+  197:             window._import_csv()
+  198:         else:
+  199:             window._import_csv_from_path(str(source))
+  200:     warning.assert_called_once()
+  201:     assert 'only CSV files are supported' in warning.call_args.args[2]
+  202:     assert window.current_spectrum is None and window.current_spectrum_details is None
+  203:     assert window.spectrum_table.rowCount() == 0
+  204:     assert window.spectra_plot._current_spectrum is None
+  205: 
+  206: 
+  207: def test_import_csv_displays_warnings_in_status_bar(tmp_path):
+  208:     """Test that warnings from spectrum import are shown in status bar."""
+  209:     app = QApplication.instance() or QApplication([])
+  210:     window = ECASWindow()
+  211: 
+  212:     # Create a CSV with missing uncertainty values (generates a warning)
+  213:     csv_path = tmp_path / "with_warnings.csv"
+  214:     csv_path.write_text(
+  215:         "wavelength,signal,uncertainty\n"
+  216:         "400,12.5,0.2\n"
+  217:         "401,13.1,\n"  # missing uncertainty
+  218:         "402,14.0,0.3\n",
+  219:         encoding="utf-8",
+  220:     )
+  221: 
+  222:     window._import_csv_from_path(str(csv_path))
+  223: 
+  224:     # Give event loop time for Qt signals to process before asserting
+  225:     QApplication.processEvents()
+  226: 
+  227:     # Import succeeded - spectrum_status should show loaded info
+  228:     assert "Loaded:" in window.spectrum_status.text()
+  229: 
+  230:     # Status bar should include the warning about missing uncertainty
+  231:     status_text = window.statusBar().currentMessage()
+  232:     assert "Imported 3 measurements" in status_text
+  233:     assert "missing uncertainty values" in status_text
+  234: 
+  235:     window.close()
+  236: 
+
+=== ecas/ui/comparison_browser.py ===
+    1: """Independent, offline input inspection; no scientific comparison operations."""
+    2: from copy import deepcopy
+    3: 
+    4: from PySide6.QtCore import Qt
+    5: from PySide6.QtWidgets import (
+    6:     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox,
+    7:     QTableWidget, QTableWidgetItem, QAbstractItemView, QSplitter,
+    8: )
+    9: 
+   10: from ecas.ingestion.exomol_reference_cache import cached_references, load_reference
+   11: 
+   12: 
+   13: def _label(text):
+   14:     label = QLabel(text)
+   15:     label.setTextFormat(Qt.TextFormat.PlainText)
+   16:     label.setWordWrap(True)
+   17:     return label
+   18: 
+   19: 
+   20: def _table():
+   21:     table = QTableWidget()
+   22:     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+   23:     return table
+   24: 
+   25: 
+   26: def _fill(table, columns, rows):
+   27:     table.clearContents()
+   28:     table.setColumnCount(len(columns))
+   29:     table.setHorizontalHeaderLabels(columns)
+   30:     table.setRowCount(len(rows))
+   31:     for i, row in enumerate(rows):
+   32:         for j, value in enumerate(row):
+   33:             table.setItem(i, j, QTableWidgetItem('' if value is None else str(value)))
+   34: 
+   35: 
+   36: class ComparisonBrowser(QWidget):
+   37:     """Session observation snapshots and revalidated cached ExoMol references.
+   38: 
+   39:     The input getter reads the window's already imported observation, never a
+   40:     source file. Each explicit addition copies its values so subsequent imports
+   41:     cannot change the selected input. Reference selection never creates a client.
+   42:     """
+   43: 
+   44:     def __init__(self, observation_getter, cache_root, parent=None):
+   45:         super().__init__(parent)
+   46:         self.observation_getter = observation_getter
+   47:         self.cache_root = cache_root
+   48:         self.current_observation = None
+   49:         self.current_reference = None
+   50:         layout = QVBoxLayout(self)
+   51:         title = _label('Comparisons')
+   52:         title.setObjectName('pageTitle')
+   53:         layout.addWidget(title)
+   54:         layout.addWidget(_label(
+   55:             'Select inputs independently and inspect their original values below. '
+   56:             'Observation choices last for this session; open saved observations in Projects '
+   57:             'and add them here. Download references in Molecular References, then refresh '
+   58:             'the cached choices. No overlay, residual, score or detection is produced.'))
+   59:         panels = QSplitter(Qt.Orientation.Horizontal)
+   60:         layout.addWidget(panels, 1)
+   61:         for side in ('observation', 'reference'):
+   62:             panel = QWidget()
+   63:             box = QVBoxLayout(panel)
+   64:             box.addWidget(_label('Observation / input' if side == 'observation' else 'Cached molecular reference'))
+   65:             controls = QHBoxLayout()
+   66:             selector = QComboBox()
+   67:             selector.setMinimumContentsLength(12)
+   68:             selector.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+   69:             button = QPushButton('Add current observation' if side == 'observation' else 'Refresh cached choices')
+   70:             controls.addWidget(selector, 1)
+   71:             controls.addWidget(button)
+   72:             box.addLayout(controls)
+   73:             status = _label('No input selected.')
+   74:             table = _table()
+   75:             box.addWidget(status)
+   76:             box.addWidget(table, 1)
+   77:             setattr(self, side + '_selector', selector)
+   78:             setattr(self, side + '_status', status)
+   79:             setattr(self, side + '_table', table)
+   80:             setattr(self, side + '_button', button)
+   81:             panels.addWidget(panel)
+   82:         self.cache_status = _label('Cached choices have not been refreshed.')
+   83:         self.compatibility = _label('Select an observation and a cached reference for inspection.')
+   84:         layout.addWidget(self.cache_status)
+   85:         layout.addWidget(self.compatibility)
+   86:         self.observation_button.clicked.connect(self.add_current_observation)
+   87:         self.reference_button.clicked.connect(self.refresh_references)
+   88:         self.observation_selector.currentIndexChanged.connect(self._select_observation)
+   89:         self.reference_selector.currentIndexChanged.connect(self._select_reference)
+   90: 
+   91:     def add_current_observation(self):
+   92:         spectrum, source_hash = self.observation_getter()
+   93:         if spectrum is None:
+   94:             self.observation_status.setText('Load an observation in Spectral Data or Projects first. Previous selection retained.')
+   95:             return
+   96:         snapshot = deepcopy(spectrum)
+   97:         self.observation_selector.addItem(
+   98:             f'{self.observation_selector.count() + 1}: {snapshot.source_file.name} | {snapshot.row_count} rows',
+   99:             (snapshot, source_hash))
+  100:         self.observation_selector.setCurrentIndex(self.observation_selector.count() - 1)
+  101: 
+  102:     def _select_observation(self, *_):
+  103:         selected = self.observation_selector.currentData()
+  104:         self.current_observation = selected[0] if selected else None
+  105:         if selected:
+  106:             spectrum, source_hash = selected
+  107:             self.observation_status.setText(
+  108:                 f'Source: {spectrum.source_file}\nObservable: {spectrum.signal_type or "unknown"}; '
+  109:                 f'axis unit: {spectrum.axis_unit or "unknown"}; signal unit: {spectrum.signal_unit or "unknown"}. '
+  110:                 f'Source SHA-256: {source_hash or "not established"}. '
+  111:                 + ('Warnings: ' + '; '.join(spectrum.warnings) if spectrum.warnings else ''))
+  112:             _fill(self.observation_table, spectrum.columns,
+  113:                   [tuple(row[column] for column in spectrum.columns) for row in spectrum.rows])
+  114:         self._explain()
+  115: 
+  116:     def refresh_references(self):
+  117:         previous = self.reference_selector.currentData()
+  118:         self.reference_selector.blockSignals(True)
+  119:         self.reference_selector.clear()
+  120:         try:
+  121:             records, invalid = cached_references(self.cache_root / 'references')
+  122:             for path, result in records:
+  123:                 request = result.request
+  124:                 self.reference_selector.addItem(
+  125:                     f'{request.service.formula} / {request.service.isotopologue} / {request.service.dataset} | '
+  126:                     f'{request.temperature} K | {request.minimum}–{request.maximum} cm^-1 | '
+  127:                     f'{request.spacing} spacing | {path.stem}', str(path))
+  128:             index = self.reference_selector.findData(previous) if previous is not None else -1
+  129:             self.reference_selector.setCurrentIndex(index)
+  130:             self.cache_status.setText(f'{len(records)} cached references available; {invalid} invalid entries excluded. '
+  131:                                       'Uncached catalogue entries require a supported download in Molecular References.')
+  132:         except (OSError, ValueError) as error:
+  133:             self.cache_status.setText(f'Reference cache unavailable: {error}')
+  134:         finally:
+  135:             self.reference_selector.blockSignals(False)
+  136:         self._select_reference()
+  137: 
+  138:     def _select_reference(self, *_):
+  139:         self.current_reference = None
+  140:         _fill(self.reference_table, (), ())
+  141:         path = self.reference_selector.currentData()
+  142:         self.reference_status.setText('No cached reference selected.')
+  143:         self.reference_status.setToolTip('')
+  144:         if path is not None:
+  145:             try:
+  146:                 result = load_reference(path)
+  147:                 self.current_reference = result
+  148:                 product, request = result.product, result.request
+  149:                 provenance = product.provenance
+  150:                 self.reference_status.setText(
+  151:                     f'{provenance.molecule} / {provenance.isotopologue} / {provenance.dataset}; '
+  152:                     f'{request.temperature} K; zero pressure; Doppler-only. Calculated absorption cross section.\n'
+  153:                     f'Source SHA-256: {product.source_sha256}\nSource: {provenance.source_url}')
+  154:                 self.reference_status.setToolTip('\n'.join((*provenance.citations, provenance.licence_url)))
+  155:                 _fill(self.reference_table, ('Wavenumber (cm^-1)', 'Cross section (cm^2/molecule)'), product.points)
+  156:             except (OSError, ValueError) as error:
+  157:                 self.reference_status.setText(f'Cached reference unavailable or invalid: {error}')
+  158:         self._explain()
+  159: 
+  160:     def _explain(self):
+  161:         if self.current_observation is None or self.current_reference is None:
+  162:             self.compatibility.setText('Select an observation and a valid cached reference for inspection. '
+  163:                                        'Comparison operations remain unavailable.')
+  164:             return
+  165:         spectrum = self.current_observation
+  166:         reasons = [
+  167:             'Comparison blocked: this reference is a calculated absorption cross section in cm^2/molecule '
+  168:             'on wavenumber cm^-1, not a predicted transit-depth spectrum. '
+  169:             'Cross sections and transit depth cannot be compared directly without a physical model.'
+  170:         ]
+  171:         if not spectrum.signal_type or not spectrum.signal_unit or not spectrum.axis_unit:
+  172:             reasons.append('Observation observable or units are unknown; no meaning or conversion is inferred.')
+  173:         reasons.append('A physical model with documented conditions, compatible observables/units, '
+  174:                        'coordinate frame, grid alignment and instrument response evidence is required '
+  175:                        'before overlay or residual analysis. Uncertainty/noise evidence is required for '
+  176:                        'weighted diagnostics. Scientific comparison operations are not available yet.')
+  177:         self.compatibility.setText('\n'.join(reasons))
+
+=== ecas/models/spectrum.py ===
+    1: 
+    2: """Typed representation of an imported spectrum.
+    3: 
+    4: This model stores validated measurements, source information, and import
+    5: warnings. It does not guess physical units or scientific signal meaning.
+    6: """
+    7: 
+    8: from dataclasses import dataclass
+    9: from pathlib import Path
+   10: 
+   11: 
+   12: # CSV cells can be numeric, text, or missing.
+   13: # None represents a missing value; it must never be treated as zero.
+   14: CellValue = float | str | None
+   15: 
+   16: 
+   17: @dataclass(frozen=True)
+   18: class SpectrumData:
+   19:     """Structured data returned after a spectrum file is imported."""
+   20: 
+   21:     # Original file location, retained for traceability.
+   22:     source_file: Path
+   23: 
+   24:     # Column names and validated rows, in their original column order.
+   25:     rows: tuple[dict[str, CellValue], ...]
+   26:     columns: tuple[str, ...]
+   27: 
+   28:     # None means the importer has not established this information.
+   29:     # These values must not be inferred from the data alone.
+   30:     axis_unit: str | None = None
+   31:     signal_unit: str | None = None
+   32:     signal_type: str | None = None
+   33: 
+   34:     # Non-fatal import limitations, such as missing uncertainty values.
+   35:     warnings: tuple[str, ...] = ()
+   36: 
+   37:     @property
+   38:     def row_count(self) -> int:
+   39:         """Return the number of imported measurement rows."""
+   40:         return len(self.rows)
+
+=== docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md ===
+    1: # Overview and Settings — 2026-10-28
+    2: 
+    3: Approved feedback step 6 is implemented locally in `ecas/ui/workspace_pages.py`
+    4: and connected through `ecas/ui/main_window.py`. The user accepted Argon's first
+    5: six code reviews and authorized pipeline continuation. This new increment needs
+    6: its own independent review; human normal-desktop acceptance remains open.
+    7: 
+    8: ## Implemented behavior
+    9: 
+   10: Overview explains the implemented import/project/reference/inspection workflow,
+   11: provides navigation shortcuts and summarizes in-memory state whenever opened.
+   12: It shows the current observation filename/row count, the reference displayed in
+   13: Molecular References, and the number of session observation choices and selection
+   14: presence in Comparisons. These are distinct states, not an inventory of saved
+   15: projects or cached products. A summary is a page-entry snapshot, not a continuously
+   16: updating activity monitor. Labels use plain text, including source filenames.
+   17: 
+   18: Settings exposes the existing CSV schema choice, synchronized in both directions
+   19: with Spectral Data. Both CSV entry points use the same established selector.
+   20: Changing the setting applies to subsequent CSV imports; it does not reinterpret
+   21: loaded/saved values, affect .tbl dispatch or persist after closing the application.
+   22: The supported generic/archive choices and their default remain unchanged.
+   23: 
+   24: The page displays selectable read-only absolute paths for the actual configured
+   25: project root, NASA cache, ExoMol catalogue cache and ExoMol reference cache. It
+   26: uses existing service/browser attributes, including constructor overrides. It
+   27: does not scan, move, delete, create or change those locations. Text explains
+   28: storage roles, session-only comparison observations, public online actions,
+   29: offline reopening and cancellation. No new credential or network controls exist.
+   30: 
+   31: Both pages are scrollable at smaller window sizes. Navigation indices and all
+   32: existing long-lived workspaces remain unchanged. Shortcuts only navigate; they
+   33: do not initiate searches/imports/downloads, change selections or cancel requests.
+   34: No scientific analysis, production eligibility, persistent settings format,
+   35: storage migration, new dependency or source/cache mutation is introduced.
+   36: 
+   37: ## Verification
+   38: 
+   39: - `.venv/Scripts/python.exe -I -B docs/Chunk_5_1/verification_workspace_20261028/run_checks.py focused`
+   40:   — **121 passed**, 5.82 s, exit 0.
+   41: - `.venv/Scripts/python.exe -I -B docs/Chunk_5_1/verification_workspace_20261028/run_checks.py full`
+   42:   — **571 passed, 1 skipped**, 11.15 s, exit 0.
+   43: - `git -c core.safecrlf=false diff --check` — exit 0.
+   44: 
+   45: Logs, exact subprocess commands, minimal environment key names and dependency
+   46: versions are in `verification_workspace_20261028/`. Existing skip: Windows
+   47: directory-symlink privileges. Five added integration cases verify navigation and
+   48: independent data preservation after source removal; both CSV dispatch entry
+   49: points; configured paths and no storage scanning/writing on page entry; .tbl
+   50: fidelity and session-only preference reset. They use real offscreen widgets,
+   51: temporary project/reference roots and existing captured fixtures. No live request,
+   52: paid service, credential, commit or push was used. Automated checks do not replace
+   53: normal-desktop inspection or establish scientific validity.
+   54: 
+   55: Review prompt and manifest: `review_workspace_20261028/07-workspace-pages.txt`
+   56: and `manifest.json`. Next: independent review and desktop acceptance of these
+   57: pages, then reconcile remaining Chunk 5.1 acceptance items against the roadmap.
+   58: Real-data scientific validation stays deferred; no chunk completion is claimed.

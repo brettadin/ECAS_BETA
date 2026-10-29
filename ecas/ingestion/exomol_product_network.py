@@ -5,7 +5,7 @@ import re
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkProxy, QNetworkReply, QNetworkRequest, QNetworkCookie
 
-from .exomol_product import ORIGIN, SERVICE_URL, ProductRequest, parse_form, product_url, supported_entry, validate_product
+from .exomol_product import ORIGIN, ProductRequest, parse_form, product_url, supported_entry, validate_product
 
 
 @dataclass(frozen=True)
@@ -39,15 +39,16 @@ class PublicExomolProductHttp(QObject):
     def download(self, entry, request, callback):
         if self.closed or self.callback is not None:
             raise ValueError('Reference client is closed or already active')
-        if not supported_entry(entry) or not isinstance(request,ProductRequest):
-            raise ValueError('Retrieval is supported only for CO2 / 12C-16O2 / UCL-4000')
+        if (not supported_entry(entry) or not isinstance(request,ProductRequest)
+                or entry.isotopologue!=request.isotopologue):
+            raise ValueError('Selected catalogue identity and request must match a supported service')
         self.request=request; self.callback=callback
         self.timer.start(30000)  # Overall deadline for form, POST and product GET.
-        try: self._send('form','GET',SERVICE_URL)
+        try: self._send('form','GET',request.service.url)
         except Exception as error: self._complete(None,str(error) or 'Could not start reference request')
 
     def _send(self, phase, method, url, body=None, cookie=None):
-        allowed=SERVICE_URL if phase in ('form','submit') else ORIGIN+self.request.product_path
+        allowed=self.request.service.url if phase in ('form','submit') else ORIGIN+self.request.product_path
         if url!=allowed or method!=('POST' if phase=='submit' else 'GET'):
             raise ValueError('Unsupported reference endpoint')
         self.phase=phase
@@ -64,7 +65,7 @@ class PublicExomolProductHttp(QObject):
         self.buffer=bytearray()
         if method=='POST':
             request.setRawHeader(b'Cookie',cookie)
-            request.setRawHeader(b'Referer',SERVICE_URL.encode())
+            request.setRawHeader(b'Referer',self.request.service.url.encode())
             request.setRawHeader(b'Origin',ORIGIN.encode())
             request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader,'application/x-www-form-urlencoded')
             reply=self.manager.post(request,body)
@@ -95,7 +96,7 @@ class PublicExomolProductHttp(QObject):
             if reply.error()!=QNetworkReply.NetworkError.NoError or status!=200:
                 raise ValueError(f'Reference request failed (HTTP {status}): {reply.errorString()}')
             if self.phase=='form':
-                form=parse_form(raw)
+                form=parse_form(raw,self.request.isotopologue)
                 cookies=[]
                 for name,value in reply.rawHeaderPairs():
                     if bytes(name).lower()==b'set-cookie':
@@ -103,7 +104,7 @@ class PublicExomolProductHttp(QObject):
                 if len(cookies)!=1 or not re.fullmatch(b'[A-Za-z0-9]{32,128}',bytes(cookies[0].value())):
                     raise ValueError('Anonymous anti-forgery cookie is missing or ambiguous')
                 # Only this fresh anonymous cookie is sent, and only to this form POST.
-                self._send('submit','POST',SERVICE_URL,form.body(self.request),b'csrftoken='+bytes(cookies[0].value()))
+                self._send('submit','POST',self.request.service.url,form.body(self.request),b'csrftoken='+bytes(cookies[0].value()))
             elif self.phase=='submit':
                 self._send('product','GET',product_url(raw,self.request))
             else:

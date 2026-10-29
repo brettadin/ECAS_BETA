@@ -2,6 +2,8 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QListWidget
 
+from ecas.ui.project_labels import project_label
+
 
 class ProjectBrowser(QWidget):
     saveRequested = Signal(str)
@@ -99,8 +101,9 @@ class ProjectBrowser(QWidget):
             if name:
                 self.records = self.store.spectra(name)
                 for record in self.records:
-                    integrity = 'source preserved' if record.attachment else 'legacy: no source attachment'
-                    self.spectra.addItem(f'{record.record_id}: {record.spectrum.source_file.name} | {record.spectrum.row_count} rows | {integrity}')
+                    label, tooltip = project_label(record)
+                    self.spectra.addItem(label)
+                    self.spectra.item(self.spectra.count() - 1).setToolTip(tooltip)
                 self.status.setText(f'{name}: {len(self.records)} saved spectra. Storage: {self.store.root}')
             else:
                 self.status.setText('Create a project to get started.')

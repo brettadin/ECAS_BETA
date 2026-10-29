@@ -1,0 +1,34 @@
+[
+  {
+    "sha256": "9b6f465941c2ac3879aa25093633817e1aff58e4c7022d7d81bb53e63db4ce25",
+    "path": "ecas/ui/comparison_browser.py"
+  },
+  {
+    "sha256": "4f2dbfb2e17777ade90e6dd89a057994b223699982322020d9293f99ea031958",
+    "path": "tests/test_comparison_browser.py"
+  },
+  {
+    "sha256": "28958a2a6877543ab4c72330a593184870c2d01f72aff491465a0b53d9b067bd",
+    "path": "docs/Chunk_5_1/verification_desktop_20261028/RESULTS.md"
+  },
+  {
+    "sha256": "c5bd2d117e484dcc95fa869489d7121dae515bcd958b1dfd7758452911e7e17e",
+    "path": "docs/Chunk_5_1/verification_desktop_20261028/launch.py"
+  },
+  {
+    "sha256": "3140d259259c51e282cd075890cc878ab79c9bb859fae3b83ab5459756e9adc2",
+    "path": "data/NASA/2026-10-27/feinstein-2023.tbl"
+  },
+  {
+    "sha256": "d323b5dd2f11c87a3cd6c0dc041fd625f00d56ec05cc2f2f2fb756cb01ea9fab",
+    "path": "data/ExoMol/2026-10-28/CO2-12C-16O2-500K-4000-4010-dnu1.sigma"
+  },
+  {
+    "sha256": "695a0560817ca90d7eb4e09f5e3479daa53ec551a23acba530e3ad42955b25f3",
+    "path": "data/ExoMol/2026-10-28/additional-products/H2O-500K-4000-4010-dnu1.sigma"
+  },
+  {
+    "sha256": "cc47d79cf6ba4bb286982f4ffbd74b4af11db32fbc2ee1960209a8e991b77151",
+    "path": "data/ExoMol/2026-10-28/additional-products/CH4-500K-4000-4010-dnu1.sigma"
+  }
+]

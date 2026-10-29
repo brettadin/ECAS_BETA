@@ -1,0 +1,48 @@
+[
+  {
+    "formula": "H2O",
+    "started_utc": "2026-10-28T18:32:21.316706+00:00",
+    "offscreen": true,
+    "human_acceptance": false,
+    "scientific_validation": false,
+    "status": "Reference downloaded, validated and saved for offline reopening. No molecular detection or comparison was performed.",
+    "success": true,
+    "observation_unchanged": true,
+    "finished_utc": "2026-10-28T18:32:22.067632+00:00",
+    "points": 11,
+    "sha256": "695a0560817ca90d7eb4e09f5e3479daa53ec551a23acba530e3ad42955b25f3",
+    "isotopologue": "1H2-16O",
+    "dataset": "POKAZATEL",
+    "settings": {
+      "minimum": 4000,
+      "maximum": 4010,
+      "temperature": 500,
+      "spacing": "1.000000"
+    },
+    "offline_equal": true,
+    "offline_clients_created": false
+  },
+  {
+    "formula": "CH4",
+    "started_utc": "2026-10-28T18:32:22.188252+00:00",
+    "offscreen": true,
+    "human_acceptance": false,
+    "scientific_validation": false,
+    "status": "Reference downloaded, validated and saved for offline reopening. No molecular detection or comparison was performed.",
+    "success": true,
+    "observation_unchanged": true,
+    "finished_utc": "2026-10-28T18:32:23.070353+00:00",
+    "points": 11,
+    "sha256": "cc47d79cf6ba4bb286982f4ffbd74b4af11db32fbc2ee1960209a8e991b77151",
+    "isotopologue": "12C-1H4",
+    "dataset": "MM",
+    "settings": {
+      "minimum": 4000,
+      "maximum": 4010,
+      "temperature": 500,
+      "spacing": "1.000000"
+    },
+    "offline_equal": true,
+    "offline_clients_created": false
+  }
+]

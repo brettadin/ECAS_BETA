@@ -38,7 +38,17 @@ These goals describe the intended direction of the project. Individual capabilit
 
 ## Current application
 
-The **Comparisons** tab now supports molecular reference catalogue search.
+For the latest feedback update and external review, start with the
+[feedback review checkpoint](docs/REVIEW_FEEDBACK_20261028.md).
+
+**Overview** provides workflow shortcuts and a summary of the loaded observation,
+displayed reference and session comparison choices when opened. **Settings** shows
+active read-only storage paths and the existing CSV-schema choice, synchronized
+with Spectral Data. That choice applies to the next CSV import and lasts for the
+session; it does not change loaded data or NASA .tbl handling. See
+[workspace pages](docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md).
+
+The **Molecular References** page supports molecular reference catalogue search.
 Search Water, H2O or an ExoMol isotope/dataset identifier; select a result to inspect
 its identity. It starts with a cached or bundled dated index. **Refresh from ExoMol**
 makes one bounded anonymous metadata request and saves a validated snapshot for
@@ -46,15 +56,29 @@ offline use; **Cancel request** preserves the prior catalogue. No network reques
 is made at startup. Catalogue records do not establish spectral availability,
 coverage or compatibility.
 
-For the initial verified download, search **CO2**, select **12C-16O2 / UCL-4000**,
+Supported downloads are **CO2 / 12C-16O2 / UCL-4000**, **H2O / 1H2-16O / POKAZATEL**
+and **CH4 / 12C-1H4 / MM**. Search the formula, select the matching record,
 choose temperature/range/spacing, then **Download selected reference**. The
 calculated zero-pressure, Doppler-only cross section appears in a separate table;
 **Open cached reference** revalidates it offline. Retrieval for other catalogue
 records remains unsupported. Defaults are reference settings, not inferred planet
 conditions. There is no scientific comparison or molecular-detection result.
-See [product retrieval status](docs/Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md)
+See [current workflow status](docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md)
 for verification, bounds and pending review. Runtime reference caches at
 data/ExoMol/cache/ are excluded from Git.
+
+**Comparisons** supports independent session observation choices and validated
+cached-reference choices, with separate read-only tables and explicit blocked
+comparison explanations. Load/reopen an observation, click **Add current observation**,
+then **Refresh cached choices** and select a reference. Analysis is not implemented.
+Local graphical follow-up adds Plot and Data table tabs in Molecular References
+and in each Comparisons pane. Plots use native units and independent axes; they
+are separate inspection views, not a shared-axis scientific comparison.
+See [graphical inspection notes](docs/Chunk_5_1/ISSUE_4_NATIVE_PLOTS.md).
+See [selection workflow](docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md).
+Switching pages retains
+the current observation, reference selection and any active reference request.
+Current feedback work: [workflow notes](docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md).
 
 The supplied project history identifies a Python desktop application using PySide6 for its user interface, PyQtGraph for spectral visualization, and SQLite-backed persistence.
 

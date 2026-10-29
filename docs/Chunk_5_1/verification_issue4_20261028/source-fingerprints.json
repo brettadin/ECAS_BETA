@@ -1,0 +1,30 @@
+[
+  {
+    "path": "ecas/ingestion/exomol_reference_cache.py",
+    "sha256": "d7beaabdfc7f60e7727f6e01cb5318c98d1ed0abf6163e26bb7e518fbd253394"
+  },
+  {
+    "path": "ecas/ui/molecular_browser.py",
+    "sha256": "bd65a7bd9bf674154b706cb5cfb2ed2e41da08be67c63f94dd6b61c54fe4e248"
+  },
+  {
+    "path": "ecas/ui/comparison_browser.py",
+    "sha256": "e46a36addb7ff1e2577aae746d4c8ed05457ca470af4adf0f0301c63ee2133a5"
+  },
+  {
+    "path": "ecas/ui/main_window.py",
+    "sha256": "1cd8de509c601886b2ca51d89461d8d842a911b0f3e63d52f5d675f043be8757"
+  },
+  {
+    "path": "tests/test_exomol_product.py",
+    "sha256": "6d5809e24323888d4ec8cfc38e897522388217732f8a3ae93d4d4ebc751e4f2f"
+  },
+  {
+    "path": "tests/test_comparison_browser.py",
+    "sha256": "fc3c00c932e33fbbb224bea57630fa50dea81d7f06ce846a528ea3eb456cedd4"
+  },
+  {
+    "path": "docs/Chunk_5_1/ISSUE_4_FIRST_FIXES.md",
+    "sha256": "e0d898ffe1fb0b088c228cb27c62c93000af9dcec221cf579dd32b971c299e27"
+  }
+]

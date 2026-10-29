@@ -1,0 +1,30 @@
+[
+  {
+    "sha256": "6a05d28c9ec91384040a4795bfde525a97b04b01d4e32d03094ba5857a80300d",
+    "path": "ecas/visualization/reference_plot.py"
+  },
+  {
+    "sha256": "83a03ee41c29d1215edc9c6f45635384407c5c421f0493f26ee57be7edf60302",
+    "path": "ecas/visualization/spectra_plot.py"
+  },
+  {
+    "sha256": "df29c0b2eca0535f2251e8d979f40a45b0078c749852a16cf76ecdb5dd79da8c",
+    "path": "ecas/ui/molecular_browser.py"
+  },
+  {
+    "sha256": "c99d875a4bd4da3285cd11686490bb38508e7fa195bc3c26f20abd84a1c79d0a",
+    "path": "ecas/ui/comparison_browser.py"
+  },
+  {
+    "sha256": "327c694e89b31a7b622bcffd2108390dfc94a4f09efa997661efb160f6af31ee",
+    "path": "tests/test_exomol_product.py"
+  },
+  {
+    "sha256": "f66916d130b4949d06a09bf77a1e176bc231c1e2e6dc16afe1a2e29733dc0977",
+    "path": "tests/test_comparison_browser.py"
+  },
+  {
+    "sha256": "d8878aaf62a8957eb11914c01d17bf1ed5f8fb0bf50c47cc8ae560d77c93fa8b",
+    "path": "docs/Chunk_5_1/ISSUE_4_NATIVE_PLOTS.md"
+  }
+]

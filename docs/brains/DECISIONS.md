@@ -7,6 +7,25 @@ persistence and currently has a separate NASA raw-product/provenance cache.
 
 ## Current decision context — 2026-10-28
 
+Workspace pages: Overview summarizes already loaded state on entry without
+scanning projects/caches. Settings mirrors the existing CSV-schema selector
+bidirectionally and displays configured storage paths read-only. The setting
+remains session-only; no relocation, persistent preference format or new network
+policy is introduced. See `../Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md`.
+Argon's first six feedback reviews were accepted by the user; the new workspace
+increment awaits separate review and desktop acceptance.
+
+Comparison-selection continuation: explicit observation additions copy imported
+values into session choices; independently selected ExoMol cache records are
+validated at discovery and selection. Inspection uses separate original-value
+tables without writing projects or changing the two existing displays. The
+compatibility explanation blocks the supported cross-section pairings; it does
+not promote the research eligibility contract into a production service or invent
+physical-model/response/noise declarations. See
+`../Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md`. All five earlier Argon
+feedback reports were received with zero findings; Batch 6 subsequently approved
+the selection snapshot with zero findings. Desktop acceptance remains separate.
+
 The source of current implementation status is PROJECT_STATE.md; older verification
 counts below describe historical checkpoints. NASA exact-name discovery, supported
 transmission-table import and sidecar cache decisions are recorded in
@@ -30,6 +49,16 @@ New work awaits independent review and desktop acceptance. See
 `../Chunk_5_1/PRODUCT_RETRIEVAL_IMPLEMENTATION.md`. The initial project provenance-transfer
 contract is described below. Do not infer
 selection of NIST, JCAMP-DX, line matching or forward modelling from historical plans.
+
+User-feedback follow-up: verified water (H2O / 1H2-16O / POKAZATEL) and methane
+(CH4 / 12C-1H4 / MM) are now explicit service mappings alongside CO2. Immutable
+mapping entries bind identity, endpoint, description, limits and citations; no
+arbitrary catalogue slug becomes a download URL. Requests/cache records carry the
+isotopologue; missing identity in original v1 records means the historical CO2
+service only. Catalogue context must match the validated request. Old records are
+not rewritten. Provider-specific limits are checked before any request; switching
+selected entries does not silently change the chosen settings. New work awaits
+Argon and desktop review; see USER_FEEDBACK_WORKFLOW_20261028.md under Chunk_5_1.
 
 ### Project source attachments — 2026-10-28
 
@@ -335,3 +364,71 @@ The persistence module provides:
 - ✅ Thread-safe connection management
 
 All functions use proper error handling and resource cleanup (finally blocks).
+
+
+---
+
+## Decision: Chunk 6 Comparison Architecture, Fair Ranking, and Persistence Boundaries
+
+**Date:** 2026-10-28  
+**Status:** Implemented (`ecas/comparison/`, `ecas/visualization/residual_plot.py`, `ecas/ui/comparison_browser.py`)
+
+### Context
+Chunk 6 introduces production spectral compatibility validation, explicit alignment transformations, residual diagnostics, multi-candidate evaluation, and reproducible result persistence while upholding strict physical boundaries between microscopic ExoMol cross sections ($\text{cm}^2/\text{molecule}$ on $\text{cm}^{-1}$) and macroscopic planetary transit-depth observations ($\%$ or fraction on $\mu\text{m}$).
+
+### Key Decisions
+1. **Mandatory Eligibility Gate & `left_minus_right` Residual Convention:**
+   - Every call to `evaluate_residuals()` re-runs `assess()` (`ecas-comparison-eligibility-v1`). Non-eligible pairs raise `IneligibleComparisonError` and never produce zero or fallback scores.
+   - Residuals follow `r = y_left - y_right` (`left_minus_right`) in the shared `signal_unit`.
+2. **Explicit Opt-In Alignment with Index Provenance:**
+   - Unit scaling (`fraction <-> percent` scaling `values`, `sigma`, and $s^2 C$), positive wavelength scaling (`nm`/`angstroms -> microns`), exact shared-coordinate restriction, and forward-model top-hat bin integration are explicit functions in `ecas/comparison/alignment.py` returning `TransformedInput(original, transformed, steps)` with `included_indices` and `excluded_indices`. Observations are never upsampled.
+3. **Multi-Candidate Covariance Parity & Tie Preservation:**
+   - In `weighted_residual_v1` mode, fixed-covariance quadratics omit $\ln\det(2\pi C)$. Cross-candidate ranking is therefore blocked (`candidates.combined_covariance.differs_across_candidates`) whenever eligible candidates yield unequal combined covariance matrices. Exact ties within `1e-12` are preserved together in `closest_candidate_indices`.
+4. **SQLite-Safe Project Comparison Envelopes (`ecas-comparison-record-v1`):**
+   - Comparison records are stored atomically (`NamedTemporaryFile` + `os.fsync` + `os.replace`) as canonical SHA-256-signed JSON files under `projects/<project_id>/comparisons/*.json`, avoiding destructive SQLite migrations to `data.sqlite` while binding records to validated project folders.
+5. **Explicit Forward-Model Physical Boundary:**
+   - Raw cross sections cannot be rescaled into transit depth (`project_cross_section_to_transit_depth()` raises `UnsupportedProjectionError`). Precomputed radiative-transfer curves must supply validated `AtmosphericModelProvenance` before entering `ComparisonInput(role='forward_model')`.
+
+
+---
+
+## Decision: Chunk 7 Scientific Resource Catalog, Interoperability, and External Forward-Model Adapter Architecture
+
+**Date:** 2026-10-28  
+**Status:** Implemented (`ecas/resources/catalog.py`, `ecas/ui/resources_browser.py`, `ecas/ingestion/tabular_formats.py`, `ecas/comparison/alignment.py`, `ecas/comparison/model_adapters.py`)
+
+### Context
+Chunk 7 extends ECAS with a traceable `References & Resources` catalog, broader astronomical and laboratory spectral file interoperability (`.ecsv`, `.dat`/`.tsv`, `.fits` `BINTABLE`), explicit wavenumber-to-micron conversion with covariance permutation, and a scientifically grounded integration path for established community atmospheric modeling codes (`petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, `Pyrat Bay`).
+
+### Key Decisions
+1. **Approach C for Atmospheric Modeling Integration (Verified External Forward-Model Adapters):**
+   - Rather than bundling heavy Fortran/C/CUDA binaries and multi-gigabyte opacity grids (Approach A) or implementing an unvalidated single-scale-height toy formula (Approach B), ECAS implements `export_external_forward_model()` in `ecas/comparison/model_adapters.py`.
+   - Precomputed spectra from `petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, and `Pyrat Bay` are converted from their native coordinate/signal conventions (`microns`, SI `m`, cgs `cm`, `nm`, `angstroms`, or wavenumber `cm^-1`; `fraction`, `percent`, or `ppm`) into SHA-256-verified `ecas-forward-model-v1` JSON records with complete `AtmosphericModelProvenance` and molecular-database temperature-applicability checks (`validate_temperature_applicability`).
+   - Copyleft packages (`Pyrat Bay` GPL-2.0, `PLATON` GPL-3.0) are never linked or copied into ECAS; only their external output files are ingested via clean schema adapters.
+2. **Laboratory FTIR vs. Planetary Observation Separation:**
+   - `ecas/ingestion/tabular_formats.py` distinguishes astronomical transmission spectra from laboratory FTIR/UV-Vis spectra (`wavenumber` + `absorbance`/`transmittance`), tagging laboratory files with `axis_unit='cm^-1'` and `signal_type='Laboratory FTIR Absorbance'` / `'Laboratory FTIR Transmittance'` so `observation_input()` leaves `observable=None` and `assess()` blocks direct comparison against planetary transit depth.
+3. **Order-Reversing Wavenumber-to-Wavelength Covariance Permutation:**
+   - Converting strictly increasing wavenumbers ($\tilde{\nu}$ in $\text{cm}^{-1}$) to strictly increasing wavelengths ($\lambda = 10^4 / \tilde{\nu}$ in $\mu\text{m}$) reverses coordinate ordering. `convert_wavenumber_to_microns()` in `ecas/comparison/alignment.py` applies the exact reversal permutation $P$ to coordinates, values, `sigma`, and `covariance` ($\mathbf{C}' = P \mathbf{C} P^{\mathsf{T}}$), preserving $\mathbf{r}^{\mathsf{T}}\mathbf{C}^{-1}\mathbf{r}$ to machine precision.
+4. **Canonical HTTPS Resource & Evidence Status Governance:**
+   - Every resource in `ecas/resources/catalog.py` is validated to use clean canonical HTTPS URLs without tracking parameters (`utm_*`, `gclid`, `fbclid`) and is linked to concrete `ecas_components`. Benchmark planet species records (`WASP-39 b`, `K2-18 b`) use the 6 `EVIDENCE_STATUSES` to separate independent confirmations from tentative/disputed claims and upper limits.
+
+---
+
+## Decision: In-App 1D Limb-Transmission Forward-Model Generator, Data-Accuracy Guards, and Quick-Setup UX
+
+**Date:** 2026-10-29  
+**Status:** Implemented (`ecas/comparison/model_generator.py`, `ecas/comparison/inputs.py`, `ecas/comparison/residuals.py`, `ecas/visualization/reference_plot.py`, `ecas/ui/molecular_browser.py`, `ecas/ui/comparison_browser.py`)
+
+### Context
+Human desktop review requested (1) an in-app forward-model generator so researchers do not have to author external JSON files by hand, (2) straightforward wavenumber-to-wavelength conversion controls, (3) metadata-driven "plug-and-chug" comparison setup without opaque jargon barriers, (4) multi-molecule feature attribution across IR and UV-Vis regimes, and (5) stronger numerical data-accuracy safeguards (passband bin integration, asymmetric error auditing, and systematic baseline offset diagnostics).
+
+### Key Decisions
+1. **True-to-Nature 1D Isothermal Hydrostatic Spherical-Shell Limb Solver (`ECAS-IsothermalLimbRT`):**
+   - Rather than rescaling cross sections heuristically, `generate_isothermal_transmission_model()` integrates exact spherical-shell slant chords through a hydrostatic atmosphere with $\text{H}_2/\text{He}$ Rayleigh continuum, haze slope, and opaque gray cloud deck $P_{\text{cloud}}$, sizing $z_{\text{top}}$ dynamically so $\tau_{\text{slant}}(z_{\text{top}}) \le e^{-10}$ even in strong UV/IR cores (verified within $<0.3\%$ of the analytical Lecavelier des Etangs 2008 formula).
+   - Cross sections are never extrapolated outside their wavelength coverage. Broadband synthetic band-center templates (`ECAS-IllustrativeBandProfile-Synthetic`) are provided for offline exploratory workflows alongside real cached ExoMol and imported laboratory UV-Vis/IR `cm^2/molecule` cross sections, and always emit an explicit non-line-list provenance warning.
+2. **Fixed-Model Leave-One-Out Attribution vs. Bayesian Retrieval:**
+   - `generate_leave_one_out_models()` and `summarize_leave_one_out_attribution()` report per-species peak wavelength, maximum optical-depth share, $\Delta\text{RMS}$, and $\Delta Q$ on identical shared grids, explicitly labeled as fixed-parameter sensitivity rather than marginalized Bayesian detection $\sigma$.
+3. **Explicit Quick Setup Without Silent Metadata Inference on Raw Evaluation:**
+   - Raw `Evaluate observation vs. candidates` retains strict Chunk 6 blocking when metadata are un-attested. Clicking `Quick Setup: Auto-fill` or `Generate, Auto-Align & Compare` explicitly populates non-conflicting fields from imported headers (`PL_NAME`, `INSTRUMENT`, `REFERENCE`, passband `bandwidth`, and uncertainties) while preserving full manual editability.
+4. **Data-Accuracy Guards (Top-Hat Passband Integration, Asymmetric Error Audit, De-Meaned Shape RMS):**
+   - Passband integration (`integrate_model_over_bins`), $>10\%$ error-bar asymmetry warnings (`audit_asymmetric_uncertainties`), and systematic baseline offset alerts (`offset_dominates_shape` when $|\bar{r}| > \text{RMS}_{\text{demeaned}}$) operate transparently without mutating raw observation values or silently subtracting offsets.

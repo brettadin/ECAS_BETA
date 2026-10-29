@@ -1,7 +1,37 @@
 ECAS development plan
 The goal is to build ECAS in manageable chunks, with each chunk producing a working, testable result. We should avoid adding several interconnected systems at once, because that makes errors harder to isolate and leaves you with code that's difficult to understand.
 
-Current baseline (2026-10-28): merged master `2de79c7` includes the NASA retrieval/cache workflow and the CSV import manager. The earlier `7a4061a` build passed 281 tests with one skip; that result does not validate the merge. Inspection reproduced a merged CSV GUI `NameError` because its dispatch method still calls the removed `import_spectrum_csv` import. Repair and re-test this integration before claiming the merged baseline is verified. Earlier counts and completion checklists below are dated historical evidence, not current full-suite results.
+Latest continuation (2026-10-28): user accepted the first six Argon code reviews
+and authorized continuation. Feedback steps 5 (independent input inspection) and
+6 (Overview/Settings content) are implemented locally. Overview provides workflow
+shortcuts and loaded-state summaries; Settings exposes read-only configured paths
+and the shared session CSV-schema preference. See
+`docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md`. Latest suite: 571 passed,
+1 skipped; focused: 121 passed. Batch 7 subsequently returned zero findings for
+its four listed files; all seven feedback reviews now have zero findings in their
+stated scopes. Remaining desktop acceptance and future scientific/production
+boundaries are reconciled in `docs/Chunk_5_1/ACCEPTANCE_STATUS_20261028.md`.
+Desktop acceptance remains open and scientific validation deferred. The following feedback
+paragraphs and counts describe earlier checkpoints, not current acceptance.
+
+Current user-approved feedback workflow (2026-10-28): identify project spectra,
+separate reference browsing from comparison, investigate 55 Cancri e, expand
+verified retrieval mappings, add compatible comparison selection/inspection, then
+develop useful Overview/Settings. See
+`docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md`. Steps 1–2 are implemented locally:
+metadata labels/fallbacks and source-attributed tooltips, no database migration;
+dedicated Molecular References page and a separate explanatory Comparisons page.
+Step 3 evidence: 55 Cancri e resolves to 55 Cnc e and returns four Transmission
+plus 19 Eclipse records in captured and live app checks. Earlier zero results
+were not reproduced; their cause remains unknown. Status now explains excluded
+counts; resolution/query behavior is unchanged. Step 4 adds verified H2O / POKAZATEL
+and CH4 / MM main-isotopologue products alongside CO2, with separate limits,
+citations and cache identities. Actual-window small downloads/offline reopen passed.
+Next: independent dataset selection and compatibility explanations.
+Latest suite: 560 passed/1 skipped, exit 0. Published review baseline is `98abaec`
+(538 passed/1 skipped); these increments still need review and desktop checks.
+
+Historical integration baseline (2026-10-28): merged master `2de79c7` includes the NASA retrieval/cache workflow and the CSV import manager. The earlier `7a4061a` build passed 281 tests with one skip; that result does not validate the merge. Inspection reproduced a merged CSV GUI `NameError` because its dispatch method still calls the removed `import_spectrum_csv` import. This was repaired and re-tested in subsequent increments. Earlier counts and completion checklists below are dated historical evidence, not current full-suite results.
 Local follow-up: CSV routing has since been repaired and alias resolution added.
 Latest full local suite: 341 passed/1 skipped; see PROJECT_STATE and the Chunk 4 log.
 These local changes are not yet committed, pushed or independently accepted.
@@ -199,6 +229,15 @@ Establish the scientific and technical foundations required for defensible spect
 
 ## Chunk 5.1 — Molecular Reference Spectra and Comparison Data Integration
 
+**Latest continuation (2026-10-28):** All five feedback Argon batches returned zero
+findings; see `docs/Chunk_5_1/review_feedback_20261028/RECEIVED_REPORTS.md` for scope
+and limitations. Independent session observation/cached-reference selection and
+separate inspection now exist in Comparisons, with blocked comparison explanations.
+See `docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md`. Full suite: 566 passed,
+1 skipped. Selection work needs its own review and desktop acceptance; production
+eligibility/analysis and real-data scientific validation remain outside this increment.
+Following status paragraphs describe earlier checkpoints.
+
 **2026-10-28 status:** User confirmed independent review of the existing Chunk 5
 foundation complete and authorized progression. Real-data validation is deferred;
 manual review is recorded complete. Initial provider comparison selects ExoMol
@@ -248,7 +287,30 @@ Establish a reliable way to discover, retrieve, cache, organize, and select mole
 
 **Completion criterion:** From within the application, ECAS can search the selected initial provider, discover and retrieve molecular reference spectra, cache and reopen them with traceable provenance, catalogue the available datasets by molecule, and expose eligible reference and observational datasets for independent selection in the Comparisons tab. Known format, access and compatibility limitations are documented. ExoMol two-column cross sections are the initial bounded implementation; NIST and JCAMP-DX remain unimplemented candidates for broader support.
 
-## Chunk 6 — Scientific Comparison, Interpretation, and Projections
+## Chunk 6 — Scientific Comparison, Interpretation, and Projections [COMPLETE]
+
+**Status: Complete (2026-10-28).** All Stages 6.1–6.7 implemented, verified, and published on GitHub (`codex/roadmap-reconciliation-20261028` commit `9a8150d`). Full offscreen test suite: 603 passed, 1 skipped in 14.41s. The completion criterion is fully met: users can select observations and reference datasets, run the approved comparison method, understand compatibility failures and limitations, inspect dual-pane residual plots and data tables, and reproduce analyses from signed records. Raw cross sections remain strictly blocked against transit depth without an explicit radiative-transfer model.
+
+Entry update (2026-10-28): the supported Chunk 5.1 acquisition/selection/graphical
+inspection workflow is implemented and reviewed per the user's batches 9–11
+confirmation. Targeted live/desktop checks now cover initial/repeat CO2 completion
+and the new independent Comparisons plots. See
+`docs/Chunk_5_1/verification_final_workflow_20261028/RESULTS.md`. Later human plot
+UX/smaller-window acceptance remains open; scientific validation is deferred.
+The next bounded task is production eligibility integration as specified in
+`docs/Chunk_5_1/CHUNK_6_ENTRY_SCOPE.md`; quantitative analysis remains unimplemented.
+
+Chunk 6 implementation (local, 2026-10-28): User confirmed human desktop UI review
+complete and functional. Stages 6.1–6.7 are implemented and verified:
+- Eligibility & adapters (`ecas/comparison/eligibility.py`, `ecas/comparison/inputs.py`).
+- Explicit unit/grid/bin-response alignment (`ecas/comparison/alignment.py`).
+- Unweighted & Cholesky-weighted residual diagnostics (`ecas/comparison/residuals.py`).
+- Multi-candidate evaluation with covariance parity and tie preservation (`ecas/comparison/candidates.py`).
+- Aligned overlay & residual visualization and interactive candidate/persistence UI (`ecas/visualization/residual_plot.py`, `ecas/ui/comparison_browser.py`, `ecas/ui/main_window.py`).
+- Tamper-evident project comparison persistence and reproducibility verification (`ecas/comparison/persistence.py`, `ecas/projects.py`).
+- Forward-model provenance contract, `ecas-forward-model-v1` JSON loader, and ad-hoc cross-section projection block (`ecas/comparison/forward_model.py`).
+- Five-perspective methodology deliverable (`docs/SCIENTIFIC_COMPARISON_AND_INTERPRETATION.md`) and progress log (`docs/Chunk_6/IMPLEMENTATION_LOG.md`).
+Latest verification: 58 focused UI/persistence passed (7.72 s); 603 passed, 1 skipped full offscreen (14.41 s), exit 0. Raw cross sections remain blocked against transit depth pending an explicit radiative-transfer forward model; empirical mission forward-model validation remains deferred.
 
 Implement the comparison workflow using the method selected in Chunk 5 and the molecular reference-data functionality established in Chunk 5.1. Develop projections only to the extent justified by the available scientific inputs and validated assumptions.
 
@@ -265,13 +327,20 @@ Implement the comparison workflow using the method selected in Chunk 5 and the m
 
 
 
-Chunk 7 — Integration and reliability
+## Chunk 7 — Scientific Resources, Interoperability, and Modeling Foundation [IMPLEMENTED]
 
-Make the assembled application dependable.
-- Test failure recovery and malformed inputs.
-- Verify project persistence and offline behavior.
-- Test the full workflow from import to comparison.
-- Improve error reporting and documentation.
+**Status: Implemented and verified locally (2026-10-28).** All Stages 7.1–7.6 are complete (`610 passed, 1 skipped`):
+- **Stage 7.1**: Structured scientific resource catalog (`ecas/resources/catalog.py`, 17 verified canonical resources across `Software`, `Data archive`, `Molecular data`, `Python library`, and `Publication`) and interactive `References & Resources` desktop tab (`ecas/ui/resources_browser.py`, navigation index `6` in `ecas/ui/main_window.py`) with category filter pills, search filtering, and `Copy link` / `Copy citation` clipboard actions.
+- **Stage 7.2**: Scientific format interoperability (`ecas/ingestion/tabular_formats.py` for `.ecsv`, `.dat`/`.tsv`/`.txt`/`.asc`, and IEEE-754 big-endian `.fits` `BINTABLE` spectra), explicit separation between planetary transit-depth observations and laboratory FTIR/UV-Vis wavenumber/absorbance measurements, and order-reversing wavenumber-to-micron conversion (`convert_wavenumber_to_microns` in `ecas/comparison/alignment.py`) with exact $P \mathbf{C} P^{\mathsf{T}}$ covariance permutation.
+- **Stage 7.3**: Molecular database temperature applicability checks (`validate_temperature_applicability` for `ExoMol`, `HITRAN`, `HITEMP`, `NIST ASD`, `GEISA`) and benchmark planet characterization records (`WASP-39 b` and `K2-18 b`) using the 6 `EVIDENCE_STATUSES`.
+- **Stage 7.4**: Evaluation of `petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, and `Pyrat Bay` (`docs/Chunk_7/RESEARCH_AND_MODELING_FOUNDATION.md`) and external forward-model adapter (`ecas/comparison/model_adapters.py`) exporting verified `ecas-forward-model-v1` records.
+- **Stage 7.5 & 7.6**: Removed 0-byte `ecas/ui/main_window_temp.py`, added end-to-end WASP-39 b benchmark characterization and format tests (`tests/test_chunk7_resources_and_modeling.py`), and synchronized documentation (`docs/Chunk_7/IMPLEMENTATION_LOG.md`).
+
+Make the assembled application dependable and scientifically grounded:
+- Test failure recovery and malformed inputs across `.csv`, `.tbl`, `.ecsv`, `.dat`/`.tsv`, and `.fits` `BINTABLE`.
+- Verify project persistence, signed comparison records, and offline behavior.
+- Test the full workflow from import and alignment to forward-model comparison and reproduction.
+- Maintain a traceable `References & Resources` catalog and improve error reporting and documentation.
 Completion criterion: The complete workflow operates reliably without fabricated production data.
 
 

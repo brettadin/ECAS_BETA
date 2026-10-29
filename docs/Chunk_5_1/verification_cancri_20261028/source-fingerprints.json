@@ -1,0 +1,25 @@
+{
+  "scope": "55 Cancri investigation; source and tests after passing checks; hashes cover working-file bytes",
+  "files": [
+    {
+      "path": "ecas/ui/nasa_browser.py",
+      "sha256": "e51e4133bc2fd722647063cb4c21f767b26494c193a9eaf351808692af8050ce"
+    },
+    {
+      "path": "ecas/ingestion/nasa_aliases.py",
+      "sha256": "2a695b1035cb7a7f169c6689d51678afdc51ba8f49af7523cccbb4b1ace9dd80"
+    },
+    {
+      "path": "ecas/ingestion/nasa_archive.py",
+      "sha256": "db6ed40849df8d32866d71db804636e8638dab622fca1ac3763ea5f34fafbab3"
+    },
+    {
+      "path": "tests/test_nasa_aliases.py",
+      "sha256": "73d74b7af6f3cbef3d97b3f201b69b8773dd480e23d8600c67cad860b53b7c52"
+    },
+    {
+      "path": "tests/test_nasa_online.py",
+      "sha256": "3b888d39a19172940c2dec0821a12457afdbe90c40e5f79eec571f450b28ac83"
+    }
+  ]
+}

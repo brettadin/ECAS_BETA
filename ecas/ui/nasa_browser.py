@@ -1,8 +1,18 @@
 """User-initiated NASA transmission discovery/download and offline cache access."""
 from pathlib import Path
+from collections import Counter
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget
+from PySide6.QtCore import QStringListModel, Qt, Signal
+from PySide6.QtWidgets import (
+    QCompleter,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ecas.ingestion.nasa_archive import (
     INTERFACE, spectra_search, parse_spectra, spectrum_url, cache_entries, read_cached, store_spectrum,
@@ -10,6 +20,11 @@ from ecas.ingestion.nasa_archive import (
 from ecas.ingestion.nasa_discovery import planet_search
 from ecas.ingestion.nasa_network import PublicNasaHttp
 from ecas.ingestion.nasa_aliases import alias_search, parse_aliases
+from ecas.ingestion.planet_resolver import (
+    collect_all_known_planets,
+    fuzzy_match_targets,
+    suggest_canonical_target,
+)
 
 
 class NasaArchiveBrowser(QWidget):
@@ -35,10 +50,35 @@ class NasaArchiveBrowser(QWidget):
         for button in (self.search_button, self.cache_button, self.cancel_button):
             controls.addWidget(button)
         layout.addLayout(controls)
+
+        self.known_planets = collect_all_known_planets(self.cache_root)
+        self.completer_model = QStringListModel(list(self.known_planets), self)
+        self.completer = QCompleter(self.completer_model, self)
+        self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.target.setCompleter(self.completer)
+
         self.status = QLabel("Search public NASA metadata; only supported transmission tables can be loaded.")
         self.status.setTextFormat(Qt.TextFormat.PlainText)
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
+
+        self.suggestion_bar = QWidget()
+        suggestion_layout = QHBoxLayout(self.suggestion_bar)
+        suggestion_layout.setContentsMargins(0, 2, 0, 2)
+        suggestion_layout.setSpacing(8)
+        self.suggestion_label = QLabel("")
+        self.suggestion_label.setStyleSheet("color: #ebcb8b; font-weight: 500;")
+        self.suggestion_button = QPushButton("")
+        self.suggestion_button.setStyleSheet("font-weight: 600; padding: 2px 8px;")
+        suggestion_layout.addWidget(self.suggestion_label)
+        suggestion_layout.addWidget(self.suggestion_button)
+        suggestion_layout.addStretch(1)
+        self.suggestion_bar.setVisible(False)
+        layout.addWidget(self.suggestion_bar)
+
+        self.suggestion_button.clicked.connect(self._apply_suggested_target)
+
         self.results = QListWidget()
         self.results.setObjectName('nasaResults')
         self.results.setStyleSheet('QListWidget#nasaResults::item { padding: 4px 6px; }')
@@ -62,10 +102,33 @@ class NasaArchiveBrowser(QWidget):
         self.cancel_button.setEnabled(self.busy)
         self.load_button.setEnabled(not self.busy and 0 <= self.results.currentRow() < len(self.items))
 
+    def _apply_suggested_target(self):
+        target_name = self.suggestion_button.property("target_name")
+        if target_name:
+            self.target.setText(target_name)
+            self.suggestion_bar.setVisible(False)
+            self.search()
+
+    def _show_suggestion(self, query: str):
+        matches = fuzzy_match_targets(query, self.known_planets, top_n=1, cutoff=0.65)
+        if matches:
+            top_match, score = matches[0]
+            if top_match.casefold() != query.strip().casefold():
+                pct = int(score * 100)
+                self.suggestion_label.setText(f"Did you mean: {top_match} ({pct}% match)?")
+                self.suggestion_button.setText(f"Search {top_match}")
+                self.suggestion_button.setProperty("target_name", top_match)
+                self.suggestion_bar.setVisible(True)
+                return
+        self.suggestion_bar.setVisible(False)
+
     def _fail(self, error):
         self.busy = False
         self.status.setText(f"NASA operation stopped: {error}. Existing displayed data is unchanged.")
         self._buttons()
+        raw_query = self.target.text().strip()
+        if raw_query:
+            self._show_suggestion(raw_query)
 
     def _request(self, url, handler):
         self.busy = True
@@ -90,6 +153,7 @@ class NasaArchiveBrowser(QWidget):
     def search(self):
         if self.busy:
             return
+        self.suggestion_bar.setVisible(False)
         try:
             name = planet_search(self.target.text()).name
             lookup_url = alias_search(name)
@@ -115,16 +179,24 @@ class NasaArchiveBrowser(QWidget):
                 row = item["metadata"]
                 self.results.addItem(f"{row['pl_name']} | {row['authors']} | {row['instrument']} | {row['num_datapoints']} points")
             self.busy = False
-            self.status.setText(f"{name} resolved as {canonical}: {len(self.items)} transmission records; " +
-                ("50-record limit reached, results may be incomplete." if len(rows) == 50 else
-                 "other spectrum types are not supported for loading."))
+            message = (f"{name} resolved as {canonical}: {len(self.items)} transmission records "
+                       f"available to load out of {len(rows)} returned records.")
+            excluded = Counter(row['spec_type'] for row in rows if row['spec_type'] != 'Transmission')
+            if excluded:
+                message += ' Excluded from loading: ' + ', '.join(
+                    f'{kind} ({count})' for kind, count in sorted(excluded.items())) + '.'
+            if len(rows) == 50:
+                message += ' 50-record limit reached, results may be incomplete.'
+            self.status.setText(message)
             if not rows:
                 self.status.setText(f"{name} resolved as {canonical}. No spectra listed in NASA's queried spectroscopy table. Other archives were not searched.")
+                self._show_suggestion(name)
             elif not self.items:
                 types = ', '.join(sorted({row['spec_type'] for row in rows}))
                 self.status.setText(f"{canonical}: archive records exist ({types}), but no supported transmission records were returned.")
                 if len(rows) == 50:
                     self.status.setText(self.status.text() + " 50-record limit reached; results may be incomplete.")
+                self._show_suggestion(name)
             self._buttons()
         self._request(lookup_url, resolved)
 

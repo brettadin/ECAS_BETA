@@ -1,4 +1,5 @@
 """Storage review regressions: snapshots, selective reads and portable v1 hashes."""
+from contextlib import closing
 from dataclasses import replace
 import json
 from pathlib import PurePosixPath, PureWindowsPath
@@ -58,8 +59,9 @@ def test_index_read_only_parses_selected_row_and_keeps_id_order(tmp_path):
     persistence.save_spectrum_to_database(spectrum, 'research', root)
     persistence.save_spectrum_to_database(spectrum, 'research', root)
     database = root / 'research/data.sqlite'
-    with sqlite3.connect(database) as conn:
-        conn.execute("UPDATE spectra SET data = 'invalid JSON' WHERE id = 1")
+    with closing(sqlite3.connect(database)) as conn:
+        with conn:
+            conn.execute("UPDATE spectra SET data = 'invalid JSON' WHERE id = 1")
     # An unrelated malformed row must not be fetched or parsed.
     assert persistence.load_spectrum_by_index('research', root, 1) == spectrum
     assert persistence.load_spectrum_by_index('research', root, 2) is None
@@ -79,12 +81,13 @@ def test_v1_path_spelling_verified_before_platform_conversion_and_copy(tmp_path,
     store.create('second')
     store.attach('first', spectrum)
     database = store.root / 'first/data.sqlite'
-    with sqlite3.connect(database) as conn:
-        data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
-        data['source_file'] = saved_path
-        unsigned = {k: v for k, v in data['attachment'].items() if k != 'integrity_sha256'}
-        data['attachment']['integrity_sha256'] = _digest(spectrum, unsigned, source_file=saved_path)
-        conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
+    with closing(sqlite3.connect(database)) as conn:
+        with conn:
+            data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
+            data['source_file'] = saved_path
+            unsigned = {k: v for k, v in data['attachment'].items() if k != 'integrity_sha256'}
+            data['attachment']['integrity_sha256'] = _digest(spectrum, unsigned, source_file=saved_path)
+            conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
     convert = persistence._to_spectrums_dict
 
     def on_destination(data):
@@ -97,5 +100,5 @@ def test_v1_path_spelling_verified_before_platform_conversion_and_copy(tmp_path,
     assert copied.spectrum == loaded.spectrum
     assert copied.attachment == loaded.attachment
     # Adapting the in-memory envelope must not rewrite the original database.
-    with sqlite3.connect(database) as conn:
+    with closing(sqlite3.connect(database)) as conn:
         assert json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0]) == data

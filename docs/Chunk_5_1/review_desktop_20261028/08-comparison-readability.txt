@@ -1,0 +1,460 @@
+Review ECAS batch 8: small comparison readability correction discovered during normal Windows desktop verification.
+Return JSON with reviewed_files, findings, limitations, summary. Actionable findings need file, one-based line, concrete trigger and severity. Do not edit code.
+Changes: resize table columns to contents, allow plain-text label selection, display observation SHA-256 as two 32-character lines with the exact unbroken value in the tooltip, and update provenance regression assertions. Verify no data/hash mutation or new eligibility/detection claims. Existing cached references are historical public captures, not freshly fetched products. Agent normal-desktop checks do not imply human acceptance or scientific validation. Prior seven reports apply to their original snapshots; this new patch needs its own review.
+Final offline checks: focused 121 passed (5.54 s); full 571 passed, 1 skipped (10.56 s), exit 0. Skip: Windows directory-symlink privileges. Launch helper uses an isolated project/reference cache and original CO2/H2O/CH4 captures, with no new requests. Remaining desktop gaps are explicitly stated in RESULTS.md.
+Complete numbered source snapshots follow.
+
+=== ecas/ui/comparison_browser.py ===
+    1: """Independent, offline input inspection; no scientific comparison operations."""
+    2: from copy import deepcopy
+    3: 
+    4: from PySide6.QtCore import Qt
+    5: from PySide6.QtWidgets import (
+    6:     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox,
+    7:     QTableWidget, QTableWidgetItem, QAbstractItemView, QSplitter,
+    8: )
+    9: 
+   10: from ecas.ingestion.exomol_reference_cache import cached_references, load_reference
+   11: 
+   12: 
+   13: def _label(text):
+   14:     label = QLabel(text)
+   15:     label.setTextFormat(Qt.TextFormat.PlainText)
+   16:     label.setWordWrap(True)
+   17:     label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+   18:     return label
+   19: 
+   20: 
+   21: def _table():
+   22:     table = QTableWidget()
+   23:     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+   24:     return table
+   25: 
+   26: 
+   27: def _fill(table, columns, rows):
+   28:     table.clearContents()
+   29:     table.setColumnCount(len(columns))
+   30:     table.setHorizontalHeaderLabels(columns)
+   31:     table.setRowCount(len(rows))
+   32:     for i, row in enumerate(rows):
+   33:         for j, value in enumerate(row):
+   34:             table.setItem(i, j, QTableWidgetItem('' if value is None else str(value)))
+   35:     table.resizeColumnsToContents()
+   36: 
+   37: 
+   38: class ComparisonBrowser(QWidget):
+   39:     """Session observation snapshots and revalidated cached ExoMol references.
+   40: 
+   41:     The input getter reads the window's already imported observation, never a
+   42:     source file. Each explicit addition copies its values so subsequent imports
+   43:     cannot change the selected input. Reference selection never creates a client.
+   44:     """
+   45: 
+   46:     def __init__(self, observation_getter, cache_root, parent=None):
+   47:         super().__init__(parent)
+   48:         self.observation_getter = observation_getter
+   49:         self.cache_root = cache_root
+   50:         self.current_observation = None
+   51:         self.current_reference = None
+   52:         layout = QVBoxLayout(self)
+   53:         title = _label('Comparisons')
+   54:         title.setObjectName('pageTitle')
+   55:         layout.addWidget(title)
+   56:         layout.addWidget(_label(
+   57:             'Select inputs independently and inspect their original values below. '
+   58:             'Observation choices last for this session; open saved observations in Projects '
+   59:             'and add them here. Download references in Molecular References, then refresh '
+   60:             'the cached choices. No overlay, residual, score or detection is produced.'))
+   61:         panels = QSplitter(Qt.Orientation.Horizontal)
+   62:         layout.addWidget(panels, 1)
+   63:         for side in ('observation', 'reference'):
+   64:             panel = QWidget()
+   65:             box = QVBoxLayout(panel)
+   66:             box.addWidget(_label('Observation / input' if side == 'observation' else 'Cached molecular reference'))
+   67:             controls = QHBoxLayout()
+   68:             selector = QComboBox()
+   69:             selector.setMinimumContentsLength(12)
+   70:             selector.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+   71:             button = QPushButton('Add current observation' if side == 'observation' else 'Refresh cached choices')
+   72:             controls.addWidget(selector, 1)
+   73:             controls.addWidget(button)
+   74:             box.addLayout(controls)
+   75:             status = _label('No input selected.')
+   76:             table = _table()
+   77:             box.addWidget(status)
+   78:             box.addWidget(table, 1)
+   79:             setattr(self, side + '_selector', selector)
+   80:             setattr(self, side + '_status', status)
+   81:             setattr(self, side + '_table', table)
+   82:             setattr(self, side + '_button', button)
+   83:             panels.addWidget(panel)
+   84:         self.cache_status = _label('Cached choices have not been refreshed.')
+   85:         self.compatibility = _label('Select an observation and a cached reference for inspection.')
+   86:         layout.addWidget(self.cache_status)
+   87:         layout.addWidget(self.compatibility)
+   88:         self.observation_button.clicked.connect(self.add_current_observation)
+   89:         self.reference_button.clicked.connect(self.refresh_references)
+   90:         self.observation_selector.currentIndexChanged.connect(self._select_observation)
+   91:         self.reference_selector.currentIndexChanged.connect(self._select_reference)
+   92: 
+   93:     def add_current_observation(self):
+   94:         spectrum, source_hash = self.observation_getter()
+   95:         if spectrum is None:
+   96:             self.observation_status.setText('Load an observation in Spectral Data or Projects first. Previous selection retained.')
+   97:             return
+   98:         snapshot = deepcopy(spectrum)
+   99:         self.observation_selector.addItem(
+  100:             f'{self.observation_selector.count() + 1}: {snapshot.source_file.name} | {snapshot.row_count} rows',
+  101:             (snapshot, source_hash))
+  102:         self.observation_selector.setCurrentIndex(self.observation_selector.count() - 1)
+  103: 
+  104:     def _select_observation(self, *_):
+  105:         selected = self.observation_selector.currentData()
+  106:         self.current_observation = selected[0] if selected else None
+  107:         if selected:
+  108:             spectrum, source_hash = selected
+  109:             # Keep the exact hash available in the tooltip; shorter lines prevent
+  110:             # a long unbroken identifier from crowding the split inspection pane.
+  111:             hash_display = ('\n'.join(source_hash[i:i + 32] for i in range(0, len(source_hash), 32))
+  112:                             if source_hash else 'not established')
+  113:             self.observation_status.setToolTip(
+  114:                 f'Source: {spectrum.source_file}\nSource SHA-256: {source_hash or "not established"}')
+  115:             self.observation_status.setText(
+  116:                 f'Source: {spectrum.source_file}\nObservable: {spectrum.signal_type or "unknown"}; '
+  117:                 f'axis unit: {spectrum.axis_unit or "unknown"}; signal unit: {spectrum.signal_unit or "unknown"}. '
+  118:                 f'Source SHA-256:\n{hash_display}\n'
+  119:                 + ('Warnings: ' + '; '.join(spectrum.warnings) if spectrum.warnings else ''))
+  120:             _fill(self.observation_table, spectrum.columns,
+  121:                   [tuple(row[column] for column in spectrum.columns) for row in spectrum.rows])
+  122:         self._explain()
+  123: 
+  124:     def refresh_references(self):
+  125:         previous = self.reference_selector.currentData()
+  126:         self.reference_selector.blockSignals(True)
+  127:         self.reference_selector.clear()
+  128:         try:
+  129:             records, invalid = cached_references(self.cache_root / 'references')
+  130:             for path, result in records:
+  131:                 request = result.request
+  132:                 self.reference_selector.addItem(
+  133:                     f'{request.service.formula} / {request.service.isotopologue} / {request.service.dataset} | '
+  134:                     f'{request.temperature} K | {request.minimum}–{request.maximum} cm^-1 | '
+  135:                     f'{request.spacing} spacing | {path.stem}', str(path))
+  136:             index = self.reference_selector.findData(previous) if previous is not None else -1
+  137:             self.reference_selector.setCurrentIndex(index)
+  138:             self.cache_status.setText(f'{len(records)} cached references available; {invalid} invalid entries excluded. '
+  139:                                       'Uncached catalogue entries require a supported download in Molecular References.')
+  140:         except (OSError, ValueError) as error:
+  141:             self.cache_status.setText(f'Reference cache unavailable: {error}')
+  142:         finally:
+  143:             self.reference_selector.blockSignals(False)
+  144:         self._select_reference()
+  145: 
+  146:     def _select_reference(self, *_):
+  147:         self.current_reference = None
+  148:         _fill(self.reference_table, (), ())
+  149:         path = self.reference_selector.currentData()
+  150:         self.reference_status.setText('No cached reference selected.')
+  151:         self.reference_status.setToolTip('')
+  152:         if path is not None:
+  153:             try:
+  154:                 result = load_reference(path)
+  155:                 self.current_reference = result
+  156:                 product, request = result.product, result.request
+  157:                 provenance = product.provenance
+  158:                 self.reference_status.setText(
+  159:                     f'{provenance.molecule} / {provenance.isotopologue} / {provenance.dataset}; '
+  160:                     f'{request.temperature} K; zero pressure; Doppler-only. Calculated absorption cross section.\n'
+  161:                     f'Source SHA-256: {product.source_sha256}\nSource: {provenance.source_url}')
+  162:                 self.reference_status.setToolTip('\n'.join((*provenance.citations, provenance.licence_url)))
+  163:                 _fill(self.reference_table, ('Wavenumber (cm^-1)', 'Cross section (cm^2/molecule)'), product.points)
+  164:             except (OSError, ValueError) as error:
+  165:                 self.reference_status.setText(f'Cached reference unavailable or invalid: {error}')
+  166:         self._explain()
+  167: 
+  168:     def _explain(self):
+  169:         if self.current_observation is None or self.current_reference is None:
+  170:             self.compatibility.setText('Select an observation and a valid cached reference for inspection. '
+  171:                                        'Comparison operations remain unavailable.')
+  172:             return
+  173:         spectrum = self.current_observation
+  174:         reasons = [
+  175:             'Comparison blocked: this reference is a calculated absorption cross section in cm^2/molecule '
+  176:             'on wavenumber cm^-1, not a predicted transit-depth spectrum. '
+  177:             'Cross sections and transit depth cannot be compared directly without a physical model.'
+  178:         ]
+  179:         if not spectrum.signal_type or not spectrum.signal_unit or not spectrum.axis_unit:
+  180:             reasons.append('Observation observable or units are unknown; no meaning or conversion is inferred.')
+  181:         reasons.append('A physical model with documented conditions, compatible observables/units, '
+  182:                        'coordinate frame, grid alignment and instrument response evidence is required '
+  183:                        'before overlay or residual analysis. Uncertainty/noise evidence is required for '
+  184:                        'weighted diagnostics. Scientific comparison operations are not available yet.')
+  185:         self.compatibility.setText('\n'.join(reasons))
+
+=== tests/test_comparison_browser.py ===
+    1: """Offline input selection and scientific boundary regressions using real widgets."""
+    2: from pathlib import Path
+    3: from unittest.mock import patch
+    4: 
+    5: import pytest
+    6: from PySide6.QtWidgets import QApplication
+    7: 
+    8: from ecas.ui.main_window import ECASWindow
+    9: from ecas.ui import molecular_browser
+   10: from ecas.ingestion.exomol_product import ProductRequest, validate_product
+   11: from ecas.ingestion.exomol_product_network import RetrievedCrossSection
+   12: from ecas.ingestion.exomol_reference_cache import store_reference
+   13: 
+   14: ROOT = Path(__file__).resolve().parents[1]
+   15: 
+   16: 
+   17: @pytest.fixture(scope='session', autouse=True)
+   18: def app():
+   19:     app = QApplication.instance() or QApplication([])
+   20:     yield app
+   21: 
+   22: 
+   23: @pytest.fixture
+   24: def window(tmp_path, app):
+   25:     widget = ECASWindow(projects_dir=tmp_path / 'projects', reference_cache_dir=tmp_path / 'cache')
+   26:     yield widget
+   27:     widget.close()
+   28: 
+   29: 
+   30: def cache_reference(window):
+   31:     request = ProductRequest(4000, 4010, 500, '1')
+   32:     raw = (ROOT / 'data/ExoMol/2026-10-28/CO2-12C-16O2-500K-4000-4010-dnu1.sigma').read_bytes()
+   33:     result = RetrievedCrossSection(request, raw, validate_product(raw, request))
+   34:     path = store_reference(window.reference_browser.cache_root / 'references', result)
+   35:     return path, result
+   36: 
+   37: 
+   38: def import_csv(window, tmp_path, name, signal):
+   39:     source = tmp_path / name
+   40:     source.write_text(f'wavelength,signal\n1,{signal}\n2,3\n', encoding='utf-8')
+   41:     window._import_csv_from_path(str(source))
+   42:     return window.current_spectrum
+   43: 
+   44: 
+   45: def test_independent_selection_preserves_original_values_and_main_display(window, tmp_path):
+   46:     browser = window.comparison_browser
+   47:     first = import_csv(window, tmp_path, 'first.csv', 2)
+   48:     browser.add_current_observation()
+   49:     second = import_csv(window, tmp_path, 'second.csv', 9)
+   50:     browser.add_current_observation()
+   51:     browser.observation_selector.setCurrentIndex(0)
+   52:     path, result = cache_reference(window)
+   53:     with patch.object(molecular_browser, 'PublicExomolCatalogueHttp') as catalogue, \
+   54:          patch.object(molecular_browser, 'PublicExomolProductHttp') as product:
+   55:         browser.refresh_references()
+   56:         assert browser.reference_selector.currentIndex() == -1  # explicit choice
+   57:         browser.reference_selector.setCurrentIndex(0)
+   58:         for page in (4, 3, 2, 4):
+   59:             window.navigation.setCurrentRow(page)
+   60:         catalogue.assert_not_called()
+   61:         product.assert_not_called()
+   62:     assert browser.current_observation == first and browser.current_observation is not first
+   63:     assert browser.current_reference == result
+   64:     assert browser.observation_table.item(0, 1).text() == '2.0'
+   65:     assert browser.reference_table.item(0, 0).text() == '4000.0'
+   66:     assert window.current_spectrum is second
+   67:     assert window.spectra_plot._current_spectrum is second
+   68:     assert window.reference_browser.current_reference is None
+   69:     assert 'Comparison blocked' in browser.compatibility.text()
+   70:     assert 'units are unknown' in browser.compatibility.text()
+   71:     assert 'physical model' in browser.compatibility.text()
+   72:     assert result.raw == (ROOT / 'data/ExoMol/2026-10-28/CO2-12C-16O2-500K-4000-4010-dnu1.sigma').read_bytes()
+   73: 
+   74: 
+   75: def test_snapshot_survives_source_removal_failed_import_and_no_current_input(window, tmp_path):
+   76:     browser = window.comparison_browser
+   77:     original = import_csv(window, tmp_path, 'original.csv', 2)
+   78:     browser.add_current_observation()
+   79:     original.source_file.unlink()
+   80:     with patch('ecas.ui.main_window.QMessageBox.warning'):
+   81:         window._import_csv_from_path(str(tmp_path / 'absent.csv'))
+   82:     browser.add_current_observation()
+   83:     assert browser.observation_selector.count() == 1
+   84:     assert browser.current_observation == original
+   85:     assert browser.observation_table.rowCount() == 2
+   86:     assert 'Previous selection retained' in browser.observation_status.text()
+   87: 
+   88: 
+   89: @pytest.mark.parametrize('damage', ['corrupt', 'delete'])
+   90: def test_invalidated_cache_clears_reference_and_prevents_stale_inspection(window, damage):
+   91:     browser = window.comparison_browser
+   92:     path, result = cache_reference(window)
+   93:     browser.refresh_references()
+   94:     browser.reference_selector.setCurrentIndex(0)
+   95:     assert browser.current_reference == result
+   96:     if damage == 'corrupt':
+   97:         path.write_text('{}', encoding='utf-8')
+   98:     else:
+   99:         path.unlink()
+  100:     browser._select_reference()  # re-read at use, not just at discovery
+  101:     assert browser.current_reference is None
+  102:     assert browser.reference_table.rowCount() == 0
+  103:     assert 'unavailable or invalid' in browser.reference_status.text()
+  104:     browser.refresh_references()
+  105:     assert browser.reference_selector.count() == 0
+  106:     assert ('1 invalid' if damage == 'corrupt' else '0 invalid') in browser.cache_status.text()
+  107:     assert browser.reference_status.toolTip() == ''
+  108: 
+  109: 
+  110: def test_refresh_preserves_independent_choices_and_reports_empty_cache(window, tmp_path):
+  111:     browser = window.comparison_browser
+  112:     browser.refresh_references()
+  113:     assert '0 cached references' in browser.cache_status.text()
+  114:     import_csv(window, tmp_path, 'generic.csv', 2)
+  115:     browser.add_current_observation()
+  116:     observation = browser.current_observation
+  117:     first, _ = cache_reference(window)
+  118:     browser.refresh_references()
+  119:     browser.reference_selector.setCurrentIndex(0)
+  120:     second, _ = cache_reference(window)
+  121:     browser.refresh_references()
+  122:     assert browser.reference_selector.count() == 2
+  123:     assert browser.reference_selector.currentData() == str(first)
+  124:     assert browser.current_observation is observation
+  125:     labels = [browser.reference_selector.itemText(i) for i in range(2)]
+  126:     assert len(set(labels)) == 2
+  127: 
+  128: 
+  129: def test_transmission_metadata_and_hash_are_preserved_without_claiming_eligibility(window):
+  130:     source = ROOT / 'data/NASA/2026-10-27/feinstein-2023.tbl'
+  131:     before = source.read_bytes()
+  132:     window._import_csv_from_path(str(source))
+  133:     browser = window.comparison_browser
+  134:     browser.add_current_observation()
+  135:     source_hash = window.current_spectrum_details.source_sha256
+  136:     assert source_hash in browser.observation_status.toolTip()
+  137:     assert source_hash[:32] + '\n' + source_hash[32:] in browser.observation_status.text()
+  138:     assert 'Transmission' in browser.observation_status.text()
+  139:     cache_reference(window)
+  140:     browser.refresh_references()
+  141:     browser.reference_selector.setCurrentIndex(0)
+  142:     assert 'cannot be compared directly without a physical model' in browser.compatibility.text()
+  143:     assert 'instrument response evidence' in browser.compatibility.text()
+  144:     assert browser.current_observation.rows == window.current_spectrum.rows
+  145:     assert source.read_bytes() == before
+
+=== docs/Chunk_5_1/verification_desktop_20261028/RESULTS.md ===
+    1: # Agent desktop verification — 2026-10-28
+    2: 
+    3: Method: normal Windows Qt platform, 1200 × 800 client-area window (captured outer
+    4: window 1202 × 832), controlled with the computer-use skill's sky API. This is
+    5: agent verification, not a claim of human acceptance. Screenshots were displayed
+    6: and inspected in the continuation chat; no separate screenshot files are claimed.
+    7: 
+    8: `launch.py` starts ECAS with a minimal environment, isolated project/reference
+    9: roots under `.venv/checks/desktop-feedback`, and the existing captured CO2, H2O
+   10: and CH4 11-point products (500 K, 4000–4010 cm^-1, spacing 1). It validates these
+   11: raw bytes through the existing parser/cache before inspection. No fresh download
+   12: or current-provider availability check is implied. NASA's configured cache remains
+   13: the application's default path; no cache action/request was triggered there.
+   14: No research project was opened or changed. The test windows were closed afterward.
+   15: 
+   16: ## Observed results
+   17: 
+   18: - Overview rendered readable text and all workflow shortcuts at this window size.
+   19:   Its observation shortcut opened Spectral Data. After inspection, Overview showed
+   20:   the 331-row observation and independent comparison selection while correctly
+   21:   reporting no reference loaded in the separate Molecular References display.
+   22: - Imported the original `data/NASA/2026-10-27/feinstein-2023.tbl` via the native
+   23:   file dialog: 331 rows, plot displayed with micron/% labels and numeric table.
+   24:   These labels are importer-provided; no new scientific interpretation was made.
+   25: - Comparisons accepted the observation snapshot and discovered three valid seeded
+   26:   references, zero invalid. Selected water/POKAZATEL in the first session and
+   27:   methane/MM after restart. The separate original-value tables and physical-model
+   28:   blocking explanation were visible. No comparison score or detection was produced.
+   29: - Settings paths were readable. Changing its CSV choice by keyboard to WASP-39 b
+   30:   Archive was reflected in Spectral Data; the existing observation plot and 331-row
+   31:   status remained intact after navigation. This did not reinterpret the .tbl file.
+   32: - After closing/relaunching, Overview showed zero session choices/no loaded data
+   33:   and Spectral Data showed Generic / Unknown. Re-import and cache reopening worked.
+   34: 
+   35: ## Desktop issue corrected
+   36: 
+   37: Initial inspection exposed clipped reference column headings and crowded inline
+   38: observation hash text. `comparison_browser.py` now resizes table columns to their
+   39: contents. The observation hash is displayed in two 32-character lines; an exact,
+   40: unbroken hash and source path remain in a tooltip. Plain-text labels
+   41: are mouse-selectable. No source values, hashes, identities or stored bytes change.
+   42: The existing provenance regression checks both the exact tooltip hash and its
+   43: two-line display. Final desktop inspection of the methane reference showed both
+   44: complete headings and both observation hash lines. Observation tables still scroll
+   45: horizontally to expose their many source columns, as intended.
+   46: 
+   47: Commands and actual final results:
+   48: 
+   49: - `.venv/Scripts/python.exe -I -B docs/Chunk_5_1/verification_desktop_20261028/run_checks.py focused`
+   50:   — 121 passed, 5.54 s, exit 0.
+   51: - `.venv/Scripts/python.exe -I -B docs/Chunk_5_1/verification_desktop_20261028/run_checks.py full`
+   52:   — 571 passed, 1 skipped, 10.56 s, exit 0.
+   53: 
+   54: Exact commands/versions/environment keys are recorded alongside these results.
+   55: The skip remains Windows directory-symlink privileges. No new dependency, paid
+   56: reviewer, credential, scientific analysis, commit or push was used.
+   57: 
+   58: ## Remaining acceptance
+   59: 
+   60: Human acceptance is still open. Long project-label/tooltips, project save/reopen
+   61: through the desktop UI, Molecular References-page offline reopening/citation
+   62: tooltips, and smaller-window scrolling were not checked in this desktop pass.
+   63: Existing automated coverage is not relabelled as manual verification. Provider
+   64: captures are historical 2026-10-28 protocol evidence, not live scientific validation.
+   65: Real-data scientific validation remains deferred. This readability patch needs its
+   66: own independent review; earlier Argon reports apply to their original snapshots.
+
+=== docs/Chunk_5_1/verification_desktop_20261028/launch.py ===
+    1: """Launch a normal-platform desktop check with isolated projects/reference caches.
+    2: 
+    3: Only existing public captures are seeded; there are no network requests here.
+    4: The GUI remains open for computer-use inspection. This is not a production launcher.
+    5: """
+    6: import os
+    7: from pathlib import Path
+    8: import subprocess
+    9: import sys
+   10: 
+   11: ROOT = Path(__file__).resolve().parents[3]
+   12: SCRATCH = ROOT / '.venv/checks/desktop-feedback'
+   13: 
+   14: if '--window' not in sys.argv:
+   15:     SCRATCH.mkdir(parents=True, exist_ok=True)
+   16:     env = {key: os.environ[key] for key in ('SystemRoot', 'WINDIR') if key in os.environ}
+   17:     for name in ('profile', 'tmp'):
+   18:         (SCRATCH / name).mkdir(exist_ok=True)
+   19:     env.update(TEMP=str(SCRATCH / 'tmp'), TMP=str(SCRATCH / 'tmp'),
+   20:                HOME=str(SCRATCH / 'profile'), USERPROFILE=str(SCRATCH / 'profile'),
+   21:                APPDATA=str(SCRATCH / 'profile'), LOCALAPPDATA=str(SCRATCH / 'profile'),
+   22:                PATH=str(ROOT / '.venv/Scripts') + os.pathsep + str(Path(env['SystemRoot']) / 'System32'))
+   23:     with (SCRATCH / 'application.log').open('ab') as log:
+   24:         process = subprocess.Popen([sys.executable, '-I', '-B', str(Path(__file__).resolve()), '--window'],
+   25:                                    cwd=ROOT, env=env, stdout=log, stderr=log,
+   26:                                    creationflags=subprocess.CREATE_NO_WINDOW)
+   27:     print(f'Isolated desktop process started: {process.pid}')
+   28: else:
+   29:     sys.path.insert(0, str(ROOT))
+   30:     from PySide6.QtWidgets import QApplication
+   31:     from ecas.ui.main_window import ECASWindow
+   32:     from ecas.ingestion.exomol_product import ProductRequest, validate_product
+   33:     from ecas.ingestion.exomol_product_network import RetrievedCrossSection
+   34:     from ecas.ingestion.exomol_reference_cache import cached_references, store_reference
+   35: 
+   36:     references = SCRATCH / 'reference-cache/references'
+   37:     if not cached_references(references)[0]:
+   38:         data = ROOT / 'data/ExoMol/2026-10-28'
+   39:         captures = (
+   40:             ('12C-16O2', data / 'CO2-12C-16O2-500K-4000-4010-dnu1.sigma'),
+   41:             ('1H2-16O', data / 'additional-products/H2O-500K-4000-4010-dnu1.sigma'),
+   42:             ('12C-1H4', data / 'additional-products/CH4-500K-4000-4010-dnu1.sigma'),
+   43:         )
+   44:         for isotope, path in captures:
+   45:             raw = path.read_bytes()
+   46:             request = ProductRequest(4000, 4010, 500, '1', isotope)
+   47:             store_reference(references, RetrievedCrossSection(request, raw, validate_product(raw, request)))
+   48:     app = QApplication([])
+   49:     window = ECASWindow(projects_dir=SCRATCH / 'projects', reference_cache_dir=SCRATCH / 'reference-cache')
+   50:     window.show()
+   51:     sys.exit(app.exec())

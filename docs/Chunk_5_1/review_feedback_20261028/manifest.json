@@ -1,0 +1,144 @@
+[
+  {
+    "batch": "01-project-labels.txt",
+    "sha256": "a0280368045a6a628d006a8a4a9e4837060c4fddf1da9d880461456c9e9abd45",
+    "files": [
+      {
+        "path": "ecas/ui/project_labels.py",
+        "sha256": "484e29705c2f2146328ffaa3c3d23ba2af9837b2c2d63afde0b21425e3781deb"
+      },
+      {
+        "path": "ecas/ui/project_browser.py",
+        "sha256": "8fcba28571ab4047dcff4b8e5461bb2d63939d60d193e76538ca43075a7d23cd"
+      },
+      {
+        "path": "ecas/projects.py",
+        "sha256": "3bc5507bb5e51e09684cca707d744b295cc871b1f5fcddd2594a0f82ab86b858"
+      },
+      {
+        "path": "ecas/models/spectrum.py",
+        "sha256": "b9102f0e6413bd5dbb7d2289c105b7febab50c512e67da2fd0faf16d80f38b23"
+      },
+      {
+        "path": "tests/test_project_labels.py",
+        "sha256": "8f9ef71c1966b8252ccb736aa3075c8c6ec59d5ce3f5293750170332cc819a24"
+      },
+      {
+        "path": "tests/test_projects_ui.py",
+        "sha256": "ab5dc3fc3476ff23a3b8abe42a8ccdc9064cc2d4fa999e57c45d3237c57c7728"
+      }
+    ]
+  },
+  {
+    "batch": "02-navigation.txt",
+    "sha256": "0a731af85dd487592013db1310593523614ad02dba34a72dc5e79c93d15061fd",
+    "files": [
+      {
+        "path": "ecas/ui/main_window.py",
+        "sha256": "26fd2af451f954e7d28e2a065725b73886d52745c6015dad229f43523d5d4f30"
+      },
+      {
+        "path": "ecas/ui/molecular_browser.py",
+        "sha256": "47e7b15fefcb91eb0bfc1c8881b5e53fedbb5d3ff15f1f0f8af8cec66158626f"
+      },
+      {
+        "path": "tests/test_main_window.py",
+        "sha256": "f1080ca80cb9cb8025b0e2f91d46435a7bb72a3920dfad979ffe37582b20b133"
+      },
+      {
+        "path": "tests/test_molecular_browser.py",
+        "sha256": "57b7deab50f254ee47799a50c03de709e748d4d1d1c7c786f8563b06e89f6580"
+      }
+    ]
+  },
+  {
+    "batch": "03-nasa-search.txt",
+    "sha256": "e39428bd10c179f345bd3e3770804152c84570d7f7fa025a2626adc9281b4a59",
+    "files": [
+      {
+        "path": "ecas/ui/nasa_browser.py",
+        "sha256": "e51e4133bc2fd722647063cb4c21f767b26494c193a9eaf351808692af8050ce"
+      },
+      {
+        "path": "ecas/ingestion/nasa_aliases.py",
+        "sha256": "2a695b1035cb7a7f169c6689d51678afdc51ba8f49af7523cccbb4b1ace9dd80"
+      },
+      {
+        "path": "ecas/ingestion/nasa_archive.py",
+        "sha256": "db6ed40849df8d32866d71db804636e8638dab622fca1ac3763ea5f34fafbab3"
+      },
+      {
+        "path": "tests/test_nasa_aliases.py",
+        "sha256": "73d74b7af6f3cbef3d97b3f201b69b8773dd480e23d8600c67cad860b53b7c52"
+      },
+      {
+        "path": "tests/test_nasa_online.py",
+        "sha256": "3b888d39a19172940c2dec0821a12457afdbe90c40e5f79eec571f450b28ac83"
+      },
+      {
+        "path": "data/NASA/2026-10-28/cancri-investigation/README.md",
+        "sha256": "406062bd00d6c049d4c6a96aea807ac584dd64d8e81188257dce098d83cb341b"
+      }
+    ]
+  },
+  {
+    "batch": "04-reference-protocol-network.txt",
+    "sha256": "d7e4b669dbce90ac950bae4b521253c23dfeaa27bbc84994d8c92943e1cab035",
+    "files": [
+      {
+        "path": "ecas/ingestion/exomol_product.py",
+        "sha256": "e79aa046607df9f6dc709ff01b1cfa3b4d4a06462b307c7880c7ce564c2d6869"
+      },
+      {
+        "path": "ecas/ingestion/exomol_product_network.py",
+        "sha256": "f4f1df60b8744236ea31757c57115e9fcce6565c1dd3f994c630e42924ff37f3"
+      },
+      {
+        "path": "ecas/ingestion/exomol_cross_section.py",
+        "sha256": "126675acc66fa157fd2e392f6e55cf107ad74c3f47e1546c8712eed007267709"
+      },
+      {
+        "path": "ecas/ingestion/exomol_catalogue.py",
+        "sha256": "f3eec1714a1225a3712d88c7f104f910345e2995b40ca4a6dfc1fe4b3831064c"
+      },
+      {
+        "path": "tests/test_exomol_product.py",
+        "sha256": "0c27f4a97c4663980772bc6e2618c2d77830af7d014f752b71a5845571c29475"
+      }
+    ]
+  },
+  {
+    "batch": "05-reference-cache-ui.txt",
+    "sha256": "08c7a7c4e880b3a409cfc913294479f9e681fbeb7fd249398c1af035545c8b3f",
+    "files": [
+      {
+        "path": "ecas/ingestion/exomol_reference_cache.py",
+        "sha256": "9aa16975d8bf61471029b10f7a5bb75534773e8b6ec727bf466edbde22e8be87"
+      },
+      {
+        "path": "ecas/ui/molecular_browser.py",
+        "sha256": "47e7b15fefcb91eb0bfc1c8881b5e53fedbb5d3ff15f1f0f8af8cec66158626f"
+      },
+      {
+        "path": "ecas/ingestion/exomol_product.py",
+        "sha256": "e79aa046607df9f6dc709ff01b1cfa3b4d4a06462b307c7880c7ce564c2d6869"
+      },
+      {
+        "path": "ecas/ingestion/exomol_product_network.py",
+        "sha256": "f4f1df60b8744236ea31757c57115e9fcce6565c1dd3f994c630e42924ff37f3"
+      },
+      {
+        "path": "tests/test_exomol_product.py",
+        "sha256": "0c27f4a97c4663980772bc6e2618c2d77830af7d014f752b71a5845571c29475"
+      },
+      {
+        "path": "tests/test_molecular_browser.py",
+        "sha256": "57b7deab50f254ee47799a50c03de709e748d4d1d1c7c786f8563b06e89f6580"
+      },
+      {
+        "path": "data/ExoMol/2026-10-28/additional-products/README.md",
+        "sha256": "eae5fabba367993e6e4d49ed4b098c868a4e17bfa38a24ff61b974e751859199"
+      }
+    ]
+  }
+]
