@@ -40,6 +40,9 @@ _CANONICAL_UNIT_MAP = {
     "dimensionless": "dimensionless",
     "absorbance": "absorbance",
     "transmittance": "transmittance",
+    "cm^2/molecule": "cm^2/molecule",
+    "cm2/molecule": "cm^2/molecule",
+    "cm^2": "cm^2/molecule",
 }
 
 
@@ -83,10 +86,12 @@ def _classify_columns_and_semantics(
     """
     lower_to_orig = {name.lower(): name for name in col_names}
 
-    # Check whether this is a laboratory FTIR / UV-Vis spectrum
+    # Check whether this is a laboratory FTIR / UV-Vis / cross-section / emission spectrum
     is_lab_wavenumber = "wavenumber" in lower_to_orig or "nu" in lower_to_orig
     is_lab_absorbance = "absorbance" in lower_to_orig
     is_lab_transmittance = "transmittance" in lower_to_orig
+    is_cross_section = "cross_section" in lower_to_orig or "sigma_cm2" in lower_to_orig
+    is_emission_ref = "emission_intensity" in lower_to_orig or "line_flux" in lower_to_orig
 
     if is_lab_wavenumber and (is_lab_absorbance or is_lab_transmittance):
         coord_col = lower_to_orig.get("wavenumber") or lower_to_orig["nu"]
@@ -109,6 +114,70 @@ def _classify_columns_and_semantics(
             else "Laboratory FTIR Transmittance"
         )
         return coord_col, signal_col, unc_col, axis_unit, signal_unit, signal_type
+
+    if not is_lab_wavenumber and (is_lab_absorbance or is_lab_transmittance):
+        coord_col = None
+        for candidate in ("wavelength", "wave", "lambda"):
+            if candidate in lower_to_orig:
+                coord_col = lower_to_orig[candidate]
+                break
+        if coord_col is not None:
+            signal_col = (
+                lower_to_orig["absorbance"]
+                if is_lab_absorbance
+                else lower_to_orig["transmittance"]
+            )
+            unc_col = lower_to_orig.get("uncertainty") or lower_to_orig.get("error")
+            axis_unit = _normalize_unit(col_units.get(coord_col)) or _normalize_unit(
+                header_meta.get("axis_unit")
+            )
+            default_sig_unit = "absorbance" if is_lab_absorbance else "transmittance"
+            signal_unit = _normalize_unit(col_units.get(signal_col)) or _normalize_unit(
+                header_meta.get("signal_unit")
+            ) or default_sig_unit
+            signal_type = (
+                "Laboratory UV-Vis Absorbance"
+                if is_lab_absorbance
+                else "Laboratory UV-Vis Transmittance"
+            )
+            return coord_col, signal_col, unc_col, axis_unit, signal_unit, signal_type
+
+    if is_cross_section:
+        coord_col = None
+        for candidate in ("wavelength", "wavenumber", "nu", "wave", "lambda"):
+            if candidate in lower_to_orig:
+                coord_col = lower_to_orig[candidate]
+                break
+        if coord_col is not None:
+            signal_col = lower_to_orig.get("cross_section") or lower_to_orig["sigma_cm2"]
+            unc_col = lower_to_orig.get("uncertainty") or lower_to_orig.get("error")
+            default_axis = "cm^-1" if coord_col.lower() in ("wavenumber", "nu") else None
+            axis_unit = _normalize_unit(col_units.get(coord_col)) or _normalize_unit(
+                header_meta.get("axis_unit")
+            ) or default_axis
+            signal_unit = _normalize_unit(col_units.get(signal_col)) or _normalize_unit(
+                header_meta.get("signal_unit")
+            ) or "cm^2/molecule"
+            signal_type = "Laboratory Cross Section"
+            return coord_col, signal_col, unc_col, axis_unit, signal_unit, signal_type
+
+    if is_emission_ref:
+        coord_col = None
+        for candidate in ("wavelength", "wavenumber", "nu", "wave", "lambda"):
+            if candidate in lower_to_orig:
+                coord_col = lower_to_orig[candidate]
+                break
+        if coord_col is not None:
+            signal_col = lower_to_orig.get("emission_intensity") or lower_to_orig["line_flux"]
+            unc_col = lower_to_orig.get("uncertainty") or lower_to_orig.get("error")
+            axis_unit = _normalize_unit(col_units.get(coord_col)) or _normalize_unit(
+                header_meta.get("axis_unit")
+            )
+            signal_unit = _normalize_unit(col_units.get(signal_col)) or _normalize_unit(
+                header_meta.get("signal_unit")
+            )
+            signal_type = "Reference Emission Spectrum"
+            return coord_col, signal_col, unc_col, axis_unit, signal_unit, signal_type
 
     coord_col = None
     for candidate in ("wavelength", "centralwavelng", "wave", "lambda", "wavenumber"):
@@ -233,9 +302,13 @@ def _build_spectrum_from_parsed_rows(
     warnings: list[str] = []
     if unc_col is not None and missing_uncertainty > 0:
         warnings.append(f"{missing_uncertainty} row(s) have missing uncertainty values")
-    if signal_type and signal_type.startswith("Laboratory FTIR"):
+    if signal_type and signal_type.startswith("Laboratory"):
         warnings.append(
             f"Imported as {signal_type}; laboratory spectra are not planetary transit-depth observations"
+        )
+    elif signal_type == "Reference Emission Spectrum":
+        warnings.append(
+            f"Imported as {signal_type}; emission reference spectra are not planetary transit-depth observations"
         )
 
     return SpectrumData(

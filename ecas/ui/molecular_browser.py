@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QListWidget, QSplitter, QFormLayout, QSpinBox, QDoubleSpinBox,
     QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QTabWidget)
-from ecas.visualization.reference_plot import ReferencePlot
+from ecas.visualization.reference_plot import ReferencePlot, reference_display_points
 
 from ecas.ingestion.exomol_catalogue import MAX_BYTES, parse_catalogue, search_catalogue
 from ecas.ingestion.exomol_catalogue_cache import load_catalogue, store_catalogue
@@ -97,9 +97,13 @@ class MolecularReferenceBrowser(QWidget):
         self.request_toggle.toggled.connect(self._toggle_request_settings)
         cache_controls=QHBoxLayout()
         self.cached=QComboBox(); self.load_reference_button=QPushButton('Open cached reference')
+        self.axis_toggle_button=QPushButton('Show X-axis in Wavelength (microns)')
+        self.axis_toggle_button.setToolTip('Convert displayed wavenumbers (cm^-1) to wavelengths (microns = 10000 / cm^-1) without altering cached bytes.')
         self.cached.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.cached.setMinimumContentsLength(10)
-        cache_controls.addWidget(self.cached,1); cache_controls.addWidget(self.load_reference_button)
+        cache_controls.addWidget(self.cached,1)
+        cache_controls.addWidget(self.load_reference_button)
+        cache_controls.addWidget(self.axis_toggle_button)
         reference_layout.addLayout(cache_controls)
         self.reference_status=QLabel('No reference loaded.')
         self.reference_status.setTextFormat(Qt.TextFormat.PlainText); self.reference_status.setWordWrap(True)
@@ -120,6 +124,7 @@ class MolecularReferenceBrowser(QWidget):
         self.results.currentRowChanged.connect(self.show_selected)
         self.download_button.clicked.connect(self.download_selected)
         self.load_reference_button.clicked.connect(self.open_cached_reference)
+        self.axis_toggle_button.clicked.connect(self.toggle_reference_axis_unit)
         self.cached.currentIndexChanged.connect(self._buttons)
         self._reload_references()
         self._load_initial()
@@ -274,13 +279,30 @@ class MolecularReferenceBrowser(QWidget):
         except Exception as error: self.reference_status.setText(f'Reference cache unavailable: {error}')
         finally: self.cached.blockSignals(False)
 
+    def _populate_reference_table(self, product):
+        axis_label, pts = reference_display_points(product, self.reference_plot.axis_mode)
+        self.reference_table.setRowCount(len(pts)); self.reference_table.setColumnCount(2)
+        self.reference_table.setHorizontalHeaderLabels([axis_label, 'Cross section (cm^2/molecule)'])
+        for row, point in enumerate(pts):
+            for column, value in enumerate(point):
+                self.reference_table.setItem(row, column, QTableWidgetItem(str(value)))
+        self.reference_table.resizeColumnsToContents()
+
+    def toggle_reference_axis_unit(self):
+        mode = self.reference_plot.toggle_axis_mode()
+        self.axis_toggle_button.setText(
+            'Show X-axis in Wavenumber (cm^-1)' if mode == 'microns' else 'Show X-axis in Wavelength (microns)'
+        )
+        self.reference_views.setTabText(
+            0, 'Plot (microns)' if mode == 'microns' else 'Plot (native units)'
+        )
+        if self.current_reference is not None:
+            self._populate_reference_table(self.current_reference.product)
+        return mode
+
     def _show_reference(self, result):
         product=result.product
-        self.reference_table.setRowCount(len(product.points)); self.reference_table.setColumnCount(2)
-        self.reference_table.setHorizontalHeaderLabels(['Wavenumber (cm^-1)','Cross section (cm^2/molecule)'])
-        for row,point in enumerate(product.points):
-            for column,value in enumerate(point): self.reference_table.setItem(row,column,QTableWidgetItem(str(value)))
-        self.reference_table.resizeColumnsToContents()
+        self._populate_reference_table(product)
         self.reference_plot.load_product(product)
         self.current_reference=result
         self.reference_status.setText(f'Calculated {product.provenance.molecule} cross section: {len(product.points)} points; {result.request.temperature} K; zero pressure; Doppler-only. '

@@ -34,3 +34,33 @@ Implemented **Chunk 7 — Scientific Resources, Interoperability, and Atmospheri
 - Removed 0-byte `ecas/ui/main_window_temp.py`.
 - Added `tests/test_chunk7_resources_and_modeling.py` covering catalog integrity, UI filtering and clipboard actions, `.ecsv`/`.dat`/`.fits` ingestion, laboratory FTIR vs. planetary transit-depth separation, wavenumber-to-micron covariance permutation invariance, and end-to-end WASP-39 b benchmark forward-model comparison and persistence reproduction.
 
+### Post-Review Physics, Data-Accuracy & UX Streamlining Increment (2026-10-29)
+- **Physical 1D Limb-Transmission Forward-Model Generator (`ecas/comparison/model_generator.py`)**:
+  - Implemented spherical-shell slant-chord quadrature for an isothermal hydrostatic atmosphere (`generate_isothermal_transmission_model`) with dynamic optically thin top-of-atmosphere sizing, verified against the analytical Lecavelier des Etangs et al. (2008) / Heng & Kitzmann (2017) formula (`lecavelier_analytic_transit_depth`) to $< 0.3\%$ across 4 orders of magnitude in opacity.
+  - Added published planetary presets (`WASP-39 b`, `K2-18 b`, `HD 209458 b`), real cached ExoMol cross-section ingestion (`component_from_cached_exomol`), imported UV-Vis / IR cross-section ingestion (`component_from_cross_section_spectrum`), explicitly flagged broadband Gaussian band-center templates (`build_illustrative_band_component` with `ECAS-IllustrativeBandProfile-Synthetic` warning), and leave-one-out multi-molecule sensitivity attribution (`generate_leave_one_out_models`, `summarize_leave_one_out_attribution`).
+- **Broader Spectral Regimes (`ecas/ingestion/tabular_formats.py`, `ecas/ui/main_window.py`)**:
+  - Added explicit recognition of UV-Vis absorbance/transmittance, `cm^2/molecule` laboratory cross-section spectra, and reference emission spectra (`emission_intensity` / `line_flux`), keeping non-transit observables strictly separated from planetary transit depth. Expanded the file import dialog filter to include `.ecsv`, `.dat`, `.tsv`, `.fits`, `.fit`, and `.fts`.
+- **Data-Accuracy Guards & Passband Integration (`ecas/comparison/inputs.py`, `ecas/comparison/alignment.py`, `ecas/comparison/residuals.py`)**:
+  - Exposed top-hat passband bin integration (`integrate_model_over_bins` + `subset_by_indices` + `extract_observation_bin_edges`) in `ComparisonBrowser` whenever an observation supplies explicit channel bandwidths.
+  - Added `audit_asymmetric_uncertainties()` to flag $>10\%$ upper/lower error-bar asymmetry when conservative $1\sigma$ envelopes are used in weighted diagnostics.
+  - Added `demeaned_rms_residual` and `offset_dominates_shape` in `ResidualDiagnostic` to alert researchers when constant multi-instrument baseline offsets exceed spectral-shape residuals without silently subtracting offsets.
+- **UX & Coordinate Conversion Controls (`ecas/visualization/reference_plot.py`, `ecas/ui/molecular_browser.py`, `ecas/ui/comparison_browser.py`)**:
+  - Added 1-click `Wavenumber (cm^-1)` $\leftrightarrow$ `Wavelength (microns)` display toggles in both `MolecularReferenceBrowser` and `ComparisonBrowser` (preserving native `Wavenumber (cm^-1)` by default and leaving cached bytes untouched).
+  - Added explicit `ppm`, `um`, and `cm^-1` unit controls, plain-English field tooltips, `Quick Setup: Auto-fill from metadata & enable alignment`, and 1-click `Generate, Auto-Align & Compare` in `ComparisonBrowser`.
+- **Opt-In Live Network Health Suite (`pytest.ini`, `tests/test_live_network_health.py`) & Verification (`tests/test_physics_ux_and_attribution.py`)**:
+  - Added `@pytest.mark.live_network` health checks (skipped offline unless `ECAS_RUN_LIVE_NETWORK_TESTS=1`) plus 10 offline physics, data-accuracy, and GUI workflow tests.
+
+### Code Review & Reliability Hardening (2026-10-29)
+- **SQLite Connection Lifecycle (`tests/test_projects.py`, `tests/test_projects_ui.py`, `tests/test_project_review_regressions.py`)**:
+  - Standardized all raw SQLite test helper connections to `contextlib.closing(sqlite3.connect(...))` and `with conn:`. Resolved latent `ResourceWarning: unclosed database in <sqlite3.Connection>` and `PytestUnraisableExceptionWarning` in Python 3.14 under strict `pytest -W error`.
+- **Defensive Error Guards & NumPy Compatibility**:
+  - In `ecas/comparison/alignment.py`, wrapped `_trapezoid = getattr(np, 'trapezoid', getattr(np, 'trapz', None))` to maintain backward compatibility across NumPy 1.x and 2.x.
+  - In `ecas/visualization/reference_plot.py`, guarded `reference_display_points(None)` to safely return empty point tuples rather than throwing `AttributeError`.
+  - In `ecas/ui/comparison_browser.py`, safeguarded `add_current_observation` against `None` or non-dict returns from `metadata_getter()`.
+  - In `ecas/comparison/inputs.py`, updated `audit_asymmetric_uncertainties()` and `extract_observation_bin_edges()` to perform case-insensitive column lookups across astronomical variants (`PL_TRANDEPERR1`/`PL_TRANDEPERR2`, `err_high`/`err_low`, `err_plus`/`err_minus`, `unc_upper`/`unc_lower`, `unc_plus`/`unc_minus`, `e_high`/`e_low`, `BANDWIDTH`, `Bin_Width`, `FWHM`).
+  - In `ecas/comparison/residuals.py`, added a numerical roundoff guard (`rms_res > 1e-12 and abs(mean_res) > 1e-12`) ensuring identical or near-identical floating-point curves do not trigger false systematic offset alerts.
+  - Removed stray Windows cache directory `%SystemDrive%`.
+  - Verified full test suite execution: **621 passed, 22 skipped in 15.20s** under `pytest -W error` with zero warnings and zero BOMs.
+
+
+

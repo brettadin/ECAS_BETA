@@ -243,6 +243,7 @@ class ECASWindow(QMainWindow):
                 self.comparison_browser = ComparisonBrowser(
                     self._comparison_observation, self.reference_browser.cache_root, self,
                     description_getter=self._comparison_description,
+                    metadata_getter=self._comparison_metadata,
                     project_store=self.project_store,
                     active_project_getter=lambda: self.project_browser.projects.currentText())
                 layout.addWidget(self.comparison_browser)
@@ -327,6 +328,36 @@ class ECASWindow(QMainWindow):
         instrument = text(archive.get('instrument')) or text(table.get('INSTRUMENT'))
         return ' — '.join(part for part in (
             planet, publication or self.current_spectrum.source_file.name, instrument) if part)
+
+    def _comparison_metadata(self) -> dict[str, str]:
+        """Return established header/archive metadata without rereading source files."""
+        details = self.current_spectrum_details
+        table = dict(details.metadata) if details is not None else {}
+        attachment = self.current_project_attachment or {}
+        archive = attachment.get('provenance', {}).get('cache_record', {}).get('metadata', {})
+        if not isinstance(archive, dict):
+            archive = {}
+
+        def clean(value):
+            return ' '.join(value.split()) if isinstance(value, str) else ''
+
+        meta: dict[str, str] = {}
+        planet = clean(archive.get('pl_name')) or clean(table.get('PL_NAME'))
+        instrument = clean(archive.get('instrument')) or clean(table.get('INSTRUMENT'))
+        facility = clean(archive.get('facility')) or clean(table.get('FACILITY'))
+        reference = clean(archive.get('authors')) or clean(table.get('REFERENCE'))
+        spec_type = clean(archive.get('spec_type')) or clean(table.get('SPEC_TYPE'))
+        if planet:
+            meta['pl_name'] = planet
+        if instrument:
+            meta['instrument'] = instrument
+        if facility:
+            meta['facility'] = facility
+        if reference:
+            meta['reference'] = reference
+        if spec_type:
+            meta['spec_type'] = spec_type
+        return meta
 
     def _build_spectral_page(self, layout):
         """Create the controls used to import and inspect a spectrum."""
@@ -498,7 +529,10 @@ class ECASWindow(QMainWindow):
             self,
             "Import Spectrum",
             "",
-            "Spectrum files (*.csv *.tbl);;CSV files (*.csv);;NASA IPAC tables (*.tbl);;All files (*)",
+            "Spectrum files (*.csv *.tbl *.ecsv *.dat *.tsv *.fits *.fit *.fts);;"
+            "CSV files (*.csv);;NASA IPAC tables (*.tbl);;"
+            "Astropy ECSV / ASCII (*.ecsv *.dat *.tsv);;"
+            "FITS binary tables (*.fits *.fit *.fts);;All files (*)",
         )
 
         # Cancelling the dialog does not count as a failed import.

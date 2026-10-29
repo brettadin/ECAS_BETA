@@ -274,6 +274,21 @@ def _subset_input(
     return TransformedInput(original=original, transformed=updated, steps=prior_steps + (step,))
 
 
+def subset_by_indices(
+    item: ComparisonInput | TransformedInput,
+    included_indices: Sequence[int],
+    *,
+    exclusion_reason: str = 'excluded_by_model_bin_coverage',
+) -> TransformedInput:
+    """Explicitly subset an input to retained coordinate indices with full provenance."""
+    return _subset_input(
+        item,
+        included_indices,
+        'subset_by_indices_v1',
+        exclusion_reason,
+    )
+
+
 def restrict_to_shared_coordinates(
     left: ComparisonInput | TransformedInput,
     right: ComparisonInput | TransformedInput,
@@ -320,6 +335,9 @@ def restrict_to_shared_coordinates(
     )
 
 
+_trapezoid = getattr(np, 'trapezoid', getattr(np, 'trapz', None))
+
+
 def _trapezoid_bin_average(x_grid: np.ndarray, y_grid: np.ndarray, left_edge: float, right_edge: float) -> float:
     """Exact piecewise-linear average over [left_edge, right_edge] within x_grid domain."""
     y_left = float(np.interp(left_edge, x_grid, y_grid))
@@ -327,7 +345,7 @@ def _trapezoid_bin_average(x_grid: np.ndarray, y_grid: np.ndarray, left_edge: fl
     interior_mask = (x_grid > left_edge) & (x_grid < right_edge)
     xs = np.concatenate(([left_edge], x_grid[interior_mask], [right_edge]))
     ys = np.concatenate(([y_left], y_grid[interior_mask], [y_right]))
-    area = float(np.trapezoid(ys, xs))
+    area = float(_trapezoid(ys, xs))
     return area / (right_edge - left_edge)
 
 

@@ -1,5 +1,6 @@
 """Project sources/provenance survive loss of original files and cached entries."""
 import base64
+from contextlib import closing
 import json
 from pathlib import Path
 import shutil
@@ -83,12 +84,13 @@ def test_changed_saved_data_is_visible_failure(tmp_path, target):
     store = ProjectStore(tmp_path / 'projects')
     store.create('research')
     store.attach('research', spectrum)
-    with sqlite3.connect(store.root / 'research/data.sqlite') as conn:
-        data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
-        if target == 'spectrum': data['rows'][0]['signal'] = 999
-        elif target == 'source': data['attachment']['source_bytes'] = 'changed'
-        else: data['attachment']['provenance']['original_path'] = 'changed'
-        conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
+    with closing(sqlite3.connect(store.root / 'research/data.sqlite')) as conn:
+        with conn:
+            data = json.loads(conn.execute('SELECT data FROM spectra').fetchone()[0])
+            if target == 'spectrum': data['rows'][0]['signal'] = 999
+            elif target == 'source': data['attachment']['source_bytes'] = 'changed'
+            else: data['attachment']['provenance']['original_path'] = 'changed'
+            conn.execute('UPDATE spectra SET data = ?', (json.dumps(data),))
     with pytest.raises(PersistenceError): store.spectra('research')
 
 
@@ -108,8 +110,9 @@ def test_failed_database_insert_does_not_register_partial_attachment(tmp_path):
     _, spectrum = csv_source(tmp_path)
     store = ProjectStore(tmp_path / 'projects')
     store.create('research')
-    with sqlite3.connect(store.root / 'research/data.sqlite') as conn:
-        conn.execute("CREATE TRIGGER fail_insert BEFORE INSERT ON spectra BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END")
+    with closing(sqlite3.connect(store.root / 'research/data.sqlite')) as conn:
+        with conn:
+            conn.execute("CREATE TRIGGER fail_insert BEFORE INSERT ON spectra BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END")
     with pytest.raises(PersistenceError): store.attach('research', spectrum)
     assert store.spectra('research') == []
 

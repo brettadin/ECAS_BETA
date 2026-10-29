@@ -72,3 +72,4 @@ Chunk 7 completes the scientific, archival, spectroscopic, and computational fou
 - Full suite executed in offscreen headless mode (`QT_QPA_PLATFORM=offscreen`, `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`):
   `610 passed, 1 skipped in 13.12s`
 - Zero regressions across existing Chunks 1–6 functionality.
+

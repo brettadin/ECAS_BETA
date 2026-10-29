@@ -2,6 +2,7 @@
 from copy import deepcopy
 from dataclasses import dataclass, replace
 import math
+import re
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -9,6 +10,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -27,12 +29,31 @@ from ecas.comparison.alignment import (
     TransformedInput,
     convert_axis_unit,
     convert_signal_unit,
+    convert_wavenumber_to_microns,
+    integrate_model_over_bins,
     restrict_to_shared_coordinates,
+    subset_by_indices,
 )
 from ecas.comparison.candidates import evaluate_candidates
 from ecas.comparison.eligibility import ComparisonInput, assess, describe_reason
 from ecas.comparison.forward_model import load_forward_model_file
-from ecas.comparison.inputs import observation_input, reference_input
+from ecas.comparison.inputs import (
+    audit_asymmetric_uncertainties,
+    extract_observation_bin_edges,
+    observation_input,
+    reference_input,
+)
+from ecas.comparison.model_generator import (
+    ILLUSTRATIVE_SPECIES,
+    PLANET_PRESETS,
+    MolecularComponentSpec,
+    build_illustrative_band_component,
+    component_from_cached_exomol,
+    generate_isothermal_transmission_model,
+    generate_leave_one_out_models,
+    get_planet_preset,
+    summarize_leave_one_out_attribution,
+)
 from ecas.comparison.persistence import (
     build_comparison_record,
     load_comparison_record,
@@ -40,7 +61,7 @@ from ecas.comparison.persistence import (
 )
 from ecas.comparison.residuals import evaluate_residuals
 from ecas.ingestion.exomol_reference_cache import cached_references, load_reference
-from ecas.visualization.reference_plot import ReferencePlot
+from ecas.visualization.reference_plot import ReferencePlot, reference_display_points
 from ecas.visualization.residual_plot import ResidualPlot
 from ecas.visualization.spectra_plot import SpectraPlot
 
@@ -122,21 +143,27 @@ class ComparisonBrowser(QWidget):
         parent=None,
         *,
         description_getter=None,
+        metadata_getter=None,
         project_store=None,
         active_project_getter=None,
     ):
         super().__init__(parent)
         self.observation_getter = observation_getter
         self.description_getter = description_getter
+        self.metadata_getter = metadata_getter
         self.cache_root = cache_root
         self.project_store = project_store
         self.active_project_getter = active_project_getter
         self.current_observation = None
         self.current_observation_hash = None
+        self.current_observation_metadata: dict[str, str] = {}
+        self._observation_metadata_list: list[dict[str, str]] = []
         self.current_reference = None
         self.current_eligibility = None
         self.current_diagnostic = None
         self.current_candidate_summary = None
+        self.last_attribution_entries = ()
+        self._last_attribution_note = ''
         self.residual_plot = None
         self.candidate_entries: list[_CandidateEntry] = []
         self._evaluated_candidate_records: list[dict] = []
@@ -168,6 +195,13 @@ class ComparisonBrowser(QWidget):
             button = QPushButton('Add current observation' if side == 'observation' else 'Refresh cached choices')
             controls.addWidget(selector, 1)
             controls.addWidget(button)
+            if side == 'reference':
+                self.reference_axis_toggle = QPushButton('Show X-axis in Wavelength (microns)')
+                self.reference_axis_toggle.setToolTip(
+                    'Toggle cached molecular reference display between native Wavenumber (cm^-1) '
+                    'and Wavelength (microns = 10000 / cm^-1) without altering cached bytes.'
+                )
+                controls.addWidget(self.reference_axis_toggle)
             box.addLayout(controls)
             status = _label('No input selected.')
             table = _table()
@@ -216,6 +250,7 @@ class ComparisonBrowser(QWidget):
 
         self.observation_button.clicked.connect(self.add_current_observation)
         self.reference_button.clicked.connect(self.refresh_references)
+        self.reference_axis_toggle.clicked.connect(self.toggle_reference_axis_unit)
         self.observation_selector.currentIndexChanged.connect(self._select_observation)
         self.reference_selector.currentIndexChanged.connect(self._select_reference)
         self.workflow_toggle_button.clicked.connect(self._toggle_workflow_panel)
@@ -224,10 +259,19 @@ class ComparisonBrowser(QWidget):
         box = QVBoxLayout(container)
         box.setContentsMargins(0, 4, 0, 4)
         box.setSpacing(6)
-        box.addWidget(_label(
-            'Caller observation attestations (optional; used only when raw import omits a field — '
-            'never overrides conflicting imported metadata):'
-        ))
+
+        quick_row = QHBoxLayout()
+        quick_row.addWidget(_label(
+            'Observation metadata & alignment (auto-fill reads imported dataset headers, '
+            'or tweak fields manually; never overrides conflicting imported metadata):'
+        ), 1)
+        self.auto_fill_button = QPushButton('Quick Setup: Auto-fill from metadata & enable alignment')
+        self.auto_fill_button.setToolTip(
+            'Populate unstated observation role, units, coordinate frame, instrument passband ID, '
+            'citation, uncertainty mode, and alignment checkboxes from imported dataset headers.'
+        )
+        quick_row.addWidget(self.auto_fill_button)
+        box.addLayout(quick_row)
 
         attest_row1 = QHBoxLayout()
         self.obs_role_selector = QComboBox()
@@ -249,8 +293,10 @@ class ComparisonBrowser(QWidget):
         for text, data in (
             ('Axis unit: (from import / unknown)', None),
             ('Axis unit: microns', 'microns'),
+            ('Axis unit: um', 'um'),
             ('Axis unit: nanometers', 'nanometers'),
             ('Axis unit: angstroms', 'angstroms'),
+            ('Axis unit: wavenumber (cm^-1)', 'cm^-1'),
         ):
             self.obs_axis_unit_selector.addItem(text, data)
 
@@ -259,6 +305,7 @@ class ComparisonBrowser(QWidget):
             ('Signal unit: (from import / unknown)', None),
             ('Signal unit: percent', 'percent'),
             ('Signal unit: fraction', 'fraction'),
+            ('Signal unit: ppm', 'ppm'),
         ):
             self.obs_signal_unit_selector.addItem(text, data)
 
@@ -274,18 +321,37 @@ class ComparisonBrowser(QWidget):
         attest_row2 = QHBoxLayout()
         self.obs_frame_input = QLineEdit()
         self.obs_frame_input.setPlaceholderText('Coordinate frame (e.g. barycentric)')
+        self.obs_frame_input.setToolTip(
+            'Rest frame of the wavelength grid (e.g., "barycentric" or "planet_rest"). '
+            'Both curves must share the same frame so Doppler shifts do not misalign lines.'
+        )
         self.obs_response_id_input = QLineEdit()
         self.obs_response_id_input.setPlaceholderText('Instrument response ID')
+        self.obs_response_id_input.setToolTip(
+            'Short label for the spectrograph passband/binning (e.g., "jwst-niriss-soss" or "nirspec-g395h"). '
+            'Click Quick Setup to fill automatically from imported instrument headers.'
+        )
         self.obs_response_evidence_input = QLineEdit()
         self.obs_response_evidence_input.setPlaceholderText('Response evidence / citation')
+        self.obs_response_evidence_input.setToolTip(
+            'Paper citation or note documenting the instrument passbands (e.g., "Feinstein et al. 2023").'
+        )
         self.obs_noise_selector = QComboBox()
         for text, data in (
             ('Noise: (not attested)', None),
             ('Noise: 1-sigma uncorrelated (imported uncertainty)', 'independent_gaussian_1sigma'),
+            ('Noise: Conservative asymmetric 1-sigma envelope', 'conservative_asymmetric_envelope_1sigma'),
         ):
             self.obs_noise_selector.addItem(text, data)
+        self.obs_noise_selector.setToolTip(
+            'Select how imported error bars should be treated in weighted chi-squared diagnostics. '
+            'Asymmetric upper/lower bounds are audited for >10% asymmetry bias.'
+        )
         self.obs_noise_evidence_input = QLineEdit()
         self.obs_noise_evidence_input.setPlaceholderText('Noise evidence (if weighted)')
+        self.obs_noise_evidence_input.setToolTip(
+            'Source or citation for the observational uncertainties when weighted diagnostics are enabled.'
+        )
         for widget in (
             self.obs_frame_input,
             self.obs_response_id_input,
@@ -300,13 +366,103 @@ class ComparisonBrowser(QWidget):
         self.align_checkbox = QCheckBox(
             'Opt-in explicit unit & exact shared-grid alignment (no interpolation or upsampling)'
         )
+        self.bin_integrate_checkbox = QCheckBox(
+            'Integrate higher-resolution forward models over observation passbands (bandwidth)'
+        )
+        self.bin_integrate_checkbox.setToolTip(
+            'When the observation provides explicit channel bandwidths, average dense forward models '
+            'over each top-hat passband [center - bw/2, center + bw/2] without extrapolating.'
+        )
         self.weighted_checkbox = QCheckBox('Weighted residual diagnostics')
         self.independent_checkbox = QCheckBox('Attest cross-dataset error independence')
         options_row.addWidget(self.align_checkbox)
+        options_row.addWidget(self.bin_integrate_checkbox)
         options_row.addWidget(self.weighted_checkbox)
         options_row.addWidget(self.independent_checkbox)
         options_row.addStretch(1)
         box.addLayout(options_row)
+
+        gen_header = _label(
+            'In-app 1D isothermal limb-transmission forward-model generator '
+            '(spherical-shell chord RT + leave-one-out multi-molecule sensitivity):'
+        )
+        box.addWidget(gen_header)
+
+        gen_row1 = QHBoxLayout()
+        self.gen_preset_selector = QComboBox()
+        for preset in PLANET_PRESETS:
+            self.gen_preset_selector.addItem(
+                f'Planet: {preset.planet_name} (T={preset.temperature_k:g}K, g={preset.gravity_m_s2:g}m/s^2)',
+                preset.preset_id,
+            )
+        self.gen_temp_spin = QDoubleSpinBox()
+        self.gen_temp_spin.setRange(50.0, 4000.0)
+        self.gen_temp_spin.setDecimals(1)
+        self.gen_temp_spin.setSingleStep(50.0)
+        self.gen_temp_spin.setValue(PLANET_PRESETS[0].temperature_k)
+        self.gen_temp_spin.setPrefix('T = ')
+        self.gen_temp_spin.setSuffix(' K')
+
+        self.gen_cloud_spin = QDoubleSpinBox()
+        self.gen_cloud_spin.setRange(0.00001, 10.0)
+        self.gen_cloud_spin.setDecimals(5)
+        self.gen_cloud_spin.setSingleStep(0.005)
+        self.gen_cloud_spin.setValue(PLANET_PRESETS[0].default_cloud_pressure_bar or 0.01)
+        self.gen_cloud_spin.setPrefix('P_cloud = ')
+        self.gen_cloud_spin.setSuffix(' bar')
+
+        self.gen_log_vmr_spin = QDoubleSpinBox()
+        self.gen_log_vmr_spin.setRange(-10.0, -0.5)
+        self.gen_log_vmr_spin.setDecimals(2)
+        self.gen_log_vmr_spin.setSingleStep(0.5)
+        self.gen_log_vmr_spin.setValue(-3.0)
+        self.gen_log_vmr_spin.setPrefix('log10(VMR) = ')
+        self.gen_log_vmr_spin.setToolTip(
+            'Uniform volume mixing ratio exponent per selected species (e.g., -3.0 = 10^-3 = 1000 ppm).'
+        )
+
+        self.gen_source_selector = QComboBox()
+        for text, data in (
+            ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
+            ('Opacities: Cached ExoMol cross sections only (strict line lists)', 'cached_only'),
+            ('Opacities: Broadband band templates (exploratory preview)', 'templates_only'),
+        ):
+            self.gen_source_selector.addItem(text, data)
+
+        for widget in (
+            self.gen_preset_selector,
+            self.gen_temp_spin,
+            self.gen_cloud_spin,
+            self.gen_log_vmr_spin,
+            self.gen_source_selector,
+        ):
+            gen_row1.addWidget(widget)
+        box.addLayout(gen_row1)
+
+        gen_row2 = QHBoxLayout()
+        gen_row2.addWidget(_label('Molecules:'))
+        self.gen_species_checks: dict[str, QCheckBox] = {}
+        default_checked = {'H2O', 'CO2', 'CH4', 'SO2'}
+        for formula in ILLUSTRATIVE_SPECIES:
+            cb = QCheckBox(formula)
+            cb.setChecked(formula in default_checked)
+            self.gen_species_checks[formula] = cb
+            gen_row2.addWidget(cb)
+        self.gen_loo_checkbox = QCheckBox('Leave-one-out attribution')
+        self.gen_loo_checkbox.setChecked(True)
+        self.gen_loo_checkbox.setToolTip(
+            'Also generate without-species models on the exact shared wavelength grid '
+            'to quantify each molecule\'s Delta-RMS and Delta-Q contribution.'
+        )
+        self.generate_model_button = QPushButton('Generate, Auto-Align & Compare')
+        self.generate_model_button.setToolTip(
+            'Auto-fill unstated observation metadata, compute 1D hydrostatic limb-transmission '
+            'forward models for the selected molecules, align units/passbands, and evaluate residuals.'
+        )
+        gen_row2.addWidget(self.gen_loo_checkbox)
+        gen_row2.addStretch(1)
+        gen_row2.addWidget(self.generate_model_button)
+        box.addLayout(gen_row2)
 
         cand_row = QHBoxLayout()
         self.load_model_button = QPushButton('Load forward-model JSON...')
@@ -343,6 +499,9 @@ class ComparisonBrowser(QWidget):
         self.persistence_status = _label('Project comparison records have not been loaded.')
         box.addWidget(self.persistence_status)
 
+        self.auto_fill_button.clicked.connect(self.auto_fill_observation_metadata)
+        self.gen_preset_selector.currentIndexChanged.connect(self._on_planet_preset_changed)
+        self.generate_model_button.clicked.connect(self.generate_and_compare_forward_model)
         self.load_model_button.clicked.connect(self.load_forward_model)
         self.add_reference_candidate_button.clicked.connect(self.stage_selected_reference_candidate)
         self.clear_candidates_button.clicked.connect(self.clear_staged_candidates)
@@ -451,8 +610,339 @@ class ComparisonBrowser(QWidget):
         self.candidate_entries.clear()
         self._evaluated_candidate_records.clear()
         self.current_candidate_summary = None
+        self.last_attribution_entries = ()
+        self._last_attribution_note = ''
         self._sync_staged_candidate_selector()
         self._explain()
+
+    def _on_planet_preset_changed(self, *_args):
+        preset_id = self.gen_preset_selector.currentData()
+        if not preset_id:
+            return
+        try:
+            preset = get_planet_preset(str(preset_id))
+        except KeyError:
+            return
+        self.gen_temp_spin.setValue(preset.temperature_k)
+        self.gen_cloud_spin.setValue(preset.default_cloud_pressure_bar or 0.01)
+
+    def auto_fill_observation_metadata(self) -> bool:
+        """Populate non-conflicting observation attestations and alignment options from dataset metadata."""
+        if self.current_observation is None:
+            self.compatibility.setText(
+                'Select and add an observation snapshot first before running Quick Setup.'
+            )
+            return False
+
+        spectrum = self.current_observation
+        adapted = observation_input(spectrum, self.current_observation_hash)
+        base = adapted.comparison_input
+        meta = self.current_observation_metadata
+
+        if self.obs_role_selector.currentData() is None:
+            self.obs_role_selector.setCurrentIndex(self.obs_role_selector.findData('observation'))
+
+        for field_name, default_val, selector in (
+            ('observable', 'transit_depth', self.obs_observable_selector),
+            ('axis_unit', 'microns', self.obs_axis_unit_selector),
+            ('signal_unit', 'percent', self.obs_signal_unit_selector),
+        ):
+            if getattr(base, field_name) is not None:
+                # Imported metadata already establishes this field; keep selector on None to avoid conflict
+                selector.setCurrentIndex(0)
+            elif selector.currentData() is None:
+                selector.setCurrentIndex(selector.findData(default_val))
+
+        if not self.obs_frame_input.text().strip():
+            self.obs_frame_input.setText('barycentric')
+
+        if not self.obs_response_id_input.text().strip():
+            inst_raw = meta.get('instrument', '')
+            slug = re.sub(r'[^a-z0-9]+', '-', inst_raw.lower()).strip('-')[:36] if inst_raw else ''
+            if not slug:
+                slug = re.sub(r'[^a-z0-9]+', '-', spectrum.source_file.stem.lower()).strip('-')[:36] or 'instrument'
+            self.obs_response_id_input.setText(f'{slug}-passband')
+
+        if not self.obs_response_evidence_input.text().strip():
+            ref = meta.get('reference', '')
+            if ref:
+                self.obs_response_evidence_input.setText(f'{ref} (imported header metadata)')
+            else:
+                self.obs_response_evidence_input.setText(
+                    f'Imported dataset {spectrum.source_file.name} (quick-setup attestation)'
+                )
+
+        if self.obs_noise_selector.currentData() is None:
+            unc_map = dict(adapted.raw_uncertainty_columns)
+            raw_unc = unc_map.get('uncertainty')
+            has_valid_sym_unc = (
+                raw_unc is not None
+                and len(raw_unc) == len(base.values)
+                and len(raw_unc) > 0
+                and all(
+                    not isinstance(v, bool)
+                    and isinstance(v, (int, float))
+                    and math.isfinite(v)
+                    and v > 0
+                    for v in raw_unc
+                )
+            )
+            asym = audit_asymmetric_uncertainties(spectrum)
+            if has_valid_sym_unc:
+                self.obs_noise_selector.setCurrentIndex(
+                    self.obs_noise_selector.findData('independent_gaussian_1sigma')
+                )
+                if not self.obs_noise_evidence_input.text().strip():
+                    ref = meta.get('reference', '')
+                    self.obs_noise_evidence_input.setText(
+                        f'{ref} 1-sigma uncertainty' if ref else 'Imported 1-sigma uncertainty column'
+                    )
+                self.weighted_checkbox.setChecked(True)
+                self.independent_checkbox.setChecked(True)
+            elif asym.envelope_sigma is not None:
+                self.obs_noise_selector.setCurrentIndex(
+                    self.obs_noise_selector.findData('conservative_asymmetric_envelope_1sigma')
+                )
+                if not self.obs_noise_evidence_input.text().strip():
+                    ref = meta.get('reference', '')
+                    self.obs_noise_evidence_input.setText(
+                        f'{ref} conservative asymmetric 1-sigma envelope'
+                        if ref else 'Imported asymmetric uncertainty envelope'
+                    )
+                self.weighted_checkbox.setChecked(True)
+                self.independent_checkbox.setChecked(True)
+
+        self.align_checkbox.setChecked(True)
+        has_bins = extract_observation_bin_edges(spectrum) is not None
+        self.bin_integrate_checkbox.setChecked(has_bins)
+
+        planet_name = meta.get('pl_name', '')
+        if planet_name:
+            try:
+                preset = get_planet_preset(planet_name)
+                p_idx = self.gen_preset_selector.findData(preset.preset_id)
+                if p_idx >= 0:
+                    self.gen_preset_selector.setCurrentIndex(p_idx)
+            except KeyError:
+                pass
+
+        self.candidate_status.setText(
+            f'Quick Setup applied from {spectrum.source_file.name} metadata '
+            f'({"passband integration enabled" if has_bins else "exact-grid alignment enabled"}).'
+        )
+        return True
+
+    def generate_and_compare_forward_model(self):
+        """Generate 1D isothermal limb-transmission forward model(s), align, and evaluate."""
+        if self.current_observation is None:
+            self.compatibility.setText(
+                'Select and add an observation snapshot first before generating a forward model.'
+            )
+            return None
+
+        self.auto_fill_observation_metadata()
+        try:
+            left_base, _, _ = self._build_attested_observation()
+        except ValueError as error:
+            self.compatibility.setText(f'Forward-model setup blocked: {error}')
+            return None
+
+        # Determine target wavelength domain in microns
+        left_um_item: ComparisonInput | TransformedInput = left_base
+        if left_base.axis_unit in ('nanometers', 'nm', 'angstroms', 'angstrom', 'um') and left_base.axis_unit != 'microns':
+            left_um_item = convert_axis_unit(left_um_item, 'microns')
+        elif left_base.axis_unit in ('cm^-1', 'cm-1', '1/cm'):
+            left_um_item = convert_wavenumber_to_microns(left_um_item, 'microns')
+        left_um = _eval_input(left_um_item)
+        if left_um.axis_unit != 'microns' or not _strictly_increasing_1d(left_um.coordinates):
+            self.compatibility.setText(
+                'Forward-model generation requires >= 3 positive strictly increasing observation coordinates.'
+            )
+            return None
+
+        obs_coords_um = np.asarray(left_um.coordinates, dtype=float)
+        obs_edges_um = self._observation_bin_edges_in_microns(left_base.axis_unit)
+        use_passband_integration = self.bin_integrate_checkbox.isChecked() and obs_edges_um is not None
+
+        if use_passband_integration:
+            min_edge = min(a for a, _ in obs_edges_um)
+            max_edge = max(b for _, b in obs_edges_um)
+            span = max(max_edge - min_edge, 1e-3)
+            dense_grid = np.linspace(max(1e-4, min_edge - 0.01 * span), max_edge + 0.01 * span, 1400)
+            target_grid_um = np.unique(np.concatenate((dense_grid, obs_coords_um)))
+            model_resp_id = 'highres_limb_rt_grid_v1'
+            model_resp_ev = 'Unbinned high-resolution limb transmission spectrum prior to passband integration'
+        else:
+            min_edge = float(obs_coords_um[0])
+            max_edge = float(obs_coords_um[-1])
+            target_grid_um = obs_coords_um
+            model_resp_id = left_um.response_id or 'observation-grid-passband'
+            model_resp_ev = f'Evaluated on observation grid ({left_um.response_evidence or "caller grid"})'
+
+        selected_formulas = [f for f, cb in self.gen_species_checks.items() if cb.isChecked()]
+        vmr = 10.0 ** float(self.gen_log_vmr_spin.value())
+        source_mode = self.gen_source_selector.currentData() or 'auto'
+
+        # Discover cached ExoMol references covering at least 3 observation coordinates
+        cached_by_formula: dict[str, object] = {}
+        if source_mode in ('auto', 'cached_only'):
+            try:
+                records, _ = cached_references(self.cache_root / 'references')
+                for _, ref_res in records:
+                    mol = ref_res.product.provenance.molecule
+                    comp_try = component_from_cached_exomol(ref_res, vmr)
+                    c_min, c_max = comp_try.wavelengths_um[0], comp_try.wavelengths_um[-1]
+                    covered_obs = int(np.sum((obs_coords_um >= c_min) & (obs_coords_um <= c_max)))
+                    if covered_obs >= 3:
+                        prev = cached_by_formula.get(mol)
+                        if prev is None or len(comp_try.wavelengths_um) > len(prev.wavelengths_um):
+                            cached_by_formula[mol] = comp_try
+            except (OSError, ValueError):
+                pass
+
+        components: list[MolecularComponentSpec] = []
+        missing_cached: list[str] = []
+        for formula in selected_formulas:
+            if formula in cached_by_formula and source_mode in ('auto', 'cached_only'):
+                components.append(cached_by_formula[formula])
+            elif source_mode == 'cached_only':
+                nu_low = 10000.0 / max_edge
+                nu_high = 10000.0 / min_edge
+                missing_cached.append(f'{formula} (need ~{nu_low:.0f}–{nu_high:.0f} cm^-1)')
+            else:
+                components.append(
+                    build_illustrative_band_component(
+                        formula,
+                        vmr,
+                        wavelength_min_um=min(0.20, float(target_grid_um[0]) * 0.95),
+                        wavelength_max_um=max(18.5, float(target_grid_um[-1]) * 1.05),
+                        n_grid_points=max(1400, len(target_grid_um)),
+                    )
+                )
+
+        if missing_cached:
+            self.compatibility.setText(
+                'Strict cached ExoMol mode blocked: no cached cross sections overlap >= 3 observation '
+                f'points for {", ".join(missing_cached)}. Download broader wavenumber ranges in '
+                'Molecular References, or switch Opacities to Auto / Broadband band templates.'
+            )
+            return None
+
+        preset = get_planet_preset(self.gen_preset_selector.currentData() or PLANET_PRESETS[0].preset_id)
+        temp_k = float(self.gen_temp_spin.value())
+        cloud_p = float(self.gen_cloud_spin.value())
+        target_sig_unit = left_um.signal_unit if left_um.signal_unit in ('percent', 'fraction') else 'percent'
+        frame = left_um.coordinate_frame or 'barycentric'
+
+        try:
+            if self.gen_loo_checkbox.isChecked() and len(components) >= 1:
+                full_model, loo_models = generate_leave_one_out_models(
+                    target_wavelengths_um=target_grid_um,
+                    temperature_k=temp_k,
+                    gravity_m_s2=preset.gravity_m_s2,
+                    planet_radius_m=preset.planet_radius_m,
+                    stellar_radius_m=preset.stellar_radius_m,
+                    components=components,
+                    reference_pressure_bar=preset.reference_pressure_bar,
+                    mean_molecular_weight_u=preset.mean_molecular_weight_u,
+                    cloud_pressure_bar=cloud_p,
+                    signal_unit=target_sig_unit,
+                    coordinate_frame=frame,
+                    response_id=model_resp_id,
+                    response_evidence=model_resp_ev,
+                )
+            else:
+                full_model = generate_isothermal_transmission_model(
+                    target_wavelengths_um=target_grid_um,
+                    temperature_k=temp_k,
+                    gravity_m_s2=preset.gravity_m_s2,
+                    planet_radius_m=preset.planet_radius_m,
+                    stellar_radius_m=preset.stellar_radius_m,
+                    components=components,
+                    reference_pressure_bar=preset.reference_pressure_bar,
+                    mean_molecular_weight_u=preset.mean_molecular_weight_u,
+                    cloud_pressure_bar=cloud_p,
+                    signal_unit=target_sig_unit,
+                    coordinate_frame=frame,
+                    response_id=model_resp_id,
+                    response_evidence=model_resp_ev,
+                )
+                loo_models = {}
+        except ValueError as error:
+            self.compatibility.setText(f'Forward-model generation failed: {error}')
+            return None
+
+        self.candidate_entries.clear()
+        self.last_attribution_entries = ()
+        self._last_attribution_note = ''
+
+        full_inp = full_model.comparison_input
+        self.candidate_entries.append(
+            _CandidateEntry(
+                label=f'{full_inp.source_id} (full model, {len(full_inp.coordinates)} pts)',
+                comparison_input=full_inp,
+                provenance=full_model.to_provenance_dict(),
+            )
+        )
+        ordered_loo_formulas = list(loo_models.keys())
+        for omitted, loo_mod in loo_models.items():
+            l_inp = loo_mod.comparison_input
+            self.candidate_entries.append(
+                _CandidateEntry(
+                    label=f'{l_inp.source_id} (leave-one-out without {omitted})',
+                    comparison_input=l_inp,
+                    provenance=loo_mod.to_provenance_dict(),
+                )
+            )
+        self._sync_staged_candidate_selector()
+        summary = self.run_interactive_candidates()
+
+        # Compute leave-one-out feature attribution on the exact aligned curves
+        if (
+            summary is not None
+            and loo_models
+            and len(self._evaluated_candidate_records) == 1 + len(ordered_loo_formulas)
+            and all(c.eligibility.status == 'eligible' for c in summary.candidates)
+        ):
+            aligned_obs = _eval_input(self._evaluated_candidate_records[0]['left_item'])
+            aligned_full_inp = _eval_input(self._evaluated_candidate_records[0]['right_item'])
+            aligned_loo_inps = {
+                formula: _eval_input(self._evaluated_candidate_records[idx_f + 1]['right_item'])
+                for idx_f, formula in enumerate(ordered_loo_formulas)
+            }
+            weighted = self.weighted_checkbox.isChecked()
+            independent = self.independent_checkbox.isChecked()
+            attr_entries = summarize_leave_one_out_attribution(
+                aligned_obs,
+                full_model,
+                loo_models,
+                weighted=weighted,
+                cross_dataset_independent=independent,
+                aligned_full_input=aligned_full_inp,
+                aligned_loo_inputs=aligned_loo_inps,
+            )
+            self.last_attribution_entries = attr_entries
+            parts = []
+            for ent in attr_entries:
+                dq_str = f', Delta-Q={ent.delta_weighted_q:+.4g}' if ent.delta_weighted_q is not None else ''
+                parts.append(
+                    f'{ent.formula} (peak {ent.peak_wavelength_um:.3g} um, '
+                    f'max opacity share {ent.max_opacity_share * 100:.1f}%, '
+                    f'Delta-RMS={ent.delta_rms:+.4g}{dq_str})'
+                )
+            warn_str = f' Warnings: {" ".join(full_model.warnings)}' if full_model.warnings else ''
+            self._last_attribution_note = (
+                'Leave-one-out species attribution (fixed-model sensitivity, not Bayesian retrieval sigma): '
+                + '; '.join(parts)
+                + '.'
+                + warn_str
+            )
+            self._render_candidate_selection(self.candidate_selector.currentIndex())
+        elif full_model.warnings and summary is not None:
+            self._last_attribution_note = 'Model warnings: ' + ' '.join(full_model.warnings)
+            self._render_candidate_selection(self.candidate_selector.currentIndex())
+
+        return summary
 
     def _build_attested_observation(self) -> tuple[ComparisonInput, dict, list[str]]:
         if self.current_observation is None:
@@ -461,6 +951,7 @@ class ComparisonBrowser(QWidget):
         adapted = observation_input(spectrum, self.current_observation_hash)
         base = adapted.comparison_input
         attestations: dict[str, object] = {}
+        extra_notes: list[str] = []
 
         role = base.role
         ui_role = self.obs_role_selector.currentData()
@@ -538,6 +1029,23 @@ class ComparisonBrowser(QWidget):
             if ui_noise_ev:
                 noise_ev = ui_noise_ev
                 attestations['noise_evidence'] = ui_noise_ev
+        elif ui_noise_kind == 'conservative_asymmetric_envelope_1sigma':
+            asym = audit_asymmetric_uncertainties(spectrum)
+            if not asym.has_asymmetric_columns or asym.envelope_sigma is None:
+                raise ValueError(
+                    asym.warning
+                    or 'Cannot attest asymmetric 1-sigma envelope: imported observation has no valid asymmetric error columns'
+                )
+            sigma = asym.envelope_sigma
+            noise_kind = 'independent_gaussian_1sigma'
+            attestations['noise_kind'] = 'conservative_asymmetric_envelope_1sigma'
+            attestations['asymmetric_columns'] = list(asym.column_pair) if asym.column_pair else []
+            attestations['max_asymmetry_ratio'] = asym.max_asymmetry_ratio
+            base_ev = ui_noise_ev or 'Imported asymmetric bounds'
+            noise_ev = f'{base_ev} (conservative symmetric envelope max(|+sigma|, |-sigma|))'
+            attestations['noise_evidence'] = noise_ev
+            if asym.warning:
+                extra_notes.append(asym.warning)
 
         updated = replace(
             base,
@@ -565,7 +1073,28 @@ class ComparisonBrowser(QWidget):
                 'Caller-supplied UI metadata attestations were applied for fields not '
                 f'established by raw import: {", ".join(sorted(attestations))}.'
             )
+        notes.extend(extra_notes)
         return updated, provenance, notes
+
+    def _observation_bin_edges_in_microns(
+        self,
+        orig_axis_unit: str | None,
+    ) -> tuple[tuple[float, float], ...] | None:
+        if self.current_observation is None:
+            return None
+        raw_edges = extract_observation_bin_edges(self.current_observation)
+        if raw_edges is None:
+            return None
+        unit = (orig_axis_unit or '').strip().lower()
+        if unit in ('microns', 'um'):
+            return raw_edges
+        if unit in ('nanometers', 'nm'):
+            return tuple((a * 1e-3, b * 1e-3) for a, b in raw_edges)
+        if unit in ('angstroms', 'angstrom'):
+            return tuple((a * 1e-4, b * 1e-4) for a, b in raw_edges)
+        if unit in ('cm^-1', 'cm-1', '1/cm'):
+            return tuple((10000.0 / b, 10000.0 / a) for a, b in reversed(raw_edges))
+        return None
 
     def _align_inputs_for_candidates(
         self,
@@ -576,21 +1105,30 @@ class ComparisonBrowser(QWidget):
             return left_input, list(candidate_inputs), []
 
         notes: list[str] = []
+        orig_left_axis_unit = left_input.axis_unit
         left_item: ComparisonInput | TransformedInput = left_input
-        if left_input.observable == 'transit_depth' and left_input.axis_unit in ('nanometers', 'nm', 'angstroms'):
-            left_item = convert_axis_unit(left_item, 'microns')
+        if left_input.observable == 'transit_depth':
+            if left_input.axis_unit in ('nanometers', 'nm', 'angstroms', 'angstrom', 'um') and left_input.axis_unit != 'microns':
+                left_item = convert_axis_unit(left_item, 'microns')
+            elif left_input.axis_unit in ('cm^-1', 'cm-1', '1/cm'):
+                left_item = convert_wavenumber_to_microns(left_item, 'microns')
+            left_cur = _eval_input(left_item)
+            if left_cur.signal_unit == 'ppm':
+                left_item = convert_signal_unit(left_item, 'percent')
         left_cur = _eval_input(left_item)
 
         stage1: list[ComparisonInput | TransformedInput] = []
         for cand in candidate_inputs:
             c_item: ComparisonInput | TransformedInput = cand
             if cand.observable == 'transit_depth':
-                if cand.axis_unit in ('nanometers', 'nm', 'angstroms'):
+                if cand.axis_unit in ('nanometers', 'nm', 'angstroms', 'angstrom', 'um') and cand.axis_unit != 'microns':
                     c_item = convert_axis_unit(c_item, 'microns')
+                elif cand.axis_unit in ('cm^-1', 'cm-1', '1/cm'):
+                    c_item = convert_wavenumber_to_microns(c_item, 'microns')
                 c_cur = _eval_input(c_item)
                 if (
                     left_cur.signal_unit in ('percent', 'fraction')
-                    and c_cur.signal_unit in ('percent', 'fraction')
+                    and c_cur.signal_unit in ('percent', 'fraction', 'ppm')
                     and c_cur.signal_unit != left_cur.signal_unit
                 ):
                     c_item = convert_signal_unit(c_item, left_cur.signal_unit)
@@ -602,6 +1140,60 @@ class ComparisonBrowser(QWidget):
             and left_cur.coordinate_frame
             and _strictly_increasing_1d(left_cur.coordinates)
         ):
+            obs_edges_um = (
+                self._observation_bin_edges_in_microns(orig_left_axis_unit)
+                if self.bin_integrate_checkbox.isChecked()
+                else None
+            )
+            if (
+                obs_edges_um is not None
+                and len(obs_edges_um) == len(left_cur.coordinates)
+                and left_cur.response_id
+                and left_cur.response_evidence
+            ):
+                fm_indices: list[int] = []
+                common_bins = list(range(len(obs_edges_um)))
+                for idx, c_item in enumerate(stage1):
+                    c_cur = _eval_input(c_item)
+                    if (
+                        c_cur.role == 'forward_model'
+                        and c_cur.observable == 'transit_depth'
+                        and c_cur.axis_unit == 'microns'
+                        and c_cur.coordinate_frame == left_cur.coordinate_frame
+                        and _strictly_increasing_1d(c_cur.coordinates)
+                    ):
+                        dom_start = float(c_cur.coordinates[0])
+                        dom_stop = float(c_cur.coordinates[-1])
+                        covered = [
+                            b_i for b_i in common_bins
+                            if dom_start <= obs_edges_um[b_i][0] and obs_edges_um[b_i][1] <= dom_stop
+                        ]
+                        if len(covered) >= 3:
+                            fm_indices.append(idx)
+                            common_bins = covered
+
+                if fm_indices and len(common_bins) >= 3:
+                    if len(common_bins) < len(left_cur.coordinates):
+                        left_item = subset_by_indices(
+                            left_item,
+                            common_bins,
+                            exclusion_reason='bin_not_fully_covered_by_model_domain',
+                        )
+                        left_cur = _eval_input(left_item)
+                        active_edges = tuple(obs_edges_um[i] for i in common_bins)
+                    else:
+                        active_edges = obs_edges_um
+
+                    for idx in fm_indices:
+                        stage1[idx], _, _ = integrate_model_over_bins(
+                            stage1[idx],
+                            left_cur.coordinates,
+                            active_edges,
+                            response_id=left_cur.response_id,
+                            response_evidence=left_cur.response_evidence,
+                        )
+                    return left_item, stage1, notes
+
             left_coord_set = set(left_cur.coordinates)
             alignable_indices: list[int] = []
             for idx, c_item in enumerate(stage1):
@@ -689,16 +1281,25 @@ class ComparisonBrowser(QWidget):
             self.observation_status.setText('Load an observation in Spectral Data or Projects first. Previous selection retained.')
             return
         snapshot = deepcopy(spectrum)
+        raw_meta = self.metadata_getter() if self.metadata_getter is not None else None
+        meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
         description = self.description_getter() if self.description_getter else snapshot.source_file.name
+        self._observation_metadata_list.append(meta)
         self.observation_selector.addItem(
             f'{self.observation_selector.count() + 1}: {description} | {snapshot.row_count} rows',
             (snapshot, source_hash))
         self.observation_selector.setCurrentIndex(self.observation_selector.count() - 1)
 
     def _select_observation(self, *_):
+        idx = self.observation_selector.currentIndex()
         selected = self.observation_selector.currentData()
         self.current_observation = selected[0] if selected else None
         self.current_observation_hash = selected[1] if selected else None
+        self.current_observation_metadata = (
+            dict(self._observation_metadata_list[idx])
+            if selected and 0 <= idx < len(self._observation_metadata_list)
+            else {}
+        )
         if selected:
             spectrum, source_hash = selected
             hash_display = ('\n'.join(source_hash[i:i + 32] for i in range(0, len(source_hash), 32))
@@ -739,6 +1340,21 @@ class ComparisonBrowser(QWidget):
             self.reference_selector.blockSignals(False)
         self._select_reference()
 
+    def toggle_reference_axis_unit(self):
+        mode = self.reference_plot.toggle_axis_mode()
+        self.reference_axis_toggle.setText(
+            'Show X-axis in Wavenumber (cm^-1)'
+            if mode == 'microns'
+            else 'Show X-axis in Wavelength (microns)'
+        )
+        self.reference_views.setTabText(
+            0, 'Plot (microns)' if mode == 'microns' else 'Plot (native units)'
+        )
+        if self.current_reference is not None:
+            axis_label, pts = reference_display_points(self.current_reference.product, mode)
+            _fill(self.reference_table, (axis_label, 'Cross section (cm^2/molecule)'), pts)
+        return mode
+
     def _select_reference(self, *_):
         self.current_reference = None
         self.reference_plot.clear()
@@ -757,7 +1373,8 @@ class ComparisonBrowser(QWidget):
                     f'{request.temperature} K; zero pressure; Doppler-only. Calculated absorption cross section.\n'
                     f'Source SHA-256: {product.source_sha256}\nSource: {provenance.source_url}')
                 self.reference_status.setToolTip('\n'.join((*provenance.citations, provenance.licence_url)))
-                _fill(self.reference_table, ('Wavenumber (cm^-1)', 'Cross section (cm^2/molecule)'), product.points)
+                axis_label, pts = reference_display_points(product, self.reference_plot.axis_mode)
+                _fill(self.reference_table, (axis_label, 'Cross section (cm^2/molecule)'), pts)
                 self.reference_plot.load_product(product)
             except (OSError, ValueError) as error:
                 self.reference_status.setText(f'Cached reference unavailable or invalid: {error}')
@@ -806,11 +1423,19 @@ class ComparisonBrowser(QWidget):
             '(fixed covariance, omits log-det normalization)'
             if diagnostic.weighted_residual_quadratic is not None else ''
         )
+        offset_note = (
+            ' Systematic-offset notice: |mean residual| exceeds de-meaned shape RMS; '
+            'a constant baseline transit-depth offset dominates spectral shape residuals '
+            '(offsets are reported diagnostically, never silently subtracted).'
+            if diagnostic.offset_dominates_shape else ''
+        )
         self.diagnostic_summary.setText(
             f'Diagnostic {diagnostic.operation} ({diagnostic.residual_convention}, '
             f'{diagnostic.sample_count} samples, {diagnostic.signal_unit}): '
-            f'RMS = {diagnostic.rms_residual:.6g}, mean = {diagnostic.mean_residual:.6g}, '
-            f'max |r| = {diagnostic.max_abs_residual:.6g}{quadratic_note}. '
+            f'RMS = {diagnostic.rms_residual:.6g}, '
+            f'de-meaned shape RMS = {diagnostic.demeaned_rms_residual:.6g}, '
+            f'mean = {diagnostic.mean_residual:.6g}, '
+            f'max |r| = {diagnostic.max_abs_residual:.6g}{quadratic_note}.{offset_note} '
             'Numerical residual agreement only; not model adequacy, statistical significance, '
             'molecular identification, or atmospheric abundance.'
         )
@@ -938,7 +1563,16 @@ class ComparisonBrowser(QWidget):
                 f'Inspecting candidate [{idx}] {cand.source_id}: '
                 f'{cand.eligibility.status}{transform_note} — Unmet checks: {unmet}.'
             )
-        self.compatibility.setText(f'{header}\n{detail}')
+        extra_lines = [f'{header}\n{detail}']
+        ctx_lims = [
+            lim for lim in rec_ctx.get('limitations', ())
+            if 'asymmetry' in lim.lower() or 'multiple candidates share' in lim.lower()
+        ]
+        if ctx_lims:
+            extra_lines.append(' '.join(ctx_lims))
+        if self._last_attribution_note:
+            extra_lines.append(self._last_attribution_note)
+        self.compatibility.setText('\n'.join(extra_lines))
         self.compatibility.setToolTip('\n'.join((
             f'{summary.version} ({summary.operation})',
             *(

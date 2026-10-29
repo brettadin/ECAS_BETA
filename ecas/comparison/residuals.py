@@ -48,6 +48,8 @@ class ResidualDiagnostic:
     max_abs_residual: float
     whitened_residuals: tuple[float, ...] | None = None
     weighted_residual_quadratic: float | None = None
+    demeaned_rms_residual: float = 0.0
+    offset_dominates_shape: bool = False
 
 
 def _covariance_matrix(item, n: int) -> np.ndarray:
@@ -96,6 +98,9 @@ def evaluate_residuals(
         mean_abs_res = float(np.mean(abs_diff))
         rms_res = float(np.sqrt(np.mean(diff ** 2)))
         max_abs_res = float(np.max(abs_diff))
+        centered = diff - mean_res
+        demeaned_rms = float(np.sqrt(np.mean(centered ** 2)))
+        offset_dominates = bool(abs(mean_res) > demeaned_rms and rms_res > 1e-12 and abs(mean_res) > 1e-12)
 
     whitened_tuple = None
     quadratic = None
@@ -133,5 +138,7 @@ def evaluate_residuals(
         max_abs_residual=max_abs_res,
         whitened_residuals=whitened_tuple,
         weighted_residual_quadratic=quadratic,
+        demeaned_rms_residual=demeaned_rms,
+        offset_dominates_shape=offset_dominates,
     )
 

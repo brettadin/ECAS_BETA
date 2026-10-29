@@ -411,3 +411,24 @@ Chunk 7 extends ECAS with a traceable `References & Resources` catalog, broader 
    - Converting strictly increasing wavenumbers ($\tilde{\nu}$ in $\text{cm}^{-1}$) to strictly increasing wavelengths ($\lambda = 10^4 / \tilde{\nu}$ in $\mu\text{m}$) reverses coordinate ordering. `convert_wavenumber_to_microns()` in `ecas/comparison/alignment.py` applies the exact reversal permutation $P$ to coordinates, values, `sigma`, and `covariance` ($\mathbf{C}' = P \mathbf{C} P^{\mathsf{T}}$), preserving $\mathbf{r}^{\mathsf{T}}\mathbf{C}^{-1}\mathbf{r}$ to machine precision.
 4. **Canonical HTTPS Resource & Evidence Status Governance:**
    - Every resource in `ecas/resources/catalog.py` is validated to use clean canonical HTTPS URLs without tracking parameters (`utm_*`, `gclid`, `fbclid`) and is linked to concrete `ecas_components`. Benchmark planet species records (`WASP-39 b`, `K2-18 b`) use the 6 `EVIDENCE_STATUSES` to separate independent confirmations from tentative/disputed claims and upper limits.
+
+---
+
+## Decision: In-App 1D Limb-Transmission Forward-Model Generator, Data-Accuracy Guards, and Quick-Setup UX
+
+**Date:** 2026-10-29  
+**Status:** Implemented (`ecas/comparison/model_generator.py`, `ecas/comparison/inputs.py`, `ecas/comparison/residuals.py`, `ecas/visualization/reference_plot.py`, `ecas/ui/molecular_browser.py`, `ecas/ui/comparison_browser.py`)
+
+### Context
+Human desktop review requested (1) an in-app forward-model generator so researchers do not have to author external JSON files by hand, (2) straightforward wavenumber-to-wavelength conversion controls, (3) metadata-driven "plug-and-chug" comparison setup without opaque jargon barriers, (4) multi-molecule feature attribution across IR and UV-Vis regimes, and (5) stronger numerical data-accuracy safeguards (passband bin integration, asymmetric error auditing, and systematic baseline offset diagnostics).
+
+### Key Decisions
+1. **True-to-Nature 1D Isothermal Hydrostatic Spherical-Shell Limb Solver (`ECAS-IsothermalLimbRT`):**
+   - Rather than rescaling cross sections heuristically, `generate_isothermal_transmission_model()` integrates exact spherical-shell slant chords through a hydrostatic atmosphere with $\text{H}_2/\text{He}$ Rayleigh continuum, haze slope, and opaque gray cloud deck $P_{\text{cloud}}$, sizing $z_{\text{top}}$ dynamically so $\tau_{\text{slant}}(z_{\text{top}}) \le e^{-10}$ even in strong UV/IR cores (verified within $<0.3\%$ of the analytical Lecavelier des Etangs 2008 formula).
+   - Cross sections are never extrapolated outside their wavelength coverage. Broadband synthetic band-center templates (`ECAS-IllustrativeBandProfile-Synthetic`) are provided for offline exploratory workflows alongside real cached ExoMol and imported laboratory UV-Vis/IR `cm^2/molecule` cross sections, and always emit an explicit non-line-list provenance warning.
+2. **Fixed-Model Leave-One-Out Attribution vs. Bayesian Retrieval:**
+   - `generate_leave_one_out_models()` and `summarize_leave_one_out_attribution()` report per-species peak wavelength, maximum optical-depth share, $\Delta\text{RMS}$, and $\Delta Q$ on identical shared grids, explicitly labeled as fixed-parameter sensitivity rather than marginalized Bayesian detection $\sigma$.
+3. **Explicit Quick Setup Without Silent Metadata Inference on Raw Evaluation:**
+   - Raw `Evaluate observation vs. candidates` retains strict Chunk 6 blocking when metadata are un-attested. Clicking `Quick Setup: Auto-fill` or `Generate, Auto-Align & Compare` explicitly populates non-conflicting fields from imported headers (`PL_NAME`, `INSTRUMENT`, `REFERENCE`, passband `bandwidth`, and uncertainties) while preserving full manual editability.
+4. **Data-Accuracy Guards (Top-Hat Passband Integration, Asymmetric Error Audit, De-Meaned Shape RMS):**
+   - Passband integration (`integrate_model_over_bins`), $>10\%$ error-bar asymmetry warnings (`audit_asymmetric_uncertainties`), and systematic baseline offset alerts (`offset_dominates_shape` when $|\bar{r}| > \text{RMS}_{\text{demeaned}}$) operate transparently without mutating raw observation values or silently subtracting offsets.

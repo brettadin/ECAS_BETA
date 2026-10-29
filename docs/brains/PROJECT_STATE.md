@@ -1,9 +1,11 @@
 # ECAS - Project State Document
 
-**Last Updated:** 2026-10-28
+**Last Updated:** 2026-10-29
 **Version:** 1.0 (Beta)
 
-**Chunk 7 implemented locally — 2026-10-28:** Stages 7.1–7.6 (`ecas/resources/catalog.py`, `ecas/ui/resources_browser.py`, `ecas/ingestion/tabular_formats.py`, `convert_wavenumber_to_microns` in `ecas/comparison/alignment.py`, `ecas/comparison/model_adapters.py`, `docs/Chunk_7/RESEARCH_AND_MODELING_FOUNDATION.md`, `docs/Chunk_7/IMPLEMENTATION_LOG.md`, and `tests/test_chunk7_resources_and_modeling.py`) are implemented and verified locally (`610 passed, 1 skipped`, exit 0). Removed 0-byte `ecas/ui/main_window_temp.py`.
+**Post-review physics, data-accuracy & UX increment implemented locally — 2026-10-29:** Added 1D isothermal hydrostatic limb-transmission forward-model generator & leave-one-out multi-molecule sensitivity (`ecas/comparison/model_generator.py`), UV-Vis cross-section & emission-reference classification (`ecas/ingestion/tabular_formats.py`), top-hat passband bin integration, asymmetric uncertainty (>10%) bias guard (`ecas/comparison/inputs.py`), systematic baseline offset diagnostics (`ecas/comparison/residuals.py`), 1-click wavenumber/wavelength display toggles (`ecas/visualization/reference_plot.py`, `ecas/ui/molecular_browser.py`, `ecas/ui/comparison_browser.py`), metadata Quick Setup & `Generate, Auto-Align & Compare` workflow, and opt-in `@pytest.mark.live_network` health checks (`tests/test_live_network_health.py`, `tests/test_physics_ux_and_attribution.py`).
+
+**Chunk 7 published for review — 2026-10-29 (`b3e3ad0`):** Stages 7.1–7.6 (`ecas/resources/catalog.py`, `ecas/ui/resources_browser.py`, `ecas/ingestion/tabular_formats.py`, `convert_wavenumber_to_microns` in `ecas/comparison/alignment.py`, `ecas/comparison/model_adapters.py`, `docs/Chunk_7/RESEARCH_AND_MODELING_FOUNDATION.md`, `docs/Chunk_7/IMPLEMENTATION_LOG.md`, and `tests/test_chunk7_resources_and_modeling.py`) were verified (`610 passed, 1 skipped`, exit 0) and pushed to `codex/roadmap-reconciliation-20261028`. Removed 0-byte `ecas/ui/main_window_temp.py`.
 
 **Chunk 6 completed — 2026-10-28:** User confirmed Chunk 6 complete and authorized pending work instructions for Chunk 7. Stages 6.1—6.7 are fully implemented, verified, and published on GitHub (`codex/roadmap-reconciliation-20261028` at commit `9a8150d`). Full offscreen test suite: 603 passed, 1 skipped (14.41 s), exit 0. Raw cross sections remain strictly blocked against transit depth without an explicit radiative-transfer model; empirical validation and abundance retrieval remain deferred. Current position: Chunk 6 complete; ready for Chunk 7 (Integration and reliability).
 
