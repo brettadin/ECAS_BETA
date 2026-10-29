@@ -8,18 +8,22 @@ import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -100,6 +104,20 @@ def _label(text):
     return label
 
 
+class _ObservableLabel(QLabel):
+    def __init__(self, text: str = '', on_changed=None, parent=None):
+        super().__init__(text, parent)
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setWordWrap(True)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._on_changed = on_changed
+
+    def setText(self, text: str):
+        super().setText(text)
+        if self._on_changed is not None:
+            self._on_changed()
+
+
 def _table():
     table = QTableWidget()
     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -169,7 +187,20 @@ class ComparisonBrowser(QWidget):
         self._evaluated_candidate_records: list[dict] = []
         self._active_record_context: dict | None = None
 
-        layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        main_layout.addWidget(self.scroll_area)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+        self.scroll_area.setWidget(content)
+
         title = _label('Comparisons')
         title.setObjectName('pageTitle')
         layout.addWidget(title)
@@ -183,7 +214,8 @@ class ComparisonBrowser(QWidget):
             'Plots use independent axes and original units; their horizontal positions do not indicate matching wavelengths.'
         ))
         panels = QSplitter(Qt.Orientation.Horizontal)
-        layout.addWidget(panels, 1)
+        panels.setMinimumHeight(240)
+        layout.addWidget(panels)
         for side in ('observation', 'reference'):
             panel = QWidget()
             box = QVBoxLayout(panel)
@@ -218,6 +250,7 @@ class ComparisonBrowser(QWidget):
             setattr(self, side + '_plot', plot)
             setattr(self, side + '_views', views)
             panels.addWidget(panel)
+        panels.setSizes([500, 500])
 
         self.cache_status = _label('Cached choices have not been refreshed.')
         layout.addWidget(self.cache_status)
@@ -234,18 +267,103 @@ class ComparisonBrowser(QWidget):
         self.workflow_panel.setVisible(False)
         layout.addWidget(self.workflow_panel)
 
-        self.compatibility = _label('Select an observation and a cached reference for inspection.')
+        # Clean Summary Card (clean, easy-to-read user interface)
+        self.summary_card = QFrame()
+        self.summary_card.setObjectName("comparisonSummaryCard")
+        self.summary_card.setStyleSheet("""
+            QFrame#comparisonSummaryCard {
+                border: 1px solid #3b4252;
+                border-radius: 6px;
+                background-color: #242933;
+            }
+        """)
+        summary_card_layout = QVBoxLayout(self.summary_card)
+        summary_card_layout.setContentsMargins(10, 8, 10, 8)
+        summary_card_layout.setSpacing(4)
+
+        summary_header_row = QHBoxLayout()
+        self.clean_status_label = _label('Select an observation and a cached reference for inspection.')
+        self.clean_status_label.setStyleSheet("font-weight: 600; color: #88c0d0; font-size: 10.5pt;")
+        summary_header_row.addWidget(self.clean_status_label, 1)
+
+        self.technical_toggle_button = QPushButton('Show Technical Details & Provenance')
+        self.technical_toggle_button.setToolTip(
+            'Toggle complete mathematical metrics, leave-one-out sensitivity logs, and cryptographic SHA-256 provenance.'
+        )
+        self.copy_technical_button = QPushButton('Copy Technical Details')
+        self.copy_technical_button.setToolTip('Copy complete diagnostic report and provenance to system clipboard.')
+        summary_header_row.addWidget(self.technical_toggle_button)
+        summary_header_row.addWidget(self.copy_technical_button)
+        summary_card_layout.addLayout(summary_header_row)
+
+        self.clean_metrics_label = _label('')
+        self.clean_metrics_label.setStyleSheet("color: #eceff4; font-size: 9.5pt;")
+        summary_card_layout.addWidget(self.clean_metrics_label)
+
+        self.clean_offset_banner = _label('')
+        self.clean_offset_banner.setStyleSheet("color: #ebcb8b; font-weight: 500;")
+        self.clean_offset_banner.setVisible(False)
+        summary_card_layout.addWidget(self.clean_offset_banner)
+
+        self.clean_attr_label = _label('')
+        self.clean_attr_label.setStyleSheet("color: #a3be8c; font-weight: 500;")
+        self.clean_attr_label.setVisible(False)
+        summary_card_layout.addWidget(self.clean_attr_label)
+
+        layout.addWidget(self.summary_card)
+
+        # Technical Details & Provenance panel (collapsible, scrollable)
+        self.technical_panel = QFrame()
+        self.technical_panel.setObjectName("technicalDetailsPanel")
+        self.technical_panel.setStyleSheet("""
+            QFrame#technicalDetailsPanel {
+                border: 1px solid #434c5e;
+                border-radius: 4px;
+                background-color: #1e222a;
+            }
+        """)
+        tech_box = QVBoxLayout(self.technical_panel)
+        tech_box.setContentsMargins(6, 6, 6, 6)
+
+        tech_scroll = QScrollArea()
+        tech_scroll.setMaximumHeight(180)
+        tech_scroll.setWidgetResizable(True)
+        tech_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        tech_inner = QWidget()
+        tech_inner_layout = QVBoxLayout(tech_inner)
+        tech_inner_layout.setContentsMargins(0, 0, 0, 0)
+        tech_inner_layout.setSpacing(6)
+
+        self.compatibility = _ObservableLabel(
+            'Select an observation and a cached reference for inspection.',
+            on_changed=self._sync_clean_summary,
+        )
+        self.diagnostic_summary = _ObservableLabel('', on_changed=self._sync_clean_summary)
+
+        tech_inner_layout.addWidget(self.compatibility)
+        tech_inner_layout.addWidget(self.diagnostic_summary)
+        tech_scroll.setWidget(tech_inner)
+        tech_box.addWidget(tech_scroll)
+
+        self.technical_panel.setVisible(False)
+        layout.addWidget(self.technical_panel)
+
+        # Diagnostic Plot and Table panel
         self.diagnostic_panel = QWidget()
         diagnostic_box = QVBoxLayout(self.diagnostic_panel)
         diagnostic_box.setContentsMargins(0, 0, 0, 0)
-        self.diagnostic_summary = _label('')
+        diagnostic_box.setSpacing(6)
+
         self.diagnostic_views = QTabWidget()
+        self.diagnostic_views.setMinimumHeight(320)
         self.residual_table = _table()
+        self.technical_text_tab = QTextEdit()
+        self.technical_text_tab.setReadOnly(True)
+        self.technical_text_tab.setPlaceholderText('Technical details, limitations, and provenance will be displayed here.')
         self.diagnostic_views.addTab(self.residual_table, 'Residual table')
-        diagnostic_box.addWidget(self.diagnostic_summary)
+        self.diagnostic_views.addTab(self.technical_text_tab, 'Technical details & provenance')
         diagnostic_box.addWidget(self.diagnostic_views, 1)
         self.diagnostic_panel.setVisible(False)
-        layout.addWidget(self.compatibility)
         layout.addWidget(self.diagnostic_panel, 1)
 
         self.observation_button.clicked.connect(self.add_current_observation)
@@ -254,6 +372,8 @@ class ComparisonBrowser(QWidget):
         self.observation_selector.currentIndexChanged.connect(self._select_observation)
         self.reference_selector.currentIndexChanged.connect(self._select_reference)
         self.workflow_toggle_button.clicked.connect(self._toggle_workflow_panel)
+        self.technical_toggle_button.clicked.connect(self._toggle_technical_details)
+        self.copy_technical_button.clicked.connect(self._copy_technical_details)
 
     def _build_workflow_panel(self, container: QWidget):
         box = QVBoxLayout(container)
@@ -512,11 +632,87 @@ class ComparisonBrowser(QWidget):
         self.reproduce_saved_button.clicked.connect(self.reproduce_selected_comparison)
 
     def _toggle_workflow_panel(self):
-        visible = not self.workflow_panel.isVisible()
+        visible = self.workflow_panel.isHidden()
         self.workflow_panel.setVisible(visible)
         self.workflow_toggle_button.setText(
             'Hide comparison & candidate tools' if visible else 'Show comparison & candidate tools'
         )
+
+    def _toggle_technical_details(self):
+        visible = self.technical_panel.isHidden()
+        self.technical_panel.setVisible(visible)
+        self.technical_toggle_button.setText(
+            'Hide Technical Details' if visible else 'Show Technical Details & Provenance'
+        )
+
+    def _copy_technical_details(self):
+        full_report = f"{self.compatibility.text()}\n\n{self.diagnostic_summary.text()}".strip()
+        if full_report:
+            clipboard = QApplication.clipboard()
+            if clipboard is not None:
+                clipboard.setText(full_report)
+            self.copy_technical_button.setText('Copied to clipboard!')
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(2000, lambda: self.copy_technical_button.setText('Copy Technical Details'))
+
+    def _sync_clean_summary(self):
+        full_report = f"{self.compatibility.text()}\n\n---\n{self.diagnostic_summary.text()}".strip()
+        self.technical_text_tab.setPlainText(full_report)
+
+        compat_text = self.compatibility.text().strip()
+        first_line = compat_text.split('\n')[0] if compat_text else ''
+        if 'Comparison blocked' in first_line:
+            self.clean_status_label.setText(f"⚠️ {first_line}")
+            self.clean_status_label.setStyleSheet("font-weight: 600; color: #ebcb8b; font-size: 10.5pt;")
+        elif 'Multi-candidate' in first_line:
+            parts = first_line.split('. ')
+            short_headline = (
+                '. '.join(parts[:2]) + ('.' if len(parts) >= 2 and not parts[1].endswith('.') else '')
+                if len(parts) >= 2 else first_line
+            )
+            self.clean_status_label.setText(f"📊 {short_headline}")
+            self.clean_status_label.setStyleSheet("font-weight: 600; color: #88c0d0; font-size: 10.5pt;")
+        elif 'eligible' in first_line.lower():
+            self.clean_status_label.setText(f"✓ {first_line}")
+            self.clean_status_label.setStyleSheet("font-weight: 600; color: #a3be8c; font-size: 10.5pt;")
+        elif first_line:
+            self.clean_status_label.setText(first_line)
+            self.clean_status_label.setStyleSheet("font-weight: 600; color: #88c0d0; font-size: 10.5pt;")
+        else:
+            self.clean_status_label.setText('Select an observation and a cached reference for inspection.')
+            self.clean_status_label.setStyleSheet("font-weight: 600; color: #88c0d0; font-size: 10.5pt;")
+
+        if self.current_diagnostic is not None:
+            diag = self.current_diagnostic
+            self.clean_metrics_label.setText(
+                f"RMS = {diag.rms_residual:.5g} {diag.signal_unit}  |  "
+                f"Shape RMS = {diag.demeaned_rms_residual:.5g} {diag.signal_unit}  |  "
+                f"Baseline Offset = {diag.mean_residual:+.5g} {diag.signal_unit}  |  "
+                f"Max |r| = {diag.max_abs_residual:.5g} {diag.signal_unit}  "
+                f"({diag.sample_count} samples)"
+            )
+            if diag.offset_dominates_shape:
+                self.clean_offset_banner.setText(
+                    "⚠️ Systematic-offset notice: |mean residual| dominates shape RMS. "
+                    "A vertical baseline offset accounts for most total residual error "
+                    "(offsets are reported diagnostically, never silently subtracted)."
+                )
+                self.clean_offset_banner.setVisible(True)
+            else:
+                self.clean_offset_banner.setText("")
+                self.clean_offset_banner.setVisible(False)
+        else:
+            self.clean_metrics_label.setText("")
+            self.clean_offset_banner.setText("")
+            self.clean_offset_banner.setVisible(False)
+
+        if self.last_attribution_entries:
+            parts = [f"{e.formula} (ΔRMS = {e.delta_rms:+.3g})" for e in self.last_attribution_entries]
+            self.clean_attr_label.setText("Species sensitivity: " + "; ".join(parts))
+            self.clean_attr_label.setVisible(True)
+        else:
+            self.clean_attr_label.setText("")
+            self.clean_attr_label.setVisible(False)
 
     def _active_project_name(self) -> str:
         if self.active_project_getter is None:

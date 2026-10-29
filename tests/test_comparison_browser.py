@@ -512,3 +512,49 @@ def test_conflicting_caller_attestation_against_imported_metadata_is_rejected(wi
     assert 'conflicts with imported metadata' in browser.compatibility.text()
     assert browser.diagnostic_panel.isHidden()
 
+
+def test_comparison_browser_clean_ui_and_plot_minimum_heights(window, tmp_path):
+    browser = window.comparison_browser
+    # Verify scroll area wrapping and plot minimum heights prevent collapsing
+    assert browser.scroll_area is not None
+    assert browser.scroll_area.widgetResizable()
+    assert browser.observation_plot.minimumHeight() >= 180
+    assert browser.reference_plot.minimumHeight() >= 180
+
+    # Summary card is present and has clean status
+    assert not browser.summary_card.isHidden()
+    assert 'Select an observation' in browser.clean_status_label.text()
+    assert browser.technical_panel.isHidden()
+
+    # Toggle technical panel visibility
+    browser.technical_toggle_button.click()
+    assert not browser.technical_panel.isHidden()
+    assert browser.technical_toggle_button.text() == 'Hide Technical Details'
+    browser.technical_toggle_button.click()
+    assert browser.technical_panel.isHidden()
+    assert browser.technical_toggle_button.text() == 'Show Technical Details & Provenance'
+
+    # Load valid observation and forward model to test clean metrics display
+    window._import_csv_from_path(str(ROOT / 'data/NASA/2026-10-27/feinstein-2023.tbl'))
+    browser.add_current_observation()
+    model_path = _write_forward_model_json(
+        tmp_path / 'clean_test_model.json',
+        source_id='clean-test-model',
+        axis_unit='microns',
+        signal_unit='percent',
+        coordinates=[2.0, 3.0, 4.0],
+        values=[2.1, 2.2, 2.0],
+    )
+    browser.load_forward_model_from_path(str(model_path))
+    browser.auto_fill_observation_metadata()
+    browser.run_candidates_button.click()
+
+    # Verify clean summary reflects candidate evaluation
+    assert not browser.diagnostic_panel.isHidden()
+    assert 'RMS =' in browser.clean_metrics_label.text()
+    assert 'Shape RMS =' in browser.clean_metrics_label.text()
+    assert 'Multi-candidate' in browser.clean_status_label.text() or 'eligible' in browser.clean_status_label.text().lower()
+
+    # Verify residual plot minimum height and technical tab content
+    assert browser.residual_plot.minimumHeight() >= 280
+    assert 'RMS =' in browser.technical_text_tab.toPlainText()

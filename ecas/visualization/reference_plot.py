@@ -27,7 +27,9 @@ class ReferencePlot(QWidget):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        self.setMinimumHeight(180)
         self.plot_widget = PlotWidget(self)
+        self.plot_widget.setMinimumHeight(160)
         layout.addWidget(self.plot_widget)
         self.axis_mode = 'wavenumber'
         self.plot_widget.setLabel('bottom', 'Wavenumber (cm^-1)')

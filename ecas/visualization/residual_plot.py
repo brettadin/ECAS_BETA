@@ -17,18 +17,23 @@ class ResidualPlot(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         layout.addWidget(splitter)
 
+        self.setMinimumHeight(280)
+
         self.overlay_widget = PlotWidget(self)
+        self.overlay_widget.setMinimumHeight(240)
         self.overlay_widget.getAxis('left').enableAutoSIPrefix(False)
         self.left_curve = self.overlay_widget.plot(pen='#88c0d0', name='Left input')
         self.right_curve = self.overlay_widget.plot(pen='#ebcb8b', name='Right input')
 
         self.residual_widget = PlotWidget(self)
+        self.residual_widget.setMinimumHeight(240)
         self.residual_widget.getAxis('left').enableAutoSIPrefix(False)
         self.zero_curve = self.residual_widget.plot(pen='#4c566a')
         self.residual_curve = self.residual_widget.plot(pen='#bf616a', name='Residual')
 
         splitter.addWidget(self.overlay_widget)
         splitter.addWidget(self.residual_widget)
+        splitter.setSizes([500, 500])
 
         self.current_diagnostic = None
         self._reset_labels()
@@ -60,6 +65,8 @@ class ResidualPlot(QWidget):
 
         self.overlay_widget.enableAutoRange()
         self.residual_widget.enableAutoRange()
+        self.overlay_widget.autoRange()
+        self.residual_widget.autoRange()
         self.current_diagnostic = diagnostic
 
     def clear(self):

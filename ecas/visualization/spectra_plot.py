@@ -29,7 +29,9 @@ class SpectraPlot(qtw.QWidget):
         self.setWindowTitle(title)
 
         layout = qtw.QVBoxLayout(self)
+        self.setMinimumHeight(180)
         self.plot_widget = PlotWidget(self)
+        self.plot_widget.setMinimumHeight(160)
         layout.addWidget(self.plot_widget)
 
         # Keep references to the axes and view for labels and scaling.
