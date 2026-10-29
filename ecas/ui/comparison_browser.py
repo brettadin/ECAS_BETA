@@ -235,16 +235,52 @@ class ComparisonBrowser(QWidget):
                 )
                 controls.addWidget(self.reference_axis_toggle)
             box.addLayout(controls)
+            info_bar = QHBoxLayout()
+            info_toggle = QPushButton('Show information')
+            info_toggle.setToolTip(
+                'Toggle source file path, observable metadata, and SHA-256 provenance.'
+                if side == 'observation' else
+                'Toggle molecular formula, conditions, ExoMol download URL, and SHA-256 provenance.'
+            )
+            info_bar.addWidget(info_toggle)
+            info_bar.addStretch(1)
+            box.addLayout(info_bar)
+
+            info_panel = QFrame()
+            info_panel.setFrameShape(QFrame.Shape.StyledPanel)
+            info_panel.setStyleSheet("""
+                QFrame {
+                    border: 1px solid #3b4252;
+                    border-radius: 4px;
+                    background-color: #242933;
+                }
+            """)
+            info_panel_layout = QVBoxLayout(info_panel)
+            info_panel_layout.setContentsMargins(6, 6, 6, 6)
             status = _label('No input selected.')
+            info_panel_layout.addWidget(status)
+            info_panel.setVisible(False)
+            box.addWidget(info_panel)
+
+            def _bind_toggle(panel_widget: QWidget, btn: QPushButton):
+                def _handler():
+                    hidden = panel_widget.isHidden()
+                    panel_widget.setVisible(hidden)
+                    btn.setText('Hide information' if hidden else 'Show information')
+                return _handler
+
+            info_toggle.clicked.connect(_bind_toggle(info_panel, info_toggle))
+
             table = _table()
             plot = SpectraPlot() if side == 'observation' else ReferencePlot()
             views = QTabWidget()
             views.addTab(plot, 'Plot (native units)')
             views.addTab(table, 'Data table')
-            box.addWidget(status)
             box.addWidget(views, 1)
             setattr(self, side + '_selector', selector)
             setattr(self, side + '_status', status)
+            setattr(self, side + '_info_toggle', info_toggle)
+            setattr(self, side + '_info_panel', info_panel)
             setattr(self, side + '_table', table)
             setattr(self, side + '_button', button)
             setattr(self, side + '_plot', plot)

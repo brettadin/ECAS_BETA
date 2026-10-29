@@ -521,6 +521,26 @@ def test_comparison_browser_clean_ui_and_plot_minimum_heights(window, tmp_path):
     assert browser.observation_plot.minimumHeight() >= 180
     assert browser.reference_plot.minimumHeight() >= 180
 
+    # Source / reference info panels are hidden by default and toggle on demand
+    assert browser.observation_info_panel.isHidden()
+    assert browser.reference_info_panel.isHidden()
+    assert browser.observation_info_toggle.text() == 'Show information'
+    assert browser.reference_info_toggle.text() == 'Show information'
+
+    browser.observation_info_toggle.click()
+    assert not browser.observation_info_panel.isHidden()
+    assert browser.observation_info_toggle.text() == 'Hide information'
+    browser.observation_info_toggle.click()
+    assert browser.observation_info_panel.isHidden()
+    assert browser.observation_info_toggle.text() == 'Show information'
+
+    browser.reference_info_toggle.click()
+    assert not browser.reference_info_panel.isHidden()
+    assert browser.reference_info_toggle.text() == 'Hide information'
+    browser.reference_info_toggle.click()
+    assert browser.reference_info_panel.isHidden()
+    assert browser.reference_info_toggle.text() == 'Show information'
+
     # Summary card is present and has clean status
     assert not browser.summary_card.isHidden()
     assert 'Select an observation' in browser.clean_status_label.text()
