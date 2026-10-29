@@ -1,10 +1,10 @@
 # ECAS Project Checkpoint — Chunk 7 & Post-Review Physics/UX Increment
 
-**Timestamp:** 2026-10-29T02:35:00-04:00  
+**Timestamp:** 2026-10-29T02:46:00-04:00  
 **Branch:** `codex/roadmap-reconciliation-20261028`  
 **Repository:** https://github.com/brettadin/ECAS_BETA  
-**Scope:** ECAS Chunk 7 Complete + Post-Review Physics/Forward Modeling + UI Rescaling & Clean Summary Card Redesign  
-**Test Suite Status:** 622 passed, 22 skipped in 15.84s (`QT_QPA_PLATFORM=offscreen`, Python 3.14.5, strict `pytest -W error`)  
+**Scope:** ECAS Chunk 7 Complete + Post-Review Physics/Forward Modeling + UI Rescaling, Clean Summary Card & Collapsible Source Metadata  
+**Test Suite Status:** 622 passed, 22 skipped in 16.29s (`QT_QPA_PLATFORM=offscreen`, Python 3.14.5, strict `pytest -W error`)  
 **Current Milestone State:** Complete and verified across all 622 tests
 
 ---
@@ -69,6 +69,10 @@
       * **Species sensitivity line**: Clean readout of leave-one-out $\Delta\text{RMS}$ per molecule.
     - Preserved full scientific provenance, mathematical caveats, and raw text inside a collapsible `technicalDetailsPanel` (hidden by default) and inside a dedicated `Technical details & provenance` tab in `diagnostic_views`.
     - Fully backwards-compatible with all test assertions and scientific boundary checks.
+
+11. **Collapsible Source Metadata Toggle (`Show information`)**:
+    - Replaced the multi-line local file paths, download URLs, and 64-character SHA-256 hashes above the observation and reference plots with clean `Show information` / `Hide information` toggle buttons.
+    - Source provenance and metadata are hidden by default inside styled collapsible frames (`observation_info_panel`, `reference_info_panel`), maximizing vertical space for the plots while remaining accessible on demand via a single click.
 
 ---
 
