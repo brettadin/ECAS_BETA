@@ -8,3 +8,5 @@ data/NASA/cache/
 data/ExoMol/cache/
 projects/
 .checkpoints/
+build/
+dist/

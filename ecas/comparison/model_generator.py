@@ -198,9 +198,17 @@ PLANET_PRESETS: tuple[PlanetAtmospherePreset, ...] = (
 
 
 def get_planet_preset(preset_id_or_name: str) -> PlanetAtmospherePreset:
+    from ecas.ingestion.planet_resolver import normalize_target_name
+
     needle = preset_id_or_name.strip().lower()
+    norm_needle = normalize_target_name(preset_id_or_name)
     for preset in PLANET_PRESETS:
-        if preset.preset_id == needle or preset.planet_name.lower() == needle:
+        if (
+            preset.preset_id == needle
+            or preset.planet_name.lower() == needle
+            or normalize_target_name(preset.planet_name) == norm_needle
+            or normalize_target_name(preset.preset_id) == norm_needle
+        ):
             return preset
     raise KeyError(f"Unknown planet preset: {preset_id_or_name!r}")
 
