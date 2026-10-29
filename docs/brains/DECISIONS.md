@@ -432,3 +432,30 @@ Human desktop review requested (1) an in-app forward-model generator so research
    - Raw `Evaluate observation vs. candidates` retains strict Chunk 6 blocking when metadata are un-attested. Clicking `Quick Setup: Auto-fill` or `Generate, Auto-Align & Compare` explicitly populates non-conflicting fields from imported headers (`PL_NAME`, `INSTRUMENT`, `REFERENCE`, passband `bandwidth`, and uncertainties) while preserving full manual editability.
 4. **Data-Accuracy Guards (Top-Hat Passband Integration, Asymmetric Error Audit, De-Meaned Shape RMS):**
    - Passband integration (`integrate_model_over_bins`), $>10\%$ error-bar asymmetry warnings (`audit_asymmetric_uncertainties`), and systematic baseline offset alerts (`offset_dominates_shape` when $|\bar{r}| > \text{RMS}_{\text{demeaned}}$) operate transparently without mutating raw observation values or silently subtracting offsets.
+
+
+---
+
+## Decision: Consolidation of Priorities 1–7 and Transit & Orbit Visualizer
+
+**Date:** 2026-10-29  
+**Status:** Implemented (`ecas/comparison/inputs.py`, `ecas/comparison/alignment.py`, `ecas/comparison/model_generator.py`, `ecas/comparison/residuals.py`, `ecas/comparison/eligibility.py`, `ecas/ui/comparison_browser.py`, `ecas/ui/transit_view.py`, `ecas/ui/main_window.py`)
+
+### Context
+Following the comprehensive program review (`10_29_26_ecas_beta_review_initial.md`) and long-term consolidation strategy (`ECAS_going_forward_considerations.md`), ECAS consolidated the beta's mathematical and physical core with v1's cleaner visual workflows. Priorities 1 through 7 address scientific bin interpretation, forward-model benchmarks, pure real-data enforcement, statistical diagnostics, attestation integrity, and verified reproducibility.
+
+### Key Decisions
+1. **Audit of Spectral Bin Boundaries vs. Instrument FWHM (Priority 1):**
+   - Implemented `audit_observation_bin_semantics()` in `ecas/comparison/inputs.py`. Distinguishes top-hat bin edges from instrument point-spread FWHM. Passband integration (`integrate_model_over_bins`) is explicitly separated from point-grid linear interpolation, preventing synthetic photometric smoothing over resolution widths.
+2. **Forward-Model Physical Bounds and Analytical Benchmarking (Priority 2):**
+   - Bounded physical scope in `ecas/comparison/model_generator.py`: $T \in [150, 3000]\ \text{K}$, $g \in [1, 100]\ \text{m/s}^2$, $H/R_p \le 0.25$, $P \in [10^{-6}, 10^2]\ \text{bar}$. Validated against Lecavelier des Etangs (2008) analytic Rayleigh scattering slope ($\alpha = -4$, matched within $0.5\%$), isothermal scale height proportionality ($H \propto T$, $H \propto 1/g$), uniform VMR scaling, cloud deck floor, and radial quadrature convergence ($N=80\dots 480$ layers) across 11 benchmark tests in `tests/test_forward_model_physics.py`.
+3. **Pure Real-Data Enforcement (Priority 3):**
+   - Defaulted `gen_source_selector` to `cached_only` (strict ExoMol line lists). Block un-cached or non-overlapping species with actionable wavenumber requirements (`"need ~{nu_low:.0f}–{nu_high:.0f} cm^-1"`) rather than silently substituting synthetic templates. Added explicit UI badges (`[Real ExoMol]` vs `[Synthetic Template]`) and provenance records (`"physical_reference_data"` vs `"synthetic_illustrative_template"`).
+4. **Reduced Chi-Square ($\chi_\nu^2$) and Covariance Conditioning Safeguards (Priority 4):**
+   - Added `reduced_weighted_quadratic` ($\chi_\nu^2 = q / N$) and sample count $N$ to `ResidualDiagnostic` in `ecas/comparison/residuals.py`. Added ill-conditioned covariance matrix detection ($\kappa > 10^{12}$) in `ecas/comparison/eligibility.py` (`left.noise.ill_conditioned`).
+5. **Attestation Conflict Detection and Structured Provenance (Priority 5):**
+   - Prevented manual user attestations from silently overriding established source facts in `ComparisonBrowser._build_attested_observation()`. Structured metadata into `source_provided`, `user_attested`, and `bin_derived`.
+6. **Comparison Reproduction Disk Verification (Priority 6):**
+   - Enhanced `reproduce_selected_comparison` to verify whether original raw source files exist on disk or whether reproduction operates from signed array snapshots.
+7. **Interactive Geometric Transit & Orbit Visualizer (v1 Feature Recovery):**
+   - Implemented `TransitVisualizerPage` in `ecas/ui/transit_view.py`: analytic geometric light curve with linear limb darkening, 2D observer-frame sky view, Tanner Helland blackbody stellar coloring, interactive scrubbing/playback, and direct `"Open in Comparisons Workspace"` integration.

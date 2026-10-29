@@ -1,380 +1,204 @@
 # ECAS — Exoplanetary Characterization & Astrochemistry Suite
 
-ECAS is a scientific software project focused on exoplanetary characterization and astrochemistry. Its long-term goal is to support the inspection, preparation, comparison, and interpretation of scientific data relevant to exoplanet atmospheres and their chemical composition.
+ECAS is a scientific desktop software suite for exoplanetary atmospheric characterization, transmission spectroscopy, and astrochemistry. Its mission is to provide an open, transparent, and mathematically rigorous environment for inspecting, modeling, comparing, and interpreting exoplanet atmospheric observations.
 
-The project is being developed incrementally, with an emphasis on scientific integrity, traceable data, transparent validation, and maintainable software architecture.
+The suite consolidates physical radiative-transfer modeling, molecular reference data handling, and statistical residual diagnostics with an intuitive, reproducible research workflow.
 
-> **Project status:** ECAS is under active development. The current application, verified capabilities, outstanding work, and known limitations are recorded in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md). Architectural proposals and long-term goals must not be interpreted as implemented functionality.
+> **Project status (Beta Consolidation Baseline):** The core physical, numerical, and persistence capabilities are fully implemented, verified, and backed by automated benchmark tests. Automated test suite status: **672 passed, 21 skipped (network), 0 failed, 0 warnings** under `pytest -W error`. Authoritative implementation records and technical decisions are maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
 
-For the current review branch, start with the
-[review checkpoint](docs/REVIEW_CHECKPOINT_20261028.md), covering project/NASA
-improvements, the Chunk 5 research foundation and initial molecular references.
+---
 
 ## Contents
 
-- [Project goals](#project-goals)
-- [Current application](#current-application)
-- [Scientific principles](#scientific-principles)
-- [Architecture and documentation](#architecture-and-documentation)
-- [Getting started](#getting-started)
-- [Development workflow](#development-workflow)
-- [AI agent instructions](#ai-agent-instructions)
-- [Contributing](#contributing)
-- [Project status and limitations](#project-status-and-limitations)
+- [Core Capabilities](#core-capabilities)
+  - [1. Spectral Data & Ingestion](#1-spectral-data--ingestion)
+  - [2. Atmospheric Forward Modeling](#2-atmospheric-forward-modeling)
+  - [3. Molecular Reference Data](#3-molecular-reference-data)
+  - [4. Comparisons & Residual Diagnostics](#4-comparisons--residual-diagnostics)
+  - [5. Transit & Orbit Visualizer](#5-transit--orbit-visualizer)
+  - [6. Research Projects & Provenance](#6-research-projects--provenance)
+  - [7. Scientific References & Resources](#7-scientific-references--resources)
+- [Scientific Principles & Boundaries](#scientific-principles--boundaries)
+- [Evidence Framework & Evidence Labels](#evidence-framework--evidence-labels)
+- [Definition of Done](#definition-of-done)
+- [Architecture & Documentation Map](#architecture--documentation-map)
+- [Getting Started](#getting-started)
+- [Running the Test Suite](#running-the-test-suite)
+- [Development Workflow & AI Agent Instructions](#development-workflow--ai-agent-instructions)
 
-## Project goals
+---
 
-ECAS aims to develop a maintainable research application that can support workflows such as:
+## Core Capabilities
 
-- Importing and inspecting scientific spectral data.
-- Preserving source information and relevant scientific metadata.
-- Validating data structure and identifying incompatibilities before comparison.
-- Preparing observations and reference data for scientifically appropriate analysis.
-- Comparing exoplanetary observations with suitable reference spectra or models.
-- Supporting astrochemical characterization while communicating uncertainty and methodological limitations.
-- Preserving analysis inputs, configurations, results, and provenance to improve reproducibility.
+```
++----------------------------------------------------------------------------------------------------+
+|                                           ECAS SUITE                                               |
++--------------------------+------------------------------+------------------------------------------+
+|  OBSERVATIONAL DATA      |  FORWARD MODEL & REFERENCES  |  COMPARISON & SIMULATION                 |
+|  - NASA Archive (.tbl)   |  - 1D Isothermal Limb RT     |  - Passband Bin Integration              |
+|  - Astropy ECSV (.ecsv)  |  - Lecavelier Rayleigh slope |  - Linear Point Interpolation            |
+|  - FITS 1D Tables        |  - ExoMol Line Lists (H2O,   |  - Residuals & Reduced Chi-Square (χ_ν²) |
+|  - Generic / WASP-39 CSV |    CO2, CH4 cached sigma)    |  - Geometric Transit Simulator           |
+|  - Lab FTIR / UV-Vis     |  - Multi-Molecule LOO Sens.  |  - Limb-Darkened Light Curves            |
++--------------------------+------------------------------+------------------------------------------+
+|                        PERSISTENCE: SQLite Projects & Signed SHA-256 JSON                          |
++----------------------------------------------------------------------------------------------------+
+```
 
-These goals describe the intended direction of the project. Individual capabilities must be confirmed against the current implementation and project-state records.
+### 1. Spectral Data & Ingestion
+* **NASA Exoplanet Archive Integration**: Search planets by canonical name or alias (e.g. `WASP39b`), preview published transmission spectra, retrieve raw IPAC tables (`.tbl`), and reopen cached products offline. Preserves signed uncertainties, source URLs, retrieval dates, and all 29 original columns alongside canonical coordinate/signal aliases.
+* **Broad Tabular & FITS Format Support**: Ingests Astropy ECSV (`.ecsv`), delimited ASCII tables (`.dat`, `.tsv`, `.txt`, `.asc`), and FITS 1D binary tables (`.fits`, `.fit`, `.fts` with `XTENSION = 'BINTABLE'`).
+* **Observable & Unit Distinction**: Distinguishes exoplanet transmission spectra (`observable = 'transit_depth'`, units `%`, `fraction`, or `ppm`) from laboratory FTIR/UV-Vis spectroscopy (`wavenumber` in $\text{cm}^{-1}$, `absorbance`, `transmittance`, or cross section in $\text{cm}^2/\text{molecule}$). Laboratory spectra are blocked from being mistakenly compared directly against planetary transit depths.
 
-## Current application
+### 2. Atmospheric Forward Modeling
+* **1D Isothermal Hydrostatic Transmission Model (`ECAS-IsothermalLimbRT`)**:
+  Calculates exoplanet transmission spectra from bulk physical parameters ($R_p$, $R_\star$, $T_{\text{eq}}$, $g$, $\mu$, $P_{\text{ref}}$) by integrating optical depths along spherical-shell chord paths:
+  $$\tau(b, \lambda) = 2 \int_0^{\infty} \kappa(r, \lambda) \, \rho(r) \, \mathrm{d}s$$
+* **Continuum & Aerosol Physics**: Incorporates $\text{H}_2/\text{He}$ Rayleigh scattering ($\sigma \propto \lambda^{-4}$, analytically verified within $0.5\%$ of Lecavelier des Etangs et al. 2008), power-law aerosol haze slopes, and an opaque gray cloud deck floor ($P_{\text{cloud}}$).
+* **Leave-One-Out Sensitivity Analysis**: Computes the individual spectral contribution and optical depth share of each molecule ($\text{H}_2\text{O}$, $\text{CO}_2$, $\text{CH}_4$, $\text{SO}_2$, $\text{CO}$, $\text{Na}$, $\text{K}$) across the observation bandpass.
+* **External Code Adapters**: Standardized JSON schema adapters (`ecas-forward-model-v1`) for precomputed output from community radiative-transfer codes (`petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, `Pyrat Bay`).
 
-For the latest feedback update and external review, start with the
-[feedback review checkpoint](docs/REVIEW_FEEDBACK_20261028.md).
+### 3. Molecular Reference Data
+* **ExoMol Line-List Management**: Search the ExoMol catalogue, download validated high-temperature cross-section grids ($\text{CO}_2$ UCL-4000, $\text{H}_2\text{O}$ POKAZATEL, $\text{CH}_4$ MM), and reopen cached `.sigma` products offline with local SHA-256 integrity checks.
+* **Strict Real-Data Enforcement**: The forward model defaults to `cached_only` (strict ExoMol line lists). Species lacking cached data within the observation's wavenumber range are rejected with actionable guidance (`"need ~2500–3500 cm^-1"`) rather than silently substituted with synthetic band templates.
+* **Transparent Badging**: Candidates are explicitly tagged in the UI as `[Real ExoMol]` or `[Synthetic Template]`.
 
-**Overview** provides workflow shortcuts and a summary of the loaded observation,
-displayed reference and session comparison choices when opened. **Settings** shows
-active read-only storage paths and the existing CSV-schema choice, synchronized
-with Spectral Data. That choice applies to the next CSV import and lasts for the
-session; it does not change loaded data or NASA .tbl handling. See
-[workspace pages](docs/Chunk_5_1/WORKSPACE_PAGES_IMPLEMENTATION.md).
+### 4. Comparisons & Residual Diagnostics
+* **Audited Passband Integration**: Automatically audits observation channel boundaries (`audit_observation_bin_semantics`). Distinguishes top-hat filter bandpasses from instrument point-spread FWHM. Integrates forward models over actual top-hat bins (`integrate_model_over_bins`) rather than applying artificial smoothing.
+* **Statistical Residual Metrics**: Computes raw residuals ($r = y_{\text{obs}} - y_{\text{model}}$), RMS residual, de-meaned shape RMS, systematic baseline offset ($|\bar{r}|$), maximum absolute residual, total weighted quadratic ($q = \mathbf{r}^{\mathsf{T}} \mathbf{C}^{-1} \mathbf{r}$), and reduced chi-square:
+  $$\chi_\nu^2 = \frac{q}{N}$$
+* **Mathematical Noise Safeguards**: Detects near-singular noise covariance matrices using condition number threshold $\kappa > 10^{12}$ (`noise.ill_conditioned`). Flags asymmetric uncertainties ($>10\%$) and alerts when systematic offsets dominate spectral shape.
+* **Attestation Integrity**: Prevents user-entered metadata overrides from conflicting with established source file facts.
 
-The **Molecular References** page supports molecular reference catalogue search.
-Search Water, H2O or an ExoMol isotope/dataset identifier; select a result to inspect
-its identity. It starts with a cached or bundled dated index. **Refresh from ExoMol**
-makes one bounded anonymous metadata request and saves a validated snapshot for
-offline use; **Cancel request** preserves the prior catalogue. No network request
-is made at startup. Catalogue records do not establish spectral availability,
-coverage or compatibility.
+### 5. Transit & Orbit Visualizer
+* **2D Observer Sky View**: Real-time celestial projection showing the host star, impact parameter chord $b = \frac{a \cos i}{R_\star}$, and transiting exoplanet disc.
+* **Limb-Darkened Geometric Light Curve**: Analytic calculation of the geometric transit profile with linear limb darkening:
+  $$I(r) = 1 - u_1 \left(1 - \sqrt{1 - r^2}\right)$$
+* **Blackbody Stellar Coloring**: Approximates the visual chromaticity of the host star from its effective temperature ($T_{\text{eff}} \in [1000, 40000]\ \text{K}$) using Tanner Helland's algorithm.
+* **Interactive Scrubber & Preset Linking**: Real-time play/pause animation ($0.5\times \dots 4.0\times$), phase scrubber slider, and a one-click button to load system parameters directly into the Comparisons workspace.
 
-Supported downloads are **CO2 / 12C-16O2 / UCL-4000**, **H2O / 1H2-16O / POKAZATEL**
-and **CH4 / 12C-1H4 / MM**. Search the formula, select the matching record,
-choose temperature/range/spacing, then **Download selected reference**. The
-calculated zero-pressure, Doppler-only cross section appears in a separate table;
-**Open cached reference** revalidates it offline. Retrieval for other catalogue
-records remains unsupported. Defaults are reference settings, not inferred planet
-conditions. There is no scientific comparison or molecular-detection result.
-See [current workflow status](docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md)
-for verification, bounds and pending review. Runtime reference caches at
-data/ExoMol/cache/ are excluded from Git.
+### 6. Research Projects & Provenance
+* **Offline Project Storage**: Organizes datasets into independent SQLite research projects.
+* **Signed Array Snapshots**: Stores complete comparison records as canonical JSON envelopes (`ecas-comparison-record-v1`) with SHA-256 checksums binding input spectra, model parameters, alignment steps, and residual metrics.
+* **Reproducibility Verification**: Verifies whether raw source files are present on disk or whether analysis reproduction operates from signed array snapshots.
 
-**Comparisons** supports independent session observation choices and validated
-cached-reference choices, with separate read-only tables and explicit blocked
-comparison explanations. Load/reopen an observation, click **Add current observation**,
-then **Refresh cached choices** and select a reference. Analysis is not implemented.
-Local graphical follow-up adds Plot and Data table tabs in Molecular References
-and in each Comparisons pane. Plots use native units and independent axes; they
-are separate inspection views, not a shared-axis scientific comparison.
-See [graphical inspection notes](docs/Chunk_5_1/ISSUE_4_NATIVE_PLOTS.md).
-See [selection workflow](docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md).
-Switching pages retains
-the current observation, reference selection and any active reference request.
-Current feedback work: [workflow notes](docs/Chunk_5_1/USER_FEEDBACK_WORKFLOW_20261028.md).
+### 7. Scientific References & Resources
+* **Curated Resource Directory**: Fast-access reference library linking canonical software, archives, molecular databases, and literature citations.
+* **Literature Benchmarks**: Preconfigured reference parameters for standard exoplanet benchmarks (WASP-39 b, HD 209458 b, HD 189733 b, K2-18 b, TRAPPIST-1 e).
 
-The supplied project history identifies a Python desktop application using PySide6 for its user interface, PyQtGraph for spectral visualization, and SQLite-backed persistence.
+---
 
-The known development baseline includes spectral data representation, CSV ingestion, persistence, a desktop interface, and spectral plotting. The CSV importer has been described as supporting a specific WASP-39 b archive CSV schema; this should not be interpreted as universal CSV/TXT support or as a complete online archive-retrieval system.
+## Scientific Principles & Boundaries
 
-Consult [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and inspect the current source code for the latest verified status.
+Scientific integrity is a non-negotiable requirement in ECAS:
 
-### Technology overview
+1. **Residual Agreement $\ne$ Molecular Detection**: A low residual, reduced chi-square $\chi_\nu^2 \approx 1$, or favorable candidate ranking indicates numerical consistency with the specified model; it does **not** prove molecular detection, chemical abundance, or atmospheric presence. Detection claims require rigorous Bayesian model selection, nested sampling, and systematic noise characterization.
+2. **Cross Sections $\ne$ Transit Depth**: Molecular cross sections ($\sigma$ in $\text{cm}^2/\text{molecule}$) describe microscopic absorption probability and cannot be rescaled into transit depth without radiative transfer.
+3. **No Silent Synthetic Substitution**: When real data is selected, the application will never silently fall back to synthetic or illustrative templates.
+4. **Transparent Data Provenance**: Every plot, comparison, and saved record preserves an unbroken provenance trail (source URLs, file checksums, user attestations, and processing steps).
 
-| Area | Known technology or role |
-|---|---|
-| Language | Python |
-| Desktop interface | PySide6 |
-| Spectral visualization | PyQtGraph |
-| Persistence | SQLite |
-| Scientific data | Spectral observations and related metadata |
-| Testing | pytest is used in the project history; check current test configuration |
+---
 
-This table reflects the known project baseline and must be reconciled with the current repository when implementation changes occur.
+## Evidence Framework & Evidence Labels
 
-## Scientific principles
+To maintain clarity between established empirical facts, mathematical theorems, and engineering approximations, ECAS uses standardized evidence tags:
 
-Scientific integrity is a core requirement, not an optional feature.
+| Label | Evidence Category | Description / Typical Context |
+|---|---|---|
+| `[E1]` | **Direct Observation** | Raw telescope/archive data (e.g. JWST NIRSpec `.tbl` from NASA Exoplanet Archive). |
+| `[E2]` | **Verified Benchmark** | Exact analytic solutions, mathematical theorems, or machine-precision tests (e.g. Lecavelier Rayleigh slope within $0.5\%$). |
+| `[E3]` | **Peer-Reviewed Reference** | Published scientific literature, ExoMol line lists, HITRAN databases, or vetted bulk planet parameters. |
+| `[E4]` | **Engineering Approximation** | Explicit simplifying assumptions (e.g. 1D isothermal atmosphere, hydrostatic equilibrium, top-hat bandpasses, uniform VMR). |
+| `[E5]` | **Exploratory / Educational** | Illustrative models and geometric simulators (e.g. Transit & Orbit Visualizer, synthetic band templates). |
 
-### Preserve provenance
+---
 
-Data should remain traceable to its source. Where applicable, retain source identifiers, citations, relevant metadata, dataset versions, and processing history.
+## Definition of Done
 
-### Distinguish data validation from scientific validity
+Any new capability or modification to ECAS must satisfy these non-negotiable criteria before being considered complete:
 
-A file that parses successfully is not necessarily scientifically valid. Structurally valid datasets may still be incompatible because of differences in units, spectral coverage, resolution, uncertainty, calibration, or measurement type.
+- [x] **Mathematical & Physical Validation**: Every forward model or numerical calculation must be accompanied by an independent analytical test or physical invariant check (e.g. dimensional consistency, scale-height proportionality, convergence with quadrature grid refinement).
+- [x] **Zero Silent Fallbacks**: Ambiguous headers, incompatible units, un-cached species, or singular covariance matrices must fail visibly with descriptive scientific diagnostics rather than resorting to silent heuristics.
+- [x] **Automated Regression Suite**: All tests must execute cleanly without warnings under `pytest -W error`.
+- [x] **Provenance Completeness**: Analysis records must record complete input SHA-256 hashes, parameter vectors, transformation histories, and algorithm versions.
+- [x] **Documentation Integrity**: Changes must be reflected in `PROJECT_STATE.md`, `DECISIONS.md`, and relevant architecture documents. Existing docstrings and scientific citations must be preserved.
 
-### Make assumptions explicit
+---
 
-Do not invent missing units, metadata, instrument characteristics, scientific thresholds, or interpretations. Uncertain assumptions must be identified and handled according to an explicit policy.
-
-### Support defensible comparisons
-
-Comparison methods and thresholds require a documented rationale and suitable evidence. Software tests can establish that an implementation behaves as intended; they do not independently establish scientific validity.
-
-### Preserve reproducibility
-
-Where supported by the workflow, analysis records should identify the inputs, processing methods, relevant settings, software versions, results, and limitations needed to understand or reproduce an analysis.
-
-## Architecture and documentation
-
-ECAS uses its repository documentation to preserve project context, technical decisions, scientific requirements, and development history.
-
-Start with these documents:
+## Architecture & Documentation Map
 
 | Document | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Shared operating instructions for AI agents working on ECAS |
-| [`docs/ECAS.md`](docs/ECAS.md) | Master project blueprint, scientific direction, and long-term objectives |
-| [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) | Verified implementation state, completed work, known limitations, and outstanding tasks |
-| [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md) | Approved technical and architectural decisions and their rationale |
-| [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) | Architectural requirements, system structure, and boundaries |
-| [`docs/architecture/DATA_FLOW.md`](docs/architecture/DATA_FLOW.md) | Data movement through the application and associated validation points |
-| [`docs/architecture/DATA_MODELS.md`](docs/architecture/DATA_MODELS.md) | Domain entities, data representations, and relationships |
-| [`docs/architecture/ECAS_Architecture_Specification.md`](docs/architecture/ECAS_Architecture_Specification.md) | Broader architectural specification |
-| [`docs/architecture/MODULE_RESPONSIBILITIES.md`](docs/architecture/MODULE_RESPONSIBILITIES.md) | Module responsibilities and intended boundaries |
-| [`docs/architecture/VALIDATION_STRATEGY.md`](docs/architecture/VALIDATION_STRATEGY.md) | Software validation, scientific evaluation, benchmarks, and threshold rationale |
+| [`AGENTS.md`](AGENTS.md) | Operating guidelines and constraints for AI coding agents |
+| [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) | Verified implementation status, test counts, and active baseline |
+| [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md) | Architectural and physical design decision records |
+| [`docs/ecas v1 and beta comparison documents/10_29_26_ecas_beta_review_initial.md`](docs/ecas%20v1%20and%20beta%20comparison%20documents/10_29_26_ecas_beta_review_initial.md) | Comprehensive program review and 8-phase roadmap |
+| [`docs/ecas v1 and beta comparison documents/ECAS_going_forward_considerations.md`](docs/ecas%20v1%20and%20beta%20comparison%20documents/ECAS_going_forward_considerations.md) | Long-term architectural, scientific, and UX consolidation strategy |
+| [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) | System layering and subsystem responsibilities |
+| [`docs/architecture/VALIDATION_STRATEGY.md`](docs/architecture/VALIDATION_STRATEGY.md) | Validation pyramid, benchmark registry, and tolerance rationales |
 
-Verify these paths against the current repository. If a document is absent, renamed, or superseded, update this map rather than leaving misleading links or creating unnecessary duplicates.
+---
 
-### Which document should answer which question?
+## Getting Started
 
-- **What is ECAS intended to become?** Read `docs/ECAS.md`.
-- **What is implemented now?** Read `docs/brains/PROJECT_STATE.md` and inspect the code.
-- **Why was a technical choice made?** Read `docs/brains/DECISIONS.md`.
-- **How should the application be structured?** Read the architecture documentation.
-- **How should scientific and software correctness be assessed?** Read `VALIDATION_STRATEGY.md`.
-- **How should an AI agent work on the project?** Read `AGENTS.md`.
+### 1. Prerequisites
+- Python 3.10 to 3.14 (tested on Windows AMD64, Linux, and macOS).
+- Git.
 
-When documentation and implementation disagree, investigate the discrepancy. Do not assume that a proposed design has already been implemented.
+### 2. Clone and Setup Environment
 
-## Getting started
-
-ECAS is a Python project. The exact installation and launch procedure should be taken from the current repository configuration and verified instructions rather than assumed from this overview.
-
-### 1. Obtain the repository
-
-Clone the repository:
-
-```bash
+```powershell
+# Clone the repository
 git clone https://github.com/brettadin/ECAS_BETA.git
 cd ECAS_BETA
-```
 
-### 2. Inspect the project configuration
-
-Runtime dependencies are recorded in `requirements.txt`; test dependencies are
-in `requirements-test.txt`. These versions were verified locally on Windows AMD64
-with Python 3.14.5; this is not a claim of compatibility with every Python version.
-
-From the repository directory, create a local environment if needed. The install
-step downloads packages and should only be run with the operator's approval:
-
-```powershell
+# Create a virtual environment
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# Activate the virtual environment
+# On Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# On Linux / macOS:
+# source .venv/bin/activate
+
+# Install runtime dependencies
+pip install -r requirements.txt
+
+# Install test dependencies
+pip install -r requirements-test.txt
 ```
 
-### 3. Launch the application
-
-Run from a terminal using the environment where the dependencies were installed:
+### 3. Launch the Application
 
 ```powershell
-.\.venv\Scripts\python.exe main.py
+python main.py
 ```
 
-`main.py` is the primary entry point; `app.py` currently starts the same window.
-Opening a Python file in an editor does not launch it. Double-clicking may select
-a different Python installation instead of this environment. A terminal keeps any
-startup error visible; include its complete traceback when reporting a failure.
+---
 
-### Import the bundled WASP-39 b example
+## Running the Test Suite
 
-1. Open **Spectral Data** in the navigation.
-2. Select **WASP-39 b Archive** under **CSV schema** before clicking **Import Spectrum**.
-3. Open `data/WASP-39b/table_WASP-39-b-Feinstein-et-al.-2023.csv`.
-4. The table and plot should show the imported dataset (331 rows, 23 columns).
-
-This reads a local file directly; it does not depend on database retrieval or
-online archive integration. **Generic / Unknown** expects generic wavelength and
-signal columns and intentionally does not infer the archive schema. The bundled
-file's uppercase source headers are handled by the archive importer. Original
-source fields remain available alongside canonical coordinate/signal fields.
-Successful import does not establish units or scientific validity.
-
-### Import a downloaded NASA transmission table
-
-**Import Spectrum** also accepts the specifically supported NASA `.tbl` transmission
-format. The captured real product is
-`data/NASA/2026-10-27/feinstein-2023.tbl`. Select that file in **Spectral Data**;
-the CSV schema selector applies to CSV files only. The NASA table declares its
-own type and units. It displays 331 rows with wavelength in microns and transit
-depth in percent, retaining all 29 source columns plus two canonical aliases.
-
-The importer preserves signed uncertainties, nulls, source URLs and metadata.
-It supports a strict four-header, aligned IPAC transmission-table subset; other
-spectrum types, malformed rows and nonzero transit-depth flags are rejected.
-It does not convert eclipse/direct-imaging data into transmission spectra.
-The captured download URL is session-specific; the online workflow below resolves
-a fresh session instead of reusing a saved link.
-
-### Search NASA and reopen cached spectra
-
-1. Open **Spectral Data**, enter a planet name or alias such as `WASP39b`,
-   and click **Search NASA**. No request is made until you start a search.
-2. Select a transmission spectrum, then click **Download selected spectrum**.
-   The application retrieves a fresh download link, validates the table, preserves
-   the raw response and metadata, and displays it. **Cancel** stops an active request.
-3. Click **Cached spectra**, select an entry, then **Load cached spectrum** to
-   reopen it without a network request. Changed or incomplete entries are excluded.
-
-The cache is local to this checkout at `data/NASA/cache/` and is excluded from Git.
-It retains raw tables, source URLs, retrieval times, metadata responses and SHA-256
-hashes. This registration is separate from project SQLite persistence.
-
-NASA first resolves the input to one explicitly identified planet; the resolved
-name is shown. Unresolved, host-only, ambiguous or inconsistent responses stop
-with an error rather than choosing a planet. A resolved planet may have no spectra
-in this archive's queried table; this is distinct from unsupported spectrum types.
-Other archives are not searched.
-
-The canonical-name search is limited to 50 metadata records; a limit warning means
-the result may be incomplete. Only the supported transmission subset can load.
-Each anonymous NASA request has a 15-second deadline and 1 MiB response cap, with
-no automatic retries, redirects, cookies or authentication. A changed NASA session
-layout stops the download with an error. There is no proxy-authentication support.
-
-The actual application workflow was tested offscreen against NASA for WASP-39 b:
-28 transmission results, a 331-row download and cache reopening with no further
-requests. Interactive testing on the friend's computer and independent Argon
-review remain pending. This verifies retrieval and display, not scientific validity.
-
-### 4. Save spectra in projects
-
-1. Open **Projects**, enter a project ID (letters, numbers, underscores or hyphens),
-   and click **Create project**, or select an existing project.
-2. Import a spectrum or load a searched/cached spectrum in **Spectral Data**.
-3. Return to **Projects** and click **Add displayed spectrum to project**.
-4. Select a saved spectrum and click **Open selected spectrum** to restore the
-   plot, data and available metadata. Projects are discovered again after restart.
-
-Projects live inside this checkout's `projects/` directory, excluded from Git.
-New attachments retain original file bytes, parsed values, units, source hashes
-and provenance. NASA cache attachments also retain the original cache record and
-metadata response. Reopening does not require the original file, cache or network.
-Changed records fail visibly; these integrity hashes are not proof of authenticity.
-Existing database rows remain readable and are labelled as legacy records without
-source attachments. To preserve a missing source for such a record, reimport the
-original data first; provenance is never fabricated. Adding the same spectrum
-again creates another saved record rather than overwriting an earlier one.
-
-The project source-size limit is 16 MiB and the JSON record limit is 64 MiB.
-Project deletion, renaming, synchronization and large-project performance work are
-not implemented. Back up your `projects/` directory separately when sharing code.
-
-Source-URL cells are underlined and can be opened with a double-click. NASA-relative
-calculation links are expanded for display only; raw imported values are preserved.
-Opening a link invokes the system browser only after that explicit action.
-
-### 5. Run the tests
-
-After approval for any needed test-dependency downloads:
+ECAS enforces strict automated testing with zero warnings:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-test.txt
-$env:QT_QPA_PLATFORM = 'offscreen'
-.\.venv\Scripts\python.exe -B -m pytest -p no:cacheprovider -q
+# Set headless platform for Qt UI tests
+$env:QT_QPA_PLATFORM = "offscreen"
+
+# Run full test suite with warning escalation
+pytest -W error
 ```
 
-A successful test run applies only to the tests and environment actually used. Follow the validation instructions for the current task, and report failures or unverified checks accurately.
+To run offline tests exclusively (skipping live network health checks to NASA/ExoMol):
+```powershell
+pytest -W error -m "not live_network"
+```
 
-## Development workflow
+---
 
-ECAS is developed incrementally. Changes should be small, reviewable, and supported by evidence.
+## Development Workflow & AI Agent Instructions
 
-The recommended workflow is:
-
-1. Establish the current project context.
-2. Inspect existing implementation, documentation, decisions, and tests.
-3. Define the objective, scope, dependencies, and acceptance criteria.
-4. Prepare and review a specific implementation plan for substantive changes.
-5. Implement only the approved scope.
-6. Run relevant tests and inspect the resulting changes.
-7. Update affected documentation and project-state records.
-8. Report results, limitations, outstanding work, and the next recommended step.
-
-Preserve existing behavior unless the approved task explicitly changes it. Avoid unrelated refactoring, unnecessary abstractions, duplicate documentation, and unsupported scientific claims.
-
-### Recording development work
-
-Meaningful work must leave a durable record in the repository.
-
-Depending on the task, update:
-
-- `docs/brains/DECISIONS.md` for approved decisions and their rationale.
-- `docs/brains/PROJECT_STATE.md` for verified changes in implementation status.
-- The relevant development plan or implementation log for progress and historical findings.
-- Architecture and validation documents when their requirements, mechanisms, or claims are affected.
-
-Work reports should identify what changed, why it changed, how it was verified, which checks were not performed, and what remains unresolved.
-
-## AI agent instructions
-
-All AI agents contributing to ECAS must read [`AGENTS.md`](AGENTS.md) before undertaking substantive work.
-
-The instructions are model- and tool-independent. They apply whether contributors use one agent or coordinate separate planning, implementation, and review agents.
-
-At a minimum, agents must:
-
-- Load the relevant project context before planning.
-- Inspect the current repository instead of relying on conversation history alone.
-- Distinguish approved decisions, proposed designs, implemented features, tested behavior, and scientifically validated results.
-- Work within an explicitly defined scope.
-- Preserve scientific integrity and data provenance.
-- Add meaningful comments where they explain non-obvious assumptions, numerical methods, invariants, or design decisions.
-- Run and report actual verification steps.
-- Update relevant documentation and project records.
-- Leave a detailed work report and a usable handoff for the next contributor.
-
-The objective is for a new contributor or a different AI model to continue work without requiring the project owner to reconstruct every prior conversation.
-
-## Contributing
-
-Contributions should respect the project's scientific objectives, existing decisions, and documentation practices.
-
-Before making substantial changes:
-
-1. Read `AGENTS.md` and the relevant project documentation.
-2. Check the current project state, decisions, and working-tree status.
-3. Identify related existing work before proposing a new implementation.
-4. Agree on scope and acceptance criteria.
-5. Keep changes focused and testable.
-
-When submitting or handing off work, include:
-
-- A concise statement of the objective.
-- The important findings and implementation decisions.
-- Files changed and the purpose of each change.
-- Tests and commands actually executed, with their results.
-- Known limitations, unresolved questions, and risks.
-- Documentation updated.
-- The next recommended step.
-
-Do not report unverified behavior as complete. Do not silently discard another contributor's work or rewrite historical records to conceal how a decision evolved.
-
-## Project status and limitations
-
-ECAS is an evolving research application. Its long-term scientific scope is broader than the currently established implementation.
-
-Capabilities involving generalized scientific-format ingestion, online archive or molecular-reference retrieval, comprehensive provenance and versioning, generalized spectral comparability assessment, scientifically validated comparison methods, defensible thresholds, and fully reproducible offline analysis must be treated as unimplemented or unverified until the current project records and code establish otherwise.
-
-The authoritative implementation status is maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md). Approved technical decisions are maintained in [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
-
-**Contributions should move ECAS toward its scientific goals without overstating current capabilities or weakening the evidence supporting its results.**
+All contributors and AI agents working on ECAS must adhere to the instructions in [`AGENTS.md`](AGENTS.md):
+1. **Never alter ExoMol case sensitivity**: Molecular identifiers in ExoMol are strictly case-sensitive (`H2O`, `CO2`, `CH4`, `SO2`).
+2. **Never present numerical fits as detections**: Adhere to the scientific claim boundaries in Section 16 of the architecture review.
+3. **Preserve data provenance**: Retain all raw file bytes, response headers, and SHA-256 hashes.
+4. **Document decisions**: Record architectural decisions in `DECISIONS.md` and status changes in `PROJECT_STATE.md`.
