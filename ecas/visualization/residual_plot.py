@@ -51,6 +51,17 @@ class ResidualPlot(QWidget):
             raise ValueError('ResidualPlot requires an eligible ResidualDiagnostic')
 
         x = list(diagnostic.coordinates)
+        chi2_str = f" | χ²_ν = {diagnostic.reduced_weighted_quadratic:.3g}" if diagnostic.reduced_weighted_quadratic is not None else ""
+        self.overlay_widget.setTitle(
+            "Aligned Overlay (Blue: Observation | Yellow: Evaluated Candidate)",
+            color="#88c0d0",
+            size="9pt",
+        )
+        self.residual_widget.setTitle(
+            f"Residuals: Obs − Candidate (RMS = {diagnostic.rms_residual:.4g} {diagnostic.signal_unit}{chi2_str})",
+            color="#bf616a",
+            size="9pt",
+        )
         self.overlay_widget.setLabel('bottom', f'Wavelength ({diagnostic.axis_unit})')
         self.overlay_widget.setLabel('left', f'{diagnostic.observable} ({diagnostic.signal_unit})')
         self.residual_widget.setLabel('bottom', f'Wavelength ({diagnostic.axis_unit})')

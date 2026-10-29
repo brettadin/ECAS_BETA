@@ -331,6 +331,16 @@ class ComparisonBrowser(QWidget):
         )
         self.copy_technical_button = QPushButton('Copy Technical Details')
         self.copy_technical_button.setToolTip('Copy complete diagnostic report and provenance to system clipboard.')
+        self.quick_generate_button = QPushButton("⚡ Generate Forward Model & Compare")
+        self.quick_generate_button.setStyleSheet(
+            "QPushButton { background-color: #5e81ac; color: white; font-weight: bold; border-radius: 4px; padding: 6px 12px; } "
+            "QPushButton:hover { background-color: #81a1c1; }"
+        )
+        self.quick_generate_button.setToolTip(
+            "Auto-fill observation metadata, convert molecular opacities to a 1D transmission spectrum, and evaluate residuals."
+        )
+        self.quick_generate_button.clicked.connect(self.generate_and_compare_forward_model)
+        summary_header_row.addWidget(self.quick_generate_button)
         summary_header_row.addWidget(self.technical_toggle_button)
         summary_header_row.addWidget(self.copy_technical_button)
         summary_card_layout.addLayout(summary_header_row)
@@ -613,7 +623,7 @@ class ComparisonBrowser(QWidget):
         gen_row2 = QHBoxLayout()
         gen_row2.addWidget(_label('Molecules:'))
         self.gen_species_checks: dict[str, QCheckBox] = {}
-        default_checked = {'H2O', 'CO2', 'CH4', 'SO2'}
+        default_checked = {'H2O', 'CO2', 'CH4'}
         for formula in ILLUSTRATIVE_SPECIES:
             cb = QCheckBox(formula)
             cb.setChecked(formula in default_checked)
@@ -684,12 +694,27 @@ class ComparisonBrowser(QWidget):
 
     def _on_opacity_source_mode_changed(self, *_args):
         mode = self.gen_source_selector.currentData() or 'cached_only'
-        if mode == 'cached_only' and self.current_observation is not None:
-            self._sync_cached_species_checks()
+        if mode == 'cached_only':
+            for formula, cb in self.gen_species_checks.items():
+                if formula not in ('H2O', 'CO2', 'CH4'):
+                    cb.setChecked(False)
+                    cb.setEnabled(False)
+                    cb.setToolTip(f'{formula} is a synthetic band template only (not available in ExoMol download service). Switch Opacities to Auto to preview.')
+                else:
+                    cb.setEnabled(True)
+                    cb.setToolTip(f'{formula} (real ExoMol line list). Downloadable in Molecular References.')
+            if self.current_observation is not None:
+                self._sync_cached_species_checks()
+            else:
+                for formula in ('H2O', 'CO2', 'CH4'):
+                    if formula in self.gen_species_checks:
+                        self.gen_species_checks[formula].setChecked(True)
         elif mode in ('auto', 'templates_only'):
             default_checked = {'H2O', 'CO2', 'CH4', 'SO2'}
             for formula, cb in self.gen_species_checks.items():
+                cb.setEnabled(True)
                 cb.setChecked(formula in default_checked)
+                cb.setToolTip(f'{formula} opacity ({mode}).')
 
     def _sync_cached_species_checks(self):
         if self.current_observation is None:
@@ -702,6 +727,10 @@ class ComparisonBrowser(QWidget):
         if len(obs_coords) == 0:
             return
         overlapping = set()
+        if self.current_reference is not None:
+            mol_sel = getattr(getattr(self.current_reference, 'product', None), 'provenance', None)
+            if mol_sel and hasattr(mol_sel, 'molecule'):
+                overlapping.add(mol_sel.molecule)
         try:
             records, _ = cached_references(self.cache_root / 'references')
             for _, ref_res in records:
@@ -715,8 +744,16 @@ class ComparisonBrowser(QWidget):
                         overlapping.add(mol)
         except (OSError, ValueError):
             pass
+        mode = self.gen_source_selector.currentData() or 'cached_only'
         for formula, cb in self.gen_species_checks.items():
-            cb.setChecked(formula in overlapping)
+            if mode == 'cached_only':
+                if formula in ('H2O', 'CO2', 'CH4'):
+                    cb.setChecked(formula in overlapping)
+                else:
+                    cb.setChecked(False)
+                    cb.setEnabled(False)
+            else:
+                cb.setEnabled(True)
 
     def _toggle_workflow_panel(self):
         visible = self.workflow_panel.isHidden()
@@ -749,7 +786,8 @@ class ComparisonBrowser(QWidget):
         compat_text = self.compatibility.text().strip()
         first_line = compat_text.split('\n')[0] if compat_text else ''
         if 'Comparison blocked' in first_line:
-            self.clean_status_label.setText(f"⚠️ {first_line}")
+            hint = " — Click '⚡ Generate Forward Model & Compare' to model transit depth (%)" if 'calculated absorption cross section' in compat_text else ""
+            self.clean_status_label.setText(f"⚠️ {first_line}{hint}")
             self.clean_status_label.setStyleSheet("font-weight: 600; color: #ebcb8b; font-size: 10.5pt;")
         elif 'Multi-candidate' in first_line:
             parts = first_line.split('. ')
@@ -1254,6 +1292,15 @@ class ComparisonBrowser(QWidget):
         elif full_model.warnings and summary is not None:
             self._last_attribution_note = 'Model warnings: ' + ' '.join(full_model.warnings)
             self._render_candidate_selection(self.candidate_selector.currentIndex())
+
+        if self.candidate_selector.count() > 0:
+            self.candidate_selector.blockSignals(True)
+            self.candidate_selector.setCurrentIndex(0)
+            self.candidate_selector.blockSignals(False)
+            self._render_candidate_selection(0)
+
+        if self.diagnostic_panel.isVisible():
+            self.scroll_area.ensureWidgetVisible(self.diagnostic_panel)
 
         return summary
 
@@ -2050,6 +2097,10 @@ class ComparisonBrowser(QWidget):
             self.candidate_selector.blockSignals(False)
 
         self._render_candidate_selection(display_idx)
+
+        if self.diagnostic_panel.isVisible():
+            self.scroll_area.ensureWidgetVisible(self.diagnostic_panel)
+
         return summary
 
     def evaluate_candidate_inputs(

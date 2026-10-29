@@ -116,20 +116,20 @@ class SkyViewWidget(pg.PlotWidget):
 
         # Star disc (radius = 1.0)
         self._star = QGraphicsEllipseItem(-1.0, -1.0, 2.0, 2.0)
-        self._star.setPen(QPen(QColor(BORDER_COLOR), 1.5))
+        self._star.setPen(pg.mkPen(BORDER_COLOR, width=1.5, cosmetic=True))
         self._star.setZValue(1)
         self.addItem(self._star)
 
         # Star limb-darkening ring
         self._limb_ring = QGraphicsEllipseItem(-0.99, -0.99, 1.98, 1.98)
-        self._limb_ring.setPen(QPen(QColor(0, 0, 0, 90), 2.5))
+        self._limb_ring.setPen(pg.mkPen(QColor(0, 0, 0, 90), width=2.0, cosmetic=True))
         self._limb_ring.setBrush(QBrush(Qt.BrushStyle.NoBrush))
         self._limb_ring.setZValue(2)
         self.addItem(self._limb_ring)
 
         # Transit chord line
         self._chord = QGraphicsLineItem(-self.HALF_SPAN, 0.0, self.HALF_SPAN, 0.0)
-        self._chord.setPen(QPen(QColor(MUTED_TEXT), 1.0, Qt.PenStyle.DashLine))
+        self._chord.setPen(pg.mkPen(MUTED_TEXT, width=1.5, style=Qt.PenStyle.DashLine, cosmetic=True))
         self._chord.setZValue(3)
         self.addItem(self._chord)
 
@@ -137,7 +137,7 @@ class SkyViewWidget(pg.PlotWidget):
         self._planet_k = 0.1
         self._planet = QGraphicsEllipseItem(0.0, 0.0, 0.2, 0.2)
         self._planet.setBrush(QBrush(QColor("#0d1117")))
-        self._planet.setPen(QPen(QColor(PLANET_ACCENT), 1.5))
+        self._planet.setPen(pg.mkPen(PLANET_ACCENT, width=1.5, cosmetic=True))
         self._planet.setZValue(10)
         self.addItem(self._planet)
 
@@ -316,7 +316,7 @@ class TransitVisualizerPage(QWidget):
         controls_scroll = QScrollArea()
         controls_scroll.setWidgetResizable(True)
         controls_scroll.setStyleSheet("background-color: #1e222b; border: 1px solid #2e3440; border-radius: 6px;")
-        controls_scroll.setFixedWidth(340)
+        controls_scroll.setFixedWidth(370)
 
         controls_inner = QWidget()
         c_layout = QVBoxLayout(controls_inner)
@@ -336,49 +336,56 @@ class TransitVisualizerPage(QWidget):
         self.preset_combo.currentIndexChanged.connect(self._on_preset_selected)
         c_layout.addWidget(self.preset_combo)
 
+        def _make_stepper(spinbox: QDoubleSpinBox, label_text: str):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label_text), 1)
+            btn_minus = QPushButton("−")
+            btn_minus.setFixedSize(28, 28)
+            btn_minus.setStyleSheet("font-weight: bold; font-size: 11pt; padding: 0px;")
+            btn_minus.setToolTip(f"Decrease {label_text}")
+            btn_minus.clicked.connect(lambda: spinbox.setValue(spinbox.value() - spinbox.singleStep()))
+            btn_plus = QPushButton("+")
+            btn_plus.setFixedSize(28, 28)
+            btn_plus.setStyleSheet("font-weight: bold; font-size: 11pt; padding: 0px;")
+            btn_plus.setToolTip(f"Increase {label_text}")
+            btn_plus.clicked.connect(lambda: spinbox.setValue(spinbox.value() + spinbox.singleStep()))
+            spinbox.setMinimumWidth(85)
+            row.addWidget(btn_minus)
+            row.addWidget(spinbox)
+            row.addWidget(btn_plus)
+            return row
+
         # Impact parameter b
-        b_box = QHBoxLayout()
-        b_box.addWidget(QLabel("Impact parameter b:"))
         self.b_spin = QDoubleSpinBox()
         self.b_spin.setRange(0.0, 0.98)
         self.b_spin.setSingleStep(0.05)
         self.b_spin.setValue(0.45)
         self.b_spin.valueChanged.connect(self._recalculate_model)
-        b_box.addWidget(self.b_spin)
-        c_layout.addLayout(b_box)
+        c_layout.addLayout(_make_stepper(self.b_spin, "Impact parameter b:"))
 
         # Star radius
-        rstar_box = QHBoxLayout()
-        rstar_box.addWidget(QLabel("Star radius (R☉):"))
         self.rstar_spin = QDoubleSpinBox()
         self.rstar_spin.setRange(0.1, 5.0)
         self.rstar_spin.setSingleStep(0.05)
         self.rstar_spin.setValue(0.895)
         self.rstar_spin.valueChanged.connect(self._recalculate_model)
-        rstar_box.addWidget(self.rstar_spin)
-        c_layout.addLayout(rstar_box)
+        c_layout.addLayout(_make_stepper(self.rstar_spin, "Star radius (R☉):"))
 
         # Planet radius
-        rpl_box = QHBoxLayout()
-        rpl_box.addWidget(QLabel("Planet radius (R_Jup):"))
         self.rpl_spin = QDoubleSpinBox()
         self.rpl_spin.setRange(0.05, 3.0)
         self.rpl_spin.setSingleStep(0.05)
         self.rpl_spin.setValue(1.279)
         self.rpl_spin.valueChanged.connect(self._recalculate_model)
-        rpl_box.addWidget(self.rpl_spin)
-        c_layout.addLayout(rpl_box)
+        c_layout.addLayout(_make_stepper(self.rpl_spin, "Planet radius (R_Jup):"))
 
         # Star temperature
-        t_box = QHBoxLayout()
-        t_box.addWidget(QLabel("Star Teff (K):"))
         self.teff_spin = QDoubleSpinBox()
         self.teff_spin.setRange(2000.0, 20000.0)
         self.teff_spin.setSingleStep(100.0)
         self.teff_spin.setValue(5400.0)
         self.teff_spin.valueChanged.connect(self._on_teff_changed)
-        t_box.addWidget(self.teff_spin)
-        c_layout.addLayout(t_box)
+        c_layout.addLayout(_make_stepper(self.teff_spin, "Star Teff (K):"))
 
         # Computed geometric quantities
         c_layout.addWidget(QLabel("Geometric Quantities:"))
