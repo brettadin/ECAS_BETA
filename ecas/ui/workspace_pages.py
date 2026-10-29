@@ -38,6 +38,7 @@ class OverviewPage(QWidget):
             (4, 'Inspect selected inputs', 'Add observation snapshots and independently select cached references. Choices last for this session.'),
             (5, 'View settings and data locations', 'Check storage paths and choose how local CSV files are interpreted.'),
             (6, 'Browse references and resources', 'Inspect canonical scientific software, archives, molecular databases, libraries, and benchmark publications.'),
+            (7, 'Simulate transit & orbit', 'Interactive geometric transit light curve and observer sky view simulator.'),
         )
         for index, caption, description in steps:
             button = QPushButton(caption)

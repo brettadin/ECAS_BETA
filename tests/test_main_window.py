@@ -146,7 +146,7 @@ def test_main_window_has_expected_navigation():
 
     assert window.windowTitle().startswith("ECAS")
     assert [window.navigation.item(i).text() for i in range(window.navigation.count())] == [
-        'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Comparisons', 'Settings', 'References & Resources']
+        'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Comparisons', 'Settings', 'References & Resources', 'Transit Visualizer']
     assert window.pages.count() == window.navigation.count()
     for index in range(window.navigation.count()):
         window.navigation.setCurrentRow(index)

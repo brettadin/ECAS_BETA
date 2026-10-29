@@ -109,6 +109,7 @@ def test_weighted_residuals_with_independent_and_correlated_covariance():
     # Whitened: (0.0, 1.0, -2.0, 2.0), quadratic: 0 + 1 + 4 + 4 = 9.0
     assert np.allclose(result.whitened_residuals, (0.0, 1.0, -2.0, 2.0), rtol=0, atol=1e-14)
     assert math.isclose(result.weighted_residual_quadratic, 9.0, rel_tol=0, abs_tol=1e-14)
+    assert math.isclose(result.reduced_weighted_quadratic, 2.25, rel_tol=0, abs_tol=1e-14)
 
     # Full positive-definite covariance on left + independent Gaussian on right
     cov_left = (

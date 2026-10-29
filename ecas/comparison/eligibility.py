@@ -109,13 +109,18 @@ def assess(left, right, *, weighted=False, cross_dataset_independent=False):
                 if not np.allclose(covariance, covariance.T, rtol=1e-12, atol=0):
                     raise ValueError('covariance symmetry')
                 np.linalg.cholesky(covariance)
+                if n > 0 and float(np.linalg.cond(covariance)) > 1e12:
+                    raise ValueError('ill_conditioned')
             elif item.noise_kind is None:
                 missing.append(f'{label}.noise_kind.missing')
             else:
                 incompatible.append(f'{label}.noise_kind.unsupported_or_asymmetric')
-        except (TypeError, ValueError, FloatingPointError, np.linalg.LinAlgError):
+        except (TypeError, ValueError, FloatingPointError, np.linalg.LinAlgError) as err:
             covariance = None
-            incompatible.append(f'{label}.noise.invalid')
+            if str(err) == 'ill_conditioned':
+                incompatible.append(f'{label}.noise.ill_conditioned')
+            else:
+                incompatible.append(f'{label}.noise.invalid')
         covariances.append(covariance)
 
     for field in ('observable', 'axis_unit', 'signal_unit', 'coordinate_frame', 'response_id'):
@@ -138,7 +143,10 @@ def assess(left, right, *, weighted=False, cross_dataset_independent=False):
                     combined = covariances[0]+covariances[1]
                 if not np.isfinite(combined).all():
                     raise ValueError('nonfinite covariance')
-                np.linalg.cholesky(combined)
+                if n > 0 and float(np.linalg.cond(combined)) > 1e12:
+                    incompatible.append('pair.combined_covariance.ill_conditioned')
+                else:
+                    np.linalg.cholesky(combined)
             except (ValueError, FloatingPointError, np.linalg.LinAlgError):
                 incompatible.append('pair.combined_covariance.not_positive_definite')
     status = 'incompatible' if incompatible else 'missing_requirements' if missing else 'eligible'
@@ -159,6 +167,7 @@ _MEANING = {
     ('noise_kind', 'missing'): 'noise kind is not established',
     ('noise_kind', 'unsupported_or_asymmetric'): 'noise kind is unsupported or asymmetric',
     ('noise', 'invalid'): 'noise declaration is invalid',
+    ('noise', 'ill_conditioned'): 'covariance matrix is ill-conditioned (condition number exceeds 1e12; numerically unstable)',
 }
 _PAIR_MEANING = {
     ('coordinates', 'not_exactly_aligned'):
@@ -168,6 +177,7 @@ _PAIR_MEANING = {
     ('cross_dataset_independence', 'not_declared'): 'cross-dataset independence is not declared',
     ('same_source', 'cannot_assume_independence'): 'both inputs share one source; independence cannot be assumed',
     ('combined_covariance', 'not_positive_definite'): 'combined covariance is not positive definite',
+    ('combined_covariance', 'ill_conditioned'): 'combined covariance matrix is ill-conditioned (condition number exceeds 1e12; numerically unstable)',
 }
 
 

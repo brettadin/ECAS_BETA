@@ -13,6 +13,7 @@ from ecas.comparison.eligibility import ComparisonInput, assess
 from ecas.comparison.forward_model import validate_model_provenance
 from ecas.comparison.inputs import (
     audit_asymmetric_uncertainties,
+    audit_observation_bin_semantics,
     extract_observation_bin_edges,
     observation_input,
 )
@@ -409,7 +410,8 @@ def test_one_click_plug_and_chug_generate_auto_align_and_compare_on_wasp39b_tbl(
     browser.add_current_observation()
     assert browser.current_observation_metadata.get("pl_name") == "WASP-39 b"
 
-    # Single click on Generate, Auto-Align & Compare with zero manual text entry
+    # Auto mode allows fallback to templates for species without cached line lists in this band
+    browser.gen_source_selector.setCurrentIndex(browser.gen_source_selector.findData('auto'))
     summary = browser.generate_and_compare_forward_model()
     assert summary is not None
     # Full model + 4 leave-one-out models (H2O, CO2, CH4, SO2) = 5 eligible candidates
@@ -539,3 +541,232 @@ def test_asymmetric_case_insensitivity_and_display_points_edge_cases(tmp_path):
     diag_identical = evaluate_residuals(inp1, inp2)
     assert diag_identical.offset_dominates_shape is False
     assert diag_identical.rms_residual == 0.0
+
+
+
+def test_priority1_spectral_bin_semantics_fwhm_rejection_and_real_nasa_tables(tmp_path):
+    """Verify Priority 1 spectral-bin semantics: FWHM rejection, explicit bounds, unit checks, and real NASA tables."""
+    from ecas.ingestion.nasa_table import import_transmission_table
+
+    # 1. FWHM must NEVER be treated as uniform top-hat passband edges
+    fwhm_tsv = tmp_path / "fwhm_spectrum.tsv"
+    fwhm_tsv.write_text(
+        "# axis_unit: microns\n"
+        "# signal_unit: %\n"
+        "# signal_type: Transmission\n"
+        "wavelength\tsignal\tfwhm\n"
+        "1.0\t2.10\t0.05\n"
+        "2.0\t2.15\t0.05\n"
+        "3.0\t2.12\t0.05\n",
+        encoding="utf-8",
+    )
+    fwhm_spec = import_tabular_spectrum(fwhm_tsv)
+    assert extract_observation_bin_edges(fwhm_spec) is None
+    fwhm_audit = audit_observation_bin_semantics(fwhm_spec, require_axis_unit=True)
+    assert fwhm_audit.has_resolved_bins is False
+    assert fwhm_audit.bin_edges is None
+    assert fwhm_audit.convention == "rejected_response_fwhm"
+    assert fwhm_audit.source_columns == ("fwhm",)
+    assert fwhm_audit.warning is not None and "Full Width at Half Maximum" in fwhm_audit.warning
+
+    # 2. Explicit lower/upper bin bounds (including asymmetric intervals around center)
+    bounds_tsv = tmp_path / "explicit_bounds.tsv"
+    bounds_tsv.write_text(
+        "# axis_unit: microns\n"
+        "wavelength\tsignal\tbin_low\tbin_high\n"
+        "1.00\t2.10\t0.92\t1.05\n"
+        "2.00\t2.15\t1.88\t2.14\n"
+        "3.00\t2.12\t2.90\t3.10\n",
+        encoding="utf-8",
+    )
+    bounds_spec = import_tabular_spectrum(bounds_tsv)
+    bounds_audit = audit_observation_bin_semantics(bounds_spec, require_axis_unit=True)
+    assert bounds_audit.has_resolved_bins is True
+    assert bounds_audit.convention == "explicit_bounds"
+    assert bounds_audit.source_columns == ("bin_low", "bin_high")
+    assert bounds_audit.bin_edges[0] == pytest.approx((0.92, 1.05))
+    assert bounds_audit.bin_edges[1] == pytest.approx((1.88, 2.14))
+    assert bounds_audit.bin_edges[2] == pytest.approx((2.90, 3.10))
+
+    # 3. Explicit bin_width vs bin_half_width and conflicting convention guards
+    bw_tsv = tmp_path / "explicit_bin_width.tsv"
+    bw_tsv.write_text(
+        "# axis_unit: microns\n"
+        "wavelength\tsignal\tbin_width\n"
+        "1.0\t2.10\t0.20\n"
+        "2.0\t2.15\t0.20\n"
+        "3.0\t2.12\t0.20\n",
+        encoding="utf-8",
+    )
+    bw_spec = import_tabular_spectrum(bw_tsv)
+    bw_audit = audit_observation_bin_semantics(bw_spec, require_axis_unit=True)
+    assert bw_audit.has_resolved_bins is True
+    assert bw_audit.convention == "full_width"
+    assert bw_audit.bin_edges[0] == pytest.approx((0.90, 1.10))
+    bw_conflict = audit_observation_bin_semantics(
+        bw_spec, width_convention="half_width", require_axis_unit=True
+    )
+    assert bw_conflict.has_resolved_bins is False
+    assert bw_conflict.convention == "unresolved_conflicting_convention"
+
+    hw_tsv = tmp_path / "explicit_half_width.tsv"
+    hw_tsv.write_text(
+        "# axis_unit: microns\n"
+        "wavelength\tsignal\tbin_half_width\n"
+        "1.0\t2.10\t0.10\n"
+        "2.0\t2.15\t0.10\n"
+        "3.0\t2.12\t0.10\n",
+        encoding="utf-8",
+    )
+    hw_spec = import_tabular_spectrum(hw_tsv)
+    hw_audit = audit_observation_bin_semantics(hw_spec, require_axis_unit=True)
+    assert hw_audit.has_resolved_bins is True
+    assert hw_audit.convention == "half_width"
+    assert hw_audit.bin_edges[0] == pytest.approx((0.90, 1.10))
+
+    # 4. Unit validation: missing axis_unit (when required) and mismatched column_units
+    no_unit_tsv = tmp_path / "no_unit.tsv"
+    no_unit_tsv.write_text(
+        "wavelength\tsignal\tbandwidth\n"
+        "1.0\t2.10\t0.10\n"
+        "2.0\t2.15\t0.10\n"
+        "3.0\t2.12\t0.10\n",
+        encoding="utf-8",
+    )
+    no_unit_spec = import_tabular_spectrum(no_unit_tsv)
+    no_unit_audit = audit_observation_bin_semantics(no_unit_spec, require_axis_unit=True)
+    assert no_unit_audit.has_resolved_bins is False
+    assert no_unit_audit.convention == "unresolved_missing_axis_unit"
+
+    mismatch_audit = audit_observation_bin_semantics(
+        bw_spec,
+        column_units={"wavelength": "microns", "bin_width": "nm"},
+        require_axis_unit=True,
+    )
+    assert mismatch_audit.has_resolved_bins is False
+    assert mismatch_audit.convention == "unresolved_unit_mismatch"
+    assert "conflicts with coordinate axis_unit" in mismatch_audit.warning
+
+    unitless_width_audit = audit_observation_bin_semantics(
+        bw_spec,
+        column_units={"wavelength": "microns", "bin_width": ""},
+        require_axis_unit=True,
+    )
+    assert unitless_width_audit.has_resolved_bins is False
+    assert unitless_width_audit.convention == "unresolved_missing_width_unit"
+
+    # 5. Real NASA Exoplanet Archive tables: Feinstein 2022 (NIRISS) vs Alderson 2022 (G395H) vs Rustamkulov 2023 (PRISM)
+    feinstein = import_transmission_table(ROOT / "data/NASA/2026-10-27/feinstein-2023.tbl")
+    fein_auto = audit_observation_bin_semantics(
+        feinstein.spectrum, column_units=feinstein.column_units, require_axis_unit=True
+    )
+    assert fein_auto.has_resolved_bins is True
+    assert fein_auto.convention == "full_width"
+    assert fein_auto.adjacent_spacing_to_width_median == pytest.approx(2.0, abs=0.05)
+    assert fein_auto.warning is not None and "half-width" in fein_auto.warning
+    fein_half = audit_observation_bin_semantics(
+        feinstein.spectrum,
+        column_units=feinstein.column_units,
+        width_convention="half_width",
+        require_axis_unit=True,
+    )
+    assert fein_half.has_resolved_bins is True
+    assert fein_half.convention == "half_width"
+    assert fein_half.overlapping_pair_count == 7
+
+    alderson = import_transmission_table(
+        ROOT / "data/NASA/cache/entry-d39db942be204812b8d322bb17f554d8/source.tbl"
+    )
+    ald_auto = audit_observation_bin_semantics(
+        alderson.spectrum, column_units=alderson.column_units, require_axis_unit=True
+    )
+    assert ald_auto.has_resolved_bins is True
+    assert ald_auto.convention == "full_width"
+    assert ald_auto.adjacent_spacing_to_width_median == pytest.approx(1.0, abs=0.05)
+    assert "half-width" not in (ald_auto.warning or "")
+    assert ald_auto.overlapping_pair_count == 2
+    # Doubling Alderson's full-width bandwidth under half_width causes massive overlap and must be rejected
+    ald_half = audit_observation_bin_semantics(
+        alderson.spectrum,
+        column_units=alderson.column_units,
+        width_convention="half_width",
+        require_axis_unit=True,
+    )
+    assert ald_half.has_resolved_bins is False
+    assert ald_half.convention == "unresolved_overlapping_bins"
+
+    rustamkulov = import_transmission_table(
+        ROOT / "data/NASA/cache/entry-174704980c13407d83953412906fd60c/source.tbl"
+    )
+    rust_audit = audit_observation_bin_semantics(
+        rustamkulov.spectrum, column_units=rustamkulov.column_units, require_axis_unit=True
+    )
+    assert rust_audit.has_resolved_bins is False
+    assert rust_audit.convention == "unresolved_invalid_values"
+
+
+def test_priority1_ui_passband_vs_point_grid_and_saved_provenance(window, tmp_path):
+    """Verify UI separates coordinate matching from passband integration and persists full bin provenance."""
+    import json
+
+    window.project_browser.name.setText("priority1-bin-provenance")
+    window.project_browser.create_button.click()
+
+    # 1. Importing a spectrum with FWHM disables passband integration, assigns point-grid response, and warns
+    fwhm_tsv = tmp_path / "inst_fwhm.tsv"
+    fwhm_tsv.write_text(
+        "# axis_unit: microns\n"
+        "# signal_unit: %\n"
+        "# signal_type: Transmission\n"
+        "wavelength\tpl_trandep\tpl_trandeperr1\tpl_trandeperr2\tfwhm\n"
+        "1.2\t2.10\t0.02\t-0.02\t0.04\n"
+        "2.0\t2.14\t0.02\t-0.02\t0.04\n"
+        "2.8\t2.12\t0.02\t-0.02\t0.04\n"
+        "3.6\t2.16\t0.02\t-0.02\t0.04\n",
+        encoding="utf-8",
+    )
+    window._import_csv_from_path(str(fwhm_tsv))
+    browser = window.comparison_browser
+    browser.add_current_observation()
+    browser.auto_fill_observation_metadata()
+    assert browser.bin_integrate_checkbox.isChecked() is False
+    assert browser.obs_response_id_input.text().endswith("-point-grid")
+    assert "Full Width at Half Maximum" in browser.candidate_status.text()
+
+    summary_fwhm = browser.generate_and_compare_forward_model()
+    assert summary_fwhm is not None
+    assert "integrate_tophat_bins_v1" not in browser.compatibility.text()
+    assert "Full Width at Half Maximum" in browser.compatibility.text()
+    saved_fwhm_path = browser.save_active_comparison()
+    saved_fwhm = json.loads(saved_fwhm_path.read_text(encoding="utf-8"))
+    assert saved_fwhm["left"]["provenance"]["bin_semantics"]["convention"] == "rejected_response_fwhm"
+    assert saved_fwhm["left"]["provenance"]["bin_semantics"]["has_resolved_bins"] is False
+
+    # 2. Importing Feinstein 2023 .tbl records bin_semantics and transformation step provenance
+    tbl_path = ROOT / "data/NASA/2026-10-27/feinstein-2023.tbl"
+    window._import_csv_from_path(str(tbl_path))
+    browser.add_current_observation()
+    browser.obs_response_id_input.clear()
+    browser.obs_response_evidence_input.clear()
+    browser.auto_fill_observation_metadata()
+    assert browser.bin_integrate_checkbox.isChecked() is True
+    assert browser.obs_response_id_input.text().endswith("-tophat-passband")
+
+    summary_tbl = browser.generate_and_compare_forward_model()
+    assert summary_tbl is not None
+    saved_tbl_path = browser.save_active_comparison()
+    saved_tbl = json.loads(saved_tbl_path.read_text(encoding="utf-8"))
+    bin_sem = saved_tbl["left"]["provenance"]["bin_semantics"]
+    assert bin_sem["has_resolved_bins"] is True
+    assert bin_sem["source_columns"] == ["bandwidth"]
+    assert bin_sem["convention"] == "full_width"
+    assert bin_sem["width_unit"] == "microns"
+    assert bin_sem["adjacent_spacing_to_width_median"] == pytest.approx(2.0, abs=0.05)
+    assert "uniform top-hat boxcar" in bin_sem["response_shape_note"]
+
+    right_steps = saved_tbl["right"]["transformations"]
+    tophat_step = next(s for s in right_steps if s["operation"] == "integrate_tophat_bins_v1")
+    step_params = dict(tophat_step["parameters"])
+    assert step_params["response_shape"] == "uniform_tophat_boxcar"
+    assert step_params["bin_source_columns"] == ["bandwidth"]
+    assert step_params["bin_width_convention"] == "full_width"

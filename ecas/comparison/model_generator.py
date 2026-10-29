@@ -21,6 +21,45 @@ Scientific integrity boundary:
 - Leave-one-out Delta-RMS and Delta-Q quantify sensitivity conditioned on the
   fixed forward model; they are never presented as marginalized Bayesian
   retrieval posteriors or standalone detection sigma claims.
+
+Validated Physical Scope & Governing Equations:
+1. Hydrostatic Vertical Structure:
+   - Scale height: H = (k_B * T) / (mu * m_u * g)
+   - Number density profile: n(z) = n_0 * exp(-z / H), where n_0 = P_0 / (k_B * T)
+   - Atmospheric layer edges r_k and midpoints r_mid[j] with altitude z = r - R_p.
+2. Slant Chord Quadrature:
+   - Exact concentric spherical shells of outer radius r_{k+1} and inner radius r_k.
+   - Slant chord path length for impact parameter b_j = r_mid[j]:
+     L_{j, k} = 2 * (sqrt(r_{k+1}^2 - b_j^2) - sqrt(r_k^2 - b_j^2)) for k >= j.
+   - Slant optical depth tau(b_j, lambda) = sum_{k >= j} L_{j, k} * n_k * sigma_mix(lambda).
+3. Transmission Obscuration:
+   - Annulus absorptance: A(b_j, lambda) = 1 - exp(-tau(b_j, lambda)).
+   - Effective planet transit area:
+     R_eff^2(lambda) = R_base^2 + 2 * int_{R_base}^{R_top} r * (1 - exp(-tau(r, lambda))) dr.
+   - Transit depth: D(lambda) = (R_eff(lambda) / R_star)^2 [fraction or percent].
+4. Supported Opacity Sources:
+   - Public ExoMol cross sections (.sigma, Doppler-broadened at zero pressure).
+   - Imported laboratory UV-Vis / IR cross sections (cm^2/molecule).
+   - Synthetic illustrative broadband templates (clearly tagged for exploratory plumbing).
+   - Parametric H2/He Rayleigh scattering continuum with power-law haze slope.
+5. Validated Parameter Ranges:
+   - Temperature: 150 K <= T <= 3000 K.
+   - Gravity: 1.0 m/s^2 <= g <= 100.0 m/s^2.
+   - Scale height ratio: H / R_p <= 0.25 (guards against unphysical escaping atmospheres).
+   - Pressures: 1e-6 bar <= P_ref, P_cloud, P_deep <= 100 bar.
+   - Trace abundances: 0.0 <= sum(VMR_i) <= 1.0.
+
+Assumptions & Known Limitations:
+- 1D isothermal profile (neglects day-night terminators and vertical temperature gradients).
+- Uniform vertical mixing ratios (neglects photochemical disequilibrium vertical profiles).
+- Zero-pressure cross sections neglect pressure-broadened collisional line wings at P > 0.01 bar.
+- Gray cloud deck acts as an opaque geometric floor without wavelength-dependent Mie scattering.
+
+Scientific Integrity Boundary:
+- Never extrapolates molecular cross sections outside their covered wavelength domain.
+- Forward-model outputs represent descriptive forward simulations conditioned on the
+  specified parameter set. They are NEVER presented as proof of molecular detection,
+  abundance measurements, or marginalized Bayesian retrieval posteriors.
 """
 from __future__ import annotations
 
@@ -243,11 +282,20 @@ class GeneratedForwardModel:
     warnings: tuple[str, ...]
 
     def to_provenance_dict(self) -> dict:
+        has_synthetic = any(
+            src.dataset == ILLUSTRATIVE_DATASET_ID for src in self.provenance.opacity_sources
+        )
+        real_datasets = tuple(
+            src.dataset for src in self.provenance.opacity_sources if src.dataset != ILLUSTRATIVE_DATASET_ID
+        )
         return {
             "kind": "generated_isothermal_forward_model",
             "engine_name": ENGINE_NAME,
             "engine_version": ENGINE_VERSION,
             "scale_height_m": self.scale_height_m,
+            "reference_type": "synthetic_illustrative_template" if has_synthetic else "physical_reference_data",
+            "contains_synthetic_templates": has_synthetic,
+            "physical_opacity_sources": list(real_datasets),
             "warnings": list(self.warnings),
             "atmospheric_model_provenance": asdict(self.provenance),
         }

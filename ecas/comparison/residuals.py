@@ -48,6 +48,7 @@ class ResidualDiagnostic:
     max_abs_residual: float
     whitened_residuals: tuple[float, ...] | None = None
     weighted_residual_quadratic: float | None = None
+    reduced_weighted_quadratic: float | None = None
     demeaned_rms_residual: float = 0.0
     offset_dominates_shape: bool = False
 
@@ -104,6 +105,7 @@ def evaluate_residuals(
 
     whitened_tuple = None
     quadratic = None
+    reduced_quadratic = None
     if weighted:
         n = len(x)
         with np.errstate(over='raise', invalid='raise'):
@@ -111,6 +113,7 @@ def evaluate_residuals(
             chol = np.linalg.cholesky(combined)
             whitened = np.linalg.solve(chol, diff)
             quadratic = float(whitened @ whitened)
+            reduced_quadratic = float(quadratic / n) if n > 0 else 0.0
         if not np.isfinite(whitened).all() or not np.isfinite(quadratic):
             raise ValueError('Nonfinite weighted residual result')
         whitened_tuple = tuple(float(v) for v in whitened)
@@ -138,6 +141,7 @@ def evaluate_residuals(
         max_abs_residual=max_abs_res,
         whitened_residuals=whitened_tuple,
         weighted_residual_quadratic=quadratic,
+        reduced_weighted_quadratic=reduced_quadratic,
         demeaned_rms_residual=demeaned_rms,
         offset_dominates_shape=offset_dominates,
     )

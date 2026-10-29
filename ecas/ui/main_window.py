@@ -58,6 +58,7 @@ from ecas.ui.molecular_browser import MolecularReferenceBrowser
 from ecas.ui.comparison_browser import ComparisonBrowser
 from ecas.ui.workspace_pages import OverviewPage, SettingsPage
 from ecas.ui.resources_browser import ResourcesBrowser
+from ecas.ui.transit_view import TransitVisualizerPage
 from ecas.ingestion.tabular_formats import import_tabular_spectrum
 
 
@@ -150,6 +151,7 @@ class ECASWindow(QMainWindow):
             "Comparisons",
             "Settings",
             "References & Resources",
+            "Transit Visualizer",
         ])
         self.navigation.setFixedWidth(200)
 
@@ -213,6 +215,7 @@ class ECASWindow(QMainWindow):
             ("Comparisons", "Inspect independently selected inputs."),
             ("Settings", "Application preferences and data locations."),
             ("References & Resources", "Scientific software, archives, molecular databases, and publications."),
+            ("Transit Visualizer", "Educational geometric exoplanet transit and orbit simulation."),
         ]
 
         for index, (heading, description) in enumerate(definitions):
@@ -258,6 +261,15 @@ class ECASWindow(QMainWindow):
             elif index == 6:
                 self.resources_browser = ResourcesBrowser(self)
                 layout.addWidget(self.resources_browser)
+            elif index == 7:
+                self.transit_page = TransitVisualizerPage(
+                    on_apply_preset=self._on_transit_apply_to_comparisons,
+                    parent=self,
+                )
+                self.transit_page.apply_to_comparisons_requested.connect(
+                    self._on_transit_apply_to_comparisons
+                )
+                layout.addWidget(self.transit_page)
             else:
                 # The remaining pages currently contain headings and
                 # descriptions only; they are not fully implemented yet.
@@ -306,6 +318,14 @@ class ECASWindow(QMainWindow):
                 f'Comparisons: {comparison.observation_selector.count()} session observation choices; '
                 f'observation {selected_observation}; reference {selected_reference}.\n'
                 'This summary updates when Overview is opened; it is not a stored-data inventory.')
+
+    def _on_transit_apply_to_comparisons(self, preset_id: str):
+        """Navigate to Comparisons workspace and select the corresponding planetary atmosphere preset."""
+        self.navigation.setCurrentRow(4)
+        if hasattr(self, 'comparison_browser') and self.comparison_browser:
+            idx = self.comparison_browser.gen_preset_selector.findData(preset_id)
+            if idx >= 0:
+                self.comparison_browser.gen_preset_selector.setCurrentIndex(idx)
 
     def _comparison_observation(self):
         """Return the loaded input without rereading files or asserting provenance."""
@@ -357,6 +377,8 @@ class ECASWindow(QMainWindow):
             meta['reference'] = reference
         if spec_type:
             meta['spec_type'] = spec_type
+        if details is not None and getattr(details, 'column_units', None):
+            meta['column_units'] = dict(details.column_units)
         return meta
 
     def _build_spectral_page(self, layout):

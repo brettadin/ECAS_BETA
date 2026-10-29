@@ -1,5 +1,6 @@
 """Independent input inspection, gated candidate comparison, and persistence."""
 from copy import deepcopy
+from pathlib import Path
 from dataclasses import dataclass, replace
 import math
 import re
@@ -43,11 +44,13 @@ from ecas.comparison.eligibility import ComparisonInput, assess, describe_reason
 from ecas.comparison.forward_model import load_forward_model_file
 from ecas.comparison.inputs import (
     audit_asymmetric_uncertainties,
+    audit_observation_bin_semantics,
     extract_observation_bin_edges,
     observation_input,
     reference_input,
 )
 from ecas.comparison.model_generator import (
+    ILLUSTRATIVE_DATASET_ID,
     ILLUSTRATIVE_SPECIES,
     PLANET_PRESETS,
     MolecularComponentSpec,
@@ -526,13 +529,24 @@ class ComparisonBrowser(QWidget):
             'Integrate higher-resolution forward models over observation passbands (bandwidth)'
         )
         self.bin_integrate_checkbox.setToolTip(
-            'When the observation provides explicit channel bandwidths, average dense forward models '
-            'over each top-hat passband [center - bw/2, center + bw/2] without extrapolating.'
+            'When the observation provides verified channel bounds or widths, average dense forward models '
+            'over each uniform top-hat passband without extrapolating. Instrument FWHM columns are not '
+            'treated as top-hat passbands.'
+        )
+        self.bin_convention_selector = QComboBox()
+        self.bin_convention_selector.addItem('Bin convention: Auto / Full width [c - w/2, c + w/2]', 'auto')
+        self.bin_convention_selector.addItem('Bin convention: Full width [c - w/2, c + w/2]', 'full_width')
+        self.bin_convention_selector.addItem('Bin convention: Half-width [c - w, c + w]', 'half_width')
+        self.bin_convention_selector.setToolTip(
+            'Select how archive "bandwidth" columns are interpreted for top-hat passband integration.\n'
+            'Explicit bound columns (bin_low/bin_high) and explicit bin_width / bin_half_width columns '
+            'follow their declared semantics; instrument FWHM columns are never treated as top-hat bins.'
         )
         self.weighted_checkbox = QCheckBox('Weighted residual diagnostics')
         self.independent_checkbox = QCheckBox('Attest cross-dataset error independence')
         options_row.addWidget(self.align_checkbox)
         options_row.addWidget(self.bin_integrate_checkbox)
+        options_row.addWidget(self.bin_convention_selector)
         options_row.addWidget(self.weighted_checkbox)
         options_row.addWidget(self.independent_checkbox)
         options_row.addStretch(1)
@@ -579,11 +593,12 @@ class ComparisonBrowser(QWidget):
 
         self.gen_source_selector = QComboBox()
         for text, data in (
-            ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
             ('Opacities: Cached ExoMol cross sections only (strict line lists)', 'cached_only'),
+            ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
             ('Opacities: Broadband band templates (exploratory preview)', 'templates_only'),
         ):
             self.gen_source_selector.addItem(text, data)
+        self.gen_source_selector.currentIndexChanged.connect(self._on_opacity_source_mode_changed)
 
         for widget in (
             self.gen_preset_selector,
@@ -666,6 +681,42 @@ class ComparisonBrowser(QWidget):
         self.save_comparison_button.clicked.connect(self.save_active_comparison)
         self.refresh_saved_comparisons_button.clicked.connect(self.refresh_saved_comparisons)
         self.reproduce_saved_button.clicked.connect(self.reproduce_selected_comparison)
+
+    def _on_opacity_source_mode_changed(self, *_args):
+        mode = self.gen_source_selector.currentData() or 'cached_only'
+        if mode == 'cached_only' and self.current_observation is not None:
+            self._sync_cached_species_checks()
+        elif mode in ('auto', 'templates_only'):
+            default_checked = {'H2O', 'CO2', 'CH4', 'SO2'}
+            for formula, cb in self.gen_species_checks.items():
+                cb.setChecked(formula in default_checked)
+
+    def _sync_cached_species_checks(self):
+        if self.current_observation is None:
+            return
+        try:
+            adapted = observation_input(self.current_observation, self.current_observation_hash)
+            obs_coords = np.asarray(adapted.comparison_input.coordinates, dtype=float)
+        except Exception:
+            return
+        if len(obs_coords) == 0:
+            return
+        overlapping = set()
+        try:
+            records, _ = cached_references(self.cache_root / 'references')
+            for _, ref_res in records:
+                mol = ref_res.product.provenance.molecule
+                pts = [(float(nu), float(sig)) for nu, sig in ref_res.product.points if float(nu) > 0.0]
+                if len(pts) >= 3:
+                    nu_arr = np.array([p[0] for p in pts], dtype=float)
+                    lam_um = 10000.0 / nu_arr
+                    c_min, c_max = float(np.min(lam_um)), float(np.max(lam_um))
+                    if int(np.sum((obs_coords >= c_min) & (obs_coords <= c_max))) >= 3:
+                        overlapping.add(mol)
+        except (OSError, ValueError):
+            pass
+        for formula, cb in self.gen_species_checks.items():
+            cb.setChecked(formula in overlapping)
 
     def _toggle_workflow_panel(self):
         visible = self.workflow_panel.isHidden()
@@ -858,7 +909,7 @@ class ComparisonBrowser(QWidget):
         self.gen_temp_spin.setValue(preset.temperature_k)
         self.gen_cloud_spin.setValue(preset.default_cloud_pressure_bar or 0.01)
 
-    def auto_fill_observation_metadata(self) -> bool:
+    def auto_fill_observation_metadata(self, sync_species: bool = True) -> bool:
         """Populate non-conflicting observation attestations and alignment options from dataset metadata."""
         if self.current_observation is None:
             self.compatibility.setText(
@@ -888,38 +939,52 @@ class ComparisonBrowser(QWidget):
         if not self.obs_frame_input.text().strip():
             self.obs_frame_input.setText('barycentric')
 
+        resolved_axis_unit = base.axis_unit or self.obs_axis_unit_selector.currentData()
+        bin_audit = self._audit_current_observation_bins(resolved_axis_unit)
+        has_bins = bool(bin_audit is not None and bin_audit.has_resolved_bins)
+
         if not self.obs_response_id_input.text().strip():
             inst_raw = meta.get('instrument', '')
             slug = re.sub(r'[^a-z0-9]+', '-', inst_raw.lower()).strip('-')[:36] if inst_raw else ''
             if not slug:
                 slug = re.sub(r'[^a-z0-9]+', '-', spectrum.source_file.stem.lower()).strip('-')[:36] or 'instrument'
-            self.obs_response_id_input.setText(f'{slug}-passband')
+            suffix = 'tophat-passband' if has_bins else 'point-grid'
+            self.obs_response_id_input.setText(f'{slug}-{suffix}')
 
         if not self.obs_response_evidence_input.text().strip():
             ref = meta.get('reference', '')
-            if ref:
-                self.obs_response_evidence_input.setText(f'{ref} (imported header metadata)')
+            base_ref = f'{ref} (imported header metadata)' if ref else f'Imported dataset {spectrum.source_file.name}'
+            if has_bins and bin_audit is not None and bin_audit.source_columns:
+                cols_str = '/'.join(bin_audit.source_columns)
+                self.obs_response_evidence_input.setText(
+                    f'{base_ref}; {cols_str} ({bin_audit.convention}) uniform top-hat passband'
+                )
             else:
                 self.obs_response_evidence_input.setText(
-                    f'Imported dataset {spectrum.source_file.name} (quick-setup attestation)'
+                    f'{base_ref}; point-sampled coordinate grid (no passband integration)'
                 )
 
-        if self.obs_noise_selector.currentData() is None:
-            unc_map = dict(adapted.raw_uncertainty_columns)
-            raw_unc = unc_map.get('uncertainty')
-            has_valid_sym_unc = (
-                raw_unc is not None
-                and len(raw_unc) == len(base.values)
-                and len(raw_unc) > 0
-                and all(
-                    not isinstance(v, bool)
-                    and isinstance(v, (int, float))
-                    and math.isfinite(v)
-                    and v > 0
-                    for v in raw_unc
-                )
+        unc_map = dict(adapted.raw_uncertainty_columns)
+        raw_unc = unc_map.get('uncertainty')
+        has_valid_sym_unc = (
+            raw_unc is not None
+            and len(raw_unc) == len(base.values)
+            and len(raw_unc) > 0
+            and all(
+                not isinstance(v, bool)
+                and isinstance(v, (int, float))
+                and math.isfinite(v)
+                and v > 0
+                for v in raw_unc
             )
-            asym = audit_asymmetric_uncertainties(spectrum)
+        )
+        asym = audit_asymmetric_uncertainties(spectrum)
+        cur_noise = self.obs_noise_selector.currentData()
+        if (
+            cur_noise is None
+            or (cur_noise == 'independent_gaussian_1sigma' and not has_valid_sym_unc)
+            or (cur_noise == 'conservative_asymmetric_envelope_1sigma' and asym.envelope_sigma is None)
+        ):
             if has_valid_sym_unc:
                 self.obs_noise_selector.setCurrentIndex(
                     self.obs_noise_selector.findData('independent_gaussian_1sigma')
@@ -945,7 +1010,6 @@ class ComparisonBrowser(QWidget):
                 self.independent_checkbox.setChecked(True)
 
         self.align_checkbox.setChecked(True)
-        has_bins = extract_observation_bin_edges(spectrum) is not None
         self.bin_integrate_checkbox.setChecked(has_bins)
 
         planet_name = meta.get('pl_name', '')
@@ -958,9 +1022,15 @@ class ComparisonBrowser(QWidget):
             except KeyError:
                 pass
 
+        warn_suffix = f' Notice: {bin_audit.warning}' if (bin_audit and bin_audit.warning) else ''
+        if sync_species and self.gen_source_selector.currentData() == 'cached_only':
+            self._sync_cached_species_checks()
+            active_mols = [f for f, cb in self.gen_species_checks.items() if cb.isChecked()]
+            if active_mols:
+                warn_suffix += f' Strict real data: checked cached ExoMol molecule(s) overlapping observation: {", ".join(active_mols)}.'
         self.candidate_status.setText(
             f'Quick Setup applied from {spectrum.source_file.name} metadata '
-            f'({"passband integration enabled" if has_bins else "exact-grid alignment enabled"}).'
+            f'({"passband integration enabled" if has_bins else "exact-grid point alignment enabled"}).{warn_suffix}'
         )
         return True
 
@@ -972,7 +1042,7 @@ class ComparisonBrowser(QWidget):
             )
             return None
 
-        self.auto_fill_observation_metadata()
+        self.auto_fill_observation_metadata(sync_species=False)
         try:
             left_base, _, _ = self._build_attested_observation()
         except ValueError as error:
@@ -1008,8 +1078,11 @@ class ComparisonBrowser(QWidget):
             min_edge = float(obs_coords_um[0])
             max_edge = float(obs_coords_um[-1])
             target_grid_um = obs_coords_um
-            model_resp_id = left_um.response_id or 'observation-grid-passband'
-            model_resp_ev = f'Evaluated on observation grid ({left_um.response_evidence or "caller grid"})'
+            model_resp_id = left_um.response_id or 'observation-point-grid'
+            model_resp_ev = (
+                f'Monochromatic point evaluation on observation coordinates '
+                f'({left_um.response_evidence or "caller grid"}; no passband integration)'
+            )
 
         selected_formulas = [f for f, cb in self.gen_species_checks.items() if cb.isChecked()]
         vmr = 10.0 ** float(self.gen_log_vmr_spin.value())
@@ -1108,10 +1181,14 @@ class ComparisonBrowser(QWidget):
         self.last_attribution_entries = ()
         self._last_attribution_note = ''
 
+        has_synthetic = any(
+            src.dataset == ILLUSTRATIVE_DATASET_ID for src in full_model.provenance.opacity_sources
+        )
+        prefix = '[Synthetic Template] ' if has_synthetic else '[Real ExoMol] '
         full_inp = full_model.comparison_input
         self.candidate_entries.append(
             _CandidateEntry(
-                label=f'{full_inp.source_id} (full model, {len(full_inp.coordinates)} pts)',
+                label=f'{prefix}{full_inp.source_id} (full model, {len(full_inp.coordinates)} pts)',
                 comparison_input=full_inp,
                 provenance=full_model.to_provenance_dict(),
             )
@@ -1119,9 +1196,13 @@ class ComparisonBrowser(QWidget):
         ordered_loo_formulas = list(loo_models.keys())
         for omitted, loo_mod in loo_models.items():
             l_inp = loo_mod.comparison_input
+            loo_has_synthetic = any(
+                src.dataset == ILLUSTRATIVE_DATASET_ID for src in loo_mod.provenance.opacity_sources
+            )
+            loo_prefix = '[Synthetic Template] ' if loo_has_synthetic else '[Real ExoMol] '
             self.candidate_entries.append(
                 _CandidateEntry(
-                    label=f'{l_inp.source_id} (leave-one-out without {omitted})',
+                    label=f'{loo_prefix}{l_inp.source_id} (leave-one-out without {omitted})',
                     comparison_input=l_inp,
                     provenance=loo_mod.to_provenance_dict(),
                 )
@@ -1188,8 +1269,14 @@ class ComparisonBrowser(QWidget):
         role = base.role
         ui_role = self.obs_role_selector.currentData()
         if ui_role is not None:
+            if base.role is not None and base.role != ui_role:
+                raise ValueError(
+                    f'Caller attestation for role ({ui_role!r}) conflicts '
+                    f'with imported metadata ({base.role!r})'
+                )
             role = ui_role
-            attestations['role'] = ui_role
+            if base.role is None:
+                attestations['role'] = ui_role
 
         resolved = {
             'observable': base.observable,
@@ -1216,20 +1303,38 @@ class ComparisonBrowser(QWidget):
         frame = base.coordinate_frame
         ui_frame = self.obs_frame_input.text().strip()
         if ui_frame:
+            if base.coordinate_frame is not None and base.coordinate_frame != ui_frame:
+                raise ValueError(
+                    f'Caller attestation for coordinate_frame ({ui_frame!r}) conflicts '
+                    f'with imported metadata ({base.coordinate_frame!r})'
+                )
             frame = ui_frame
-            attestations['coordinate_frame'] = ui_frame
+            if base.coordinate_frame is None:
+                attestations['coordinate_frame'] = ui_frame
 
         resp_id = base.response_id
         ui_resp_id = self.obs_response_id_input.text().strip()
         if ui_resp_id:
+            if base.response_id is not None and base.response_id != ui_resp_id:
+                raise ValueError(
+                    f'Caller attestation for response_id ({ui_resp_id!r}) conflicts '
+                    f'with imported metadata ({base.response_id!r})'
+                )
             resp_id = ui_resp_id
-            attestations['response_id'] = ui_resp_id
+            if base.response_id is None:
+                attestations['response_id'] = ui_resp_id
 
         resp_ev = base.response_evidence
         ui_resp_ev = self.obs_response_evidence_input.text().strip()
         if ui_resp_ev:
+            if base.response_evidence is not None and base.response_evidence != ui_resp_ev:
+                raise ValueError(
+                    f'Caller attestation for response_evidence ({ui_resp_ev!r}) conflicts '
+                    f'with imported metadata ({base.response_evidence!r})'
+                )
             resp_ev = ui_resp_ev
-            attestations['response_evidence'] = ui_resp_ev
+            if base.response_evidence is None:
+                attestations['response_evidence'] = ui_resp_ev
 
         noise_kind = base.noise_kind
         noise_ev = base.noise_evidence
@@ -1292,12 +1397,43 @@ class ComparisonBrowser(QWidget):
             noise_evidence=noise_ev,
             sigma=sigma,
         )
+        bin_audit = self._audit_current_observation_bins(resolved['axis_unit'])
+        bin_semantics = None
+        if bin_audit is not None:
+            bin_semantics = {
+                'has_resolved_bins': bin_audit.has_resolved_bins,
+                'source_columns': list(bin_audit.source_columns) if bin_audit.source_columns else None,
+                'convention': bin_audit.convention,
+                'axis_unit': bin_audit.axis_unit,
+                'width_unit': bin_audit.width_unit,
+                'adjacent_spacing_to_width_median': bin_audit.adjacent_spacing_to_width_median,
+                'overlapping_pair_count': bin_audit.overlapping_pair_count,
+                'response_shape_note': bin_audit.response_shape_note,
+                'warning': bin_audit.warning,
+            }
+            if bin_audit.warning:
+                extra_notes.append(f'Bin semantics notice: {bin_audit.warning}')
+
+        metadata_provenance = {
+            'source_provided': {
+                k: getattr(base, k)
+                for k in ('role', 'observable', 'axis_unit', 'signal_unit', 'coordinate_frame', 'response_id', 'response_evidence')
+                if getattr(base, k) is not None
+            },
+            'user_attested': dict(attestations),
+            'bin_derived': {
+                'convention': bin_semantics.get('convention') if bin_semantics else None,
+                'source_columns': bin_semantics.get('source_columns') if bin_semantics else None,
+            } if bin_semantics else None,
+        }
         provenance = {
             'kind': 'imported_observation_snapshot',
             'source_file': str(spectrum.source_file),
             'source_sha256': self.current_observation_hash,
             'importer_mappings': [list(item) for item in adapted.mappings],
             'caller_attestations': attestations,
+            'metadata_provenance': metadata_provenance,
+            'bin_semantics': bin_semantics,
         }
         notes: list[str] = []
         if attestations:
@@ -1308,15 +1444,37 @@ class ComparisonBrowser(QWidget):
         notes.extend(extra_notes)
         return updated, provenance, notes
 
+    def _audit_current_observation_bins(self, resolved_axis_unit: str | None = None):
+        if self.current_observation is None:
+            return None
+        col_units = self.current_observation_metadata.get('column_units')
+        conv = self.bin_convention_selector.currentData() or 'auto'
+        effective_unit = (
+            resolved_axis_unit
+            if resolved_axis_unit is not None
+            else (
+                self.current_observation.axis_unit
+                or self.obs_axis_unit_selector.currentData()
+            )
+        )
+        return audit_observation_bin_semantics(
+            self.current_observation,
+            column_units=col_units if isinstance(col_units, (dict, tuple)) else None,
+            width_convention=conv,
+            require_axis_unit=True,
+            axis_unit_override=effective_unit,
+        )
+
     def _observation_bin_edges_in_microns(
         self,
         orig_axis_unit: str | None,
     ) -> tuple[tuple[float, float], ...] | None:
         if self.current_observation is None:
             return None
-        raw_edges = extract_observation_bin_edges(self.current_observation)
-        if raw_edges is None:
+        bin_audit = self._audit_current_observation_bins(orig_axis_unit)
+        if bin_audit is None or not bin_audit.has_resolved_bins or bin_audit.bin_edges is None:
             return None
+        raw_edges = bin_audit.bin_edges
         unit = (orig_axis_unit or '').strip().lower()
         if unit in ('microns', 'um'):
             return raw_edges
@@ -1416,6 +1574,9 @@ class ComparisonBrowser(QWidget):
                     else:
                         active_edges = obs_edges_um
 
+                    bin_audit = self._audit_current_observation_bins(orig_left_axis_unit)
+                    src_cols = bin_audit.source_columns if bin_audit is not None else None
+                    bin_conv = bin_audit.convention if bin_audit is not None else 'tophat_bounds'
                     for idx in fm_indices:
                         stage1[idx], _, _ = integrate_model_over_bins(
                             stage1[idx],
@@ -1423,7 +1584,12 @@ class ComparisonBrowser(QWidget):
                             active_edges,
                             response_id=left_cur.response_id,
                             response_evidence=left_cur.response_evidence,
+                            bin_source_columns=src_cols,
+                            bin_width_convention=bin_conv,
+                            response_shape='uniform_tophat_boxcar',
                         )
+                    if bin_audit is not None and bin_audit.response_shape_note:
+                        notes.append(bin_audit.response_shape_note)
                     return left_item, stage1, notes
 
             left_coord_set = set(left_cur.coordinates)
@@ -1652,8 +1818,14 @@ class ComparisonBrowser(QWidget):
         _fill(self.residual_table, columns, rows)
         quadratic_note = (
             f'; weighted quadratic r^T C^-1 r = {diagnostic.weighted_residual_quadratic:.6g} '
-            '(fixed covariance, omits log-det normalization)'
-            if diagnostic.weighted_residual_quadratic is not None else ''
+            f'(reduced chi2 = {diagnostic.reduced_weighted_quadratic:.4g}, N = {diagnostic.sample_count}; '
+            'fixed covariance, omits log-det normalization)'
+            if diagnostic.weighted_residual_quadratic is not None and diagnostic.reduced_weighted_quadratic is not None
+            else (
+                f'; weighted quadratic r^T C^-1 r = {diagnostic.weighted_residual_quadratic:.6g} '
+                '(fixed covariance, omits log-det normalization)'
+                if diagnostic.weighted_residual_quadratic is not None else ''
+            )
         )
         offset_note = (
             ' Systematic-offset notice: |mean residual| exceeds de-meaned shape RMS; '
@@ -1798,7 +1970,11 @@ class ComparisonBrowser(QWidget):
         extra_lines = [f'{header}\n{detail}']
         ctx_lims = [
             lim for lim in rec_ctx.get('limitations', ())
-            if 'asymmetry' in lim.lower() or 'multiple candidates share' in lim.lower()
+            if (
+                'asymmetry' in lim.lower()
+                or 'multiple candidates share' in lim.lower()
+                or 'bin semantics notice' in lim.lower()
+            )
         ]
         if ctx_lims:
             extra_lines.append(' '.join(ctx_lims))
@@ -2005,21 +2181,35 @@ class ComparisonBrowser(QWidget):
             f' Discrepancies: {"; ".join(check.discrepancies)}.'
             if check.discrepancies else ''
         )
+        left_prov = record.get('left', {}).get('provenance', {})
+        source_path_str = left_prov.get('source_file')
+        raw_source_available = bool(source_path_str and Path(source_path_str).is_file())
+        regeneration_note = (
+            f'Original raw source file is available on disk ({Path(source_path_str).name}); full analysis can be regenerated from source.'
+            if raw_source_available
+            else 'Original raw source file is not found at its original path; analysis reproduced from signed record snapshot.'
+        )
         self.persistence_status.setText(
             f'Verified & reproduced {record["right"]["evaluated_input"]["source_id"]}: '
             f'verdict {verdict_flag}, diagnostics {diag_flag}.{discrepancy_text} '
-            'Re-evaluated from signed record arrays; raw source files were not re-ingested.'
+            f'Re-evaluated from signed record arrays; raw source files were not re-ingested. {regeneration_note}'
         )
         self.persistence_status.setToolTip('\n'.join((
             f'Method: {record["method_version"]}',
             f'Integrity SHA-256: {record["integrity_sha256"]}',
+            f'Raw source available: {raw_source_available}',
             *check.discrepancies,
             *check.limitations,
         )))
         elig = check.recomputed_eligibility
+        right_prov = record.get('right', {}).get('provenance', {})
+        opacity_srcs = right_prov.get('physical_opacity_sources') or ()
+        opacity_str = f' Opacities: {", ".join(opacity_srcs)}.' if opacity_srcs else ''
+        raw_src_text = f' Source file: {Path(source_path_str).name} (available).' if raw_source_available else ' Source file: offline record snapshot.'
         if elig.status == 'eligible':
             self.compatibility.setText(
-                f'Reopened saved comparison ({elig.version} / {elig.operation}: {elig.status}). '
+                f'Reopened saved comparison ({elig.version} / {elig.operation}: {elig.status}).{raw_src_text}{opacity_str} '
+                f'Integrity SHA-256 verified ({record["integrity_sha256"][:12]}...). '
                 'Recomputed overlay and left-minus-right residuals are displayed below. '
                 'Numerical agreement does not establish molecular presence or abundance.'
             )

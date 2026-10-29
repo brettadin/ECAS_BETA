@@ -7,8 +7,15 @@ import sys
 # Add parent directory to path to import from project root.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from PySide6.QtWidgets import QApplication
 from ecas.visualization.spectra_plot import SpectraPlot
 from ecas.models.spectrum import SpectrumData
+
+
+@pytest.fixture(scope="session", autouse=True)
+def app():
+    app = QApplication.instance() or QApplication([])
+    yield app
 
 
 def test_load_spectrum_basic_coordinates():
@@ -63,29 +70,6 @@ def test_axis_labels_set_correctly_with_units():
     assert widget.plot_widget.getAxis("left").labelText == (
         "signal (counts)"
     )
-
-
-def test_axis_labels_set_correctly_with_units():
-    """Verify axis labels are set correctly with known units."""
-    rows = ({"wavelength": 500.0, "signal": 10.5},)
-    
-    spectrum_with_units = SpectrumData(
-        source_file=Path("/tmp/test.csv"),
-        columns=("wavelength", "signal"),
-        rows=tuple(rows),
-        axis_unit="nm",
-        signal_unit="counts",
-    )
-    
-    widget = SpectraPlot()
-    assert widget.load_spectrum(spectrum_with_units) is True
-    
-    # Inspect actual axis label text using labelText property.
-    bottom_label_text = widget.plot_widget.getAxis("bottom").labelText
-    left_label_text = widget.plot_widget.getAxis("left").labelText
-    
-    # Verify wavelength column name and unit appear in bottom axis label.
-    assert "wavelength" in str(bottom_label_text) or "500" in str(bottom_label_text)
 
 
 def test_axis_labels_with_missing_units():

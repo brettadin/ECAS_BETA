@@ -356,6 +356,9 @@ def integrate_model_over_bins(
     *,
     response_id: str,
     response_evidence: str,
+    bin_source_columns: Sequence[str] | None = None,
+    bin_width_convention: str = 'tophat_bounds',
+    response_shape: str = 'uniform_tophat_boxcar',
 ) -> tuple[TransformedInput, tuple[int, ...], tuple[int, ...]]:
     """Average a dense forward_model over declared top-hat bins without extrapolation.
 
@@ -413,11 +416,15 @@ def integrate_model_over_bins(
             f'Insufficient fully covered bins ({len(included_bins)} covered; need >= 3)'
         )
 
+    src_cols = tuple(str(c) for c in bin_source_columns) if bin_source_columns else ('caller_supplied_edges',)
     step = TransformationStep(
         operation='integrate_tophat_bins_v1',
         parameters=(
             ('response_id', response_id),
             ('response_evidence', response_evidence),
+            ('response_shape', response_shape),
+            ('bin_source_columns', src_cols),
+            ('bin_width_convention', bin_width_convention),
             ('model_domain', (domain_start, domain_stop)),
             ('total_bins', len(centers)),
             ('covered_bins', len(included_bins)),
