@@ -7,6 +7,7 @@ import sqlite3
 from pathlib import Path
 
 from ecas import persistence
+from ecas.comparison.persistence import load_comparison_records, save_comparison_record
 from ecas.ingestion.import_manager import import_spectrum
 from ecas.ingestion.nasa_archive import read_cached
 from ecas.ingestion.nasa_table import TransmissionTable, import_transmission_table
@@ -143,3 +144,17 @@ class ProjectStore:
             return result
         except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
             raise persistence.PersistenceError(f'Could not validate project spectra: {error}') from error
+
+    def save_comparison(self, name, record):
+        """Persist a verified comparison record inside the project directory."""
+        try:
+            return save_comparison_record(name, self.root, record)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise persistence.PersistenceError(f'Could not save comparison record: {error}') from error
+
+    def comparisons(self, name):
+        """Return `(valid_records, invalid_count)` for saved comparison records in `name`."""
+        try:
+            return load_comparison_records(name, self.root)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise persistence.PersistenceError(f'Could not load comparison records: {error}') from error

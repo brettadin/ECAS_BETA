@@ -1,5 +1,20 @@
 # Feedback acceptance reconciliation — 2026-10-28
 
+Latest follow-through: `verification_final_workflow_20261028/RESULTS.md` records
+successful live initial/repeated CO2 download-to-display and native-unit Comparisons
+desktop inspection with preserved choices/view tabs. Historical display symptom is
+not reproduced on the current local build. User confirms batches 9–11 require no
+Argon fixes. Core supported workflow is ready for the bounded Chunk 6 entry task
+in `CHUNK_6_ENTRY_SCOPE.md`; later human plot UX and smaller-window acceptance
+remain open and no quantitative scientific operation is enabled.
+
+Latest human review: issue #4 explicitly reviews `49e3b96`, confirms the main
+desktop workflows and gives the go-ahead for continued development with known
+issues. See `ISSUE_4_DESKTOP_FEEDBACK_20261028.md` for dispositions and next work.
+The earlier open-checklist wording below is historical. Do not infer unreported
+CSV synchronization/restart checks from the item-5 response about directories.
+Human review is received with follow-ups; scientific validation remains deferred.
+
 All six approved feedback implementation steps have a local disposition. All
 eight Argon feedback batches returned zero findings in their stated scopes.
 Reports are in review_feedback_20261028, review_selection_20261028 and

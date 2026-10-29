@@ -84,7 +84,8 @@ def test_reference_cache_offline_registration_revalidation_and_atomic_failure(tm
     assert cached_references(path.parent)[0][0][0]==path
     original=path.read_bytes()
     with patch('ecas.ingestion.exomol_reference_cache.os.replace',side_effect=OSError('synthetic disk error')):
-        with pytest.raises(OSError): store_reference(path.parent,stored)
+        with pytest.raises(OSError): store_reference(path.parent,stored,catalogue_context=dict(
+            formula='CO2',isotopologue='12C-16O2',dataset='UCL-4000',version='20261028',catalogue_sha256='a'*64))
     assert path.read_bytes()==original and not list(path.parent.glob('*.tmp'))
     bad=json.loads(original); bad['request']['temperature']=600
     path.write_text(json.dumps(bad))
@@ -220,6 +221,71 @@ def select_supported(browser):
     browser.query.setText('CO2'); browser.search_button.click()
     index=next(i for i,e in enumerate(browser.entries) if supported_entry(e))
     browser.results.setCurrentRow(index)
+
+
+def test_repeated_cache_content_reuses_record_and_collapses_legacy_choices(tmp_path):
+    import shutil
+    first = store_reference(tmp_path, result())
+    original = first.read_bytes()
+    assert store_reference(tmp_path, result()) == first
+    assert first.read_bytes() == original
+    legacy = tmp_path / 'legacy-duplicate.json'
+    shutil.copyfile(first, legacy)
+    records, invalid = cached_references(tmp_path)
+    assert len(records) == 1 and invalid == 0
+    assert first.read_bytes() == original and legacy.read_bytes() == original
+    context = dict(formula='CO2', isotopologue='12C-16O2', dataset='UCL-4000',
+                   version='20261028', catalogue_sha256='a' * 64)
+    distinct = store_reference(tmp_path, result(), catalogue_context=context)
+    assert distinct not in (first, legacy)
+    assert len(cached_references(tmp_path)[0]) == 2
+    assert store_reference(tmp_path, result(), catalogue_context=context) == distinct
+
+
+def test_download_completion_redraws_immediately_and_reuses_same_cached_choice(tmp_path):
+    browser = MolecularReferenceBrowser(cache_root=tmp_path, product_http=ProductHttp())
+    try:
+        select_supported(browser)
+        for attempt in range(2):
+            browser.reference_table.clearContents()
+            browser.download_button.click()
+            browser.product_http.finish()
+            assert browser.reference_table.item(0, 0).text() == '4000.0'
+            assert browser.current_reference == result()
+            x, y = browser.reference_plot.curve.getData()
+            assert list(zip(x, y)) == list(result().product.points)
+            assert browser.reference_plot.current_product is browser.current_reference.product
+            assert browser.cached.count() == 1
+            assert load_reference(browser.cached.currentData()) == browser.current_reference
+            assert not browser.busy
+        loaded = browser.current_reference
+        settings = (browser.minimum.value(), browser.maximum.value(), browser.temperature.value(), browser.spacing.value())
+        browser.request_toggle.setChecked(False)
+        assert browser.request_panel.isHidden()
+        assert browser.current_reference is loaded
+        browser.request_toggle.setChecked(True)
+        assert not browser.request_panel.isHidden()
+        assert settings == (browser.minimum.value(), browser.maximum.value(), browser.temperature.value(), browser.spacing.value())
+    finally:
+        browser.shutdown()
+        browser.close()
+
+
+def test_catalogue_distinguishes_supported_downloads_without_hiding_other_entries(tmp_path):
+    browser = MolecularReferenceBrowser(cache_root=tmp_path)
+    try:
+        select_supported(browser)
+        assert 'Supported download' in browser.results.currentItem().text()
+        assert browser.download_button.isEnabled()
+        unsupported = next(i for i, entry in enumerate(browser.entries) if not supported_entry(entry))
+        browser.results.setCurrentRow(unsupported)
+        assert 'Catalogue only' in browser.results.currentItem().text()
+        assert not browser.download_button.isEnabled()
+        assert 'does not mean no data exist' in browser.download_button.toolTip()
+        assert browser.product_http is None
+    finally:
+        browser.shutdown()
+        browser.close()
 
 
 def test_browser_download_display_and_cached_reopen_preserve_observation(tmp_path):

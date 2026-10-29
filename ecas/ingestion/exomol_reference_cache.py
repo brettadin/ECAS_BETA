@@ -49,6 +49,16 @@ def store_reference(root, result, *, catalogue_context=None):
     encoded=json.dumps(envelope,allow_nan=False).encode()
     if len(encoded)>MAX_CACHE_BYTES: raise ValueError('Reference cache record exceeds 2 MiB')
     root=_root(root); root.mkdir(parents=True,exist_ok=True)
+    # Reuse only fully validated identical content/conditions/catalogue provenance.
+    # The original retrieval timestamp and bytes remain untouched.
+    identity = _identity(result, catalogue_context)
+    for path in sorted(root.glob('*.json')):
+        try:
+            existing, saved = _load_reference(path)
+            if _identity(existing, saved.get('catalogue_context')) == identity:
+                return path
+        except (OSError, ValueError):
+            continue
     target=root/(uuid4().hex+'.json')
     temporary=None
     try:
@@ -60,7 +70,7 @@ def store_reference(root, result, *, catalogue_context=None):
     return target
 
 
-def load_reference(path):
+def _load_reference(path):
     path=Path(path)
     _root(path.parent)
     if path.is_symlink() or path.is_junction(): raise ValueError('Linked reference record is unsupported')
@@ -92,16 +102,31 @@ def load_reference(path):
             product=replace(product,provenance=replace(product.provenance,citations=CITATIONS[:2]))
         if expected!=stored or product.source_sha256!=envelope['source_sha256']:
             raise ValueError('Saved reference provenance differs from validated request')
-        return RetrievedCrossSection(request,source,product)
+        return RetrievedCrossSection(request,source,product), envelope
     except (ValueError,TypeError,KeyError,RecursionError) as error:
         raise ValueError(f'Invalid reference cache: {error}') from error
+
+
+def load_reference(path):
+    return _load_reference(path)[0]
+
+
+def _identity(result, context):
+    return json.dumps(dict(request=asdict(result.request), provenance=asdict(result.product.provenance),
+                           source_sha256=result.product.source_sha256, catalogue_context=context),
+                      sort_keys=True, separators=(',', ':'), allow_nan=False)
 
 
 def cached_references(root):
     root=_root(root)
     if not root.exists(): return [],0
-    records=[]; invalid=0
+    records=[]; invalid=0; seen=set()
     for path in sorted(root.glob('*.json')):
-        try: records.append((path,load_reference(path)))
+        try:
+            result, envelope = _load_reference(path)
+            identity = _identity(result, envelope.get('catalogue_context'))
+            if identity not in seen:
+                seen.add(identity)
+                records.append((path, result))
         except (OSError,ValueError): invalid+=1
     return records,invalid

@@ -289,6 +289,27 @@ Establish a reliable way to discover, retrieve, cache, organize, and select mole
 
 ## Chunk 6 — Scientific Comparison, Interpretation, and Projections
 
+Entry update (2026-10-28): the supported Chunk 5.1 acquisition/selection/graphical
+inspection workflow is implemented and reviewed per the user's batches 9–11
+confirmation. Targeted live/desktop checks now cover initial/repeat CO2 completion
+and the new independent Comparisons plots. See
+`docs/Chunk_5_1/verification_final_workflow_20261028/RESULTS.md`. Later human plot
+UX/smaller-window acceptance remains open; scientific validation is deferred.
+The next bounded task is production eligibility integration as specified in
+`docs/Chunk_5_1/CHUNK_6_ENTRY_SCOPE.md`; quantitative analysis remains unimplemented.
+
+Chunk 6 implementation (local, 2026-10-28): User confirmed human desktop UI review
+complete and functional. Stages 6.1–6.7 are implemented and verified:
+- Eligibility & adapters (`ecas/comparison/eligibility.py`, `ecas/comparison/inputs.py`).
+- Explicit unit/grid/bin-response alignment (`ecas/comparison/alignment.py`).
+- Unweighted & Cholesky-weighted residual diagnostics (`ecas/comparison/residuals.py`).
+- Multi-candidate evaluation with covariance parity and tie preservation (`ecas/comparison/candidates.py`).
+- Aligned overlay & residual visualization and interactive candidate/persistence UI (`ecas/visualization/residual_plot.py`, `ecas/ui/comparison_browser.py`, `ecas/ui/main_window.py`).
+- Tamper-evident project comparison persistence and reproducibility verification (`ecas/comparison/persistence.py`, `ecas/projects.py`).
+- Forward-model provenance contract, `ecas-forward-model-v1` JSON loader, and ad-hoc cross-section projection block (`ecas/comparison/forward_model.py`).
+- Five-perspective methodology deliverable (`docs/SCIENTIFIC_COMPARISON_AND_INTERPRETATION.md`) and progress log (`docs/Chunk_6/IMPLEMENTATION_LOG.md`).
+Latest verification: 58 focused UI/persistence passed (7.72 s); 603 passed, 1 skipped full offscreen (14.41 s), exit 0. Raw cross sections remain blocked against transit depth pending an explicit radiative-transfer forward model; empirical mission forward-model validation remains deferred.
+
 Implement the comparison workflow using the method selected in Chunk 5 and the molecular reference-data functionality established in Chunk 5.1. Develop projections only to the extent justified by the available scientific inputs and validated assumptions.
 
 - **Connect datasets and validation.** Allow users to select an observational or input spectrum and one or more eligible reference datasets or molecules. Validate compatibility before comparison and explain which requirements are unmet when a comparison cannot proceed.

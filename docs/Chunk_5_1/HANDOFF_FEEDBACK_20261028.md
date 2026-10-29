@@ -1,5 +1,39 @@
 # ECAS fresh-chat checkpoint — 2026-10-28
 
+Latest: verification_final_workflow_20261028/RESULTS.md records live initial/repeat
+CO2 completion with immediate display, cache reuse and new Comparisons desktop
+plot/table state checks. Display symptom not reproduced on current build; no
+historical-cause claim. CHUNK_6_ENTRY_SCOPE.md defines the next bounded eligibility
+integration. Human later-plot UX/smaller-window acceptance remains open. No code
+changed during this verification increment; local changes remain uncommitted.
+
+Latest local plot follow-up: verification_plot_desktop_20261028/RESULTS.md records
+normal Windows CO2 plotting/table checks. Explicit scientific y ticks replace
+automatic multiplier notation; a manual request-settings collapse control gives
+inspection more room. No data transformation. Final 126 focused passes; full
+576 passed, 1 skipped. Batch 11 awaits review; original batch 9/10 snapshots remain
+preserved. New Comparisons desktop/smaller-size checks remain open. No commit/push.
+
+New local follow-on: ISSUE_4_NATIVE_PLOTS.md records native-unit graphical
+inspection with Plot/Data table tabs in Molecular References and Comparisons,
+and clearer supported-download catalogue labels. No shared-axis cross-section/
+transit-depth comparison or scientific inference. Review and desktop acceptance
+are pending for both issue #4 increments; published HEAD remains 49e3b96.
+
+Local continuation after issue #4: read ISSUE_4_FIRST_FIXES.md. Cache reuse/grouped
+legacy choices and richer session observation labels are implemented with offline
+regression coverage. Reported manual-reopen display symptom remains un-reproduced
+in callback/widget tests, not marked fixed. New changes are not published/reviewed;
+next is targeted review/desktop confirmation, then native-unit graphical inspection.
+
+Latest user feedback: GitHub issue #4 reviews published `49e3b96`, confirms core
+desktop use and authorizes continuation with known follow-ups. Read
+`ISSUE_4_DESKTOP_FEEDBACK_20261028.md` before new implementation: duplicate cached
+choices, ambiguous comparison labels, reported display update requiring reopening
+(not yet reproduced), explicit supported-product limits, and future native-unit
+graphical inspection/layout. Human review received does not imply every individual
+checklist result or scientific validity. This triage is not yet committed/pushed.
+
 Publication update: user authorized commit/push for external review. Start with
 `docs/REVIEW_FEEDBACK_20261028.md` and actual Git state. The uncommitted/unpublished
 instructions below describe the original handoff; publication does not imply

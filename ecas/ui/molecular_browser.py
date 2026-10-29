@@ -4,7 +4,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QListWidget, QSplitter, QFormLayout, QSpinBox, QDoubleSpinBox,
-    QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView)
+    QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QTabWidget)
+from ecas.visualization.reference_plot import ReferencePlot
 
 from ecas.ingestion.exomol_catalogue import MAX_BYTES, parse_catalogue, search_catalogue
 from ecas.ingestion.exomol_catalogue_cache import load_catalogue, store_catalogue
@@ -72,8 +73,16 @@ class MolecularReferenceBrowser(QWidget):
         panels.addWidget(catalogue_panel)
         reference_panel=QWidget(); reference_layout=QVBoxLayout(reference_panel)
         reference_layout.setContentsMargins(8,0,0,0)
+        self.request_toggle = QPushButton('Hide request settings')
+        self.request_toggle.setCheckable(True)
+        self.request_toggle.setChecked(True)
+        reference_layout.addWidget(self.request_toggle, 0, Qt.AlignmentFlag.AlignLeft)
+        self.request_panel = QWidget()
+        request_layout = QVBoxLayout(self.request_panel)
+        request_layout.setContentsMargins(0, 0, 0, 0)
+        reference_layout.addWidget(self.request_panel)
         conditions=QLabel('Supported retrieval: CO2 / UCL-4000, H2O / POKAZATEL, CH4 / MM (main isotopologues only). Calculated cross sections, zero pressure, Doppler-only broadening. Settings describe a reference product, not the planet atmosphere.')
-        conditions.setWordWrap(True); reference_layout.addWidget(conditions)
+        conditions.setWordWrap(True); request_layout.addWidget(conditions)
         form=QFormLayout()
         self.temperature=QSpinBox(); self.temperature.setRange(100,5000); self.temperature.setValue(500)
         self.minimum=QSpinBox(); self.minimum.setRange(0,41200); self.minimum.setValue(4000)
@@ -82,9 +91,10 @@ class MolecularReferenceBrowser(QWidget):
         form.addRow('Temperature (K)',self.temperature)
         form.addRow('Minimum (cm^-1)',self.minimum); form.addRow('Maximum (cm^-1)',self.maximum)
         form.addRow('Spacing (cm^-1)',self.spacing)
-        reference_layout.addLayout(form)
+        request_layout.addLayout(form)
         self.download_button=QPushButton('Download selected reference')
-        reference_layout.addWidget(self.download_button,0,Qt.AlignmentFlag.AlignLeft)
+        request_layout.addWidget(self.download_button,0,Qt.AlignmentFlag.AlignLeft)
+        self.request_toggle.toggled.connect(self._toggle_request_settings)
         cache_controls=QHBoxLayout()
         self.cached=QComboBox(); self.load_reference_button=QPushButton('Open cached reference')
         self.cached.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
@@ -96,7 +106,11 @@ class MolecularReferenceBrowser(QWidget):
         reference_layout.addWidget(self.reference_status)
         self.reference_table=QTableWidget()
         self.reference_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        reference_layout.addWidget(self.reference_table,1)
+        self.reference_plot = ReferencePlot()
+        self.reference_views = QTabWidget()
+        self.reference_views.addTab(self.reference_plot, 'Plot (native units)')
+        self.reference_views.addTab(self.reference_table, 'Data table')
+        reference_layout.addWidget(self.reference_views,1)
         panels.addWidget(reference_panel); panels.setSizes([500,500])
         layout.addWidget(panels,1)
         self.query.returnPressed.connect(self.search)
@@ -110,6 +124,10 @@ class MolecularReferenceBrowser(QWidget):
         self._reload_references()
         self._load_initial()
 
+    def _toggle_request_settings(self, shown):
+        self.request_panel.setVisible(shown)
+        self.request_toggle.setText('Hide request settings' if shown else 'Show request settings')
+
     def _buttons(self):
         self.search_button.setEnabled(not self.busy and self.catalogue is not None)
         self.query.setEnabled(not self.busy)
@@ -118,6 +136,11 @@ class MolecularReferenceBrowser(QWidget):
         self.cancel_button.setEnabled(self.busy)
         selected=self.results.currentRow()
         self.download_button.setEnabled(not self.busy and 0<=selected<len(self.entries) and supported_entry(self.entries[selected]))
+        self.download_button.setToolTip(
+            'A request is running; cancel it or wait.' if self.busy else
+            'Downloads require an exact supported main-isotopologue dataset: CO2 / UCL-4000, '
+            'H2O / POKAZATEL or CH4 / MM. Other catalogue entries describe identities; '
+            'their retrieval protocols have not been verified. Disabled download does not mean no data exist.')
         self.load_reference_button.setEnabled(not self.busy and self.cached.currentIndex()>=0)
         self.cached.setEnabled(not self.busy)
         for control in (self.temperature,self.minimum,self.maximum,self.spacing): control.setEnabled(not self.busy)
@@ -152,7 +175,8 @@ class MolecularReferenceBrowser(QWidget):
             result = search_catalogue(self.catalogue, self.query.text())
             self.entries = list(result.entries)
             for entry in self.entries:
-                self.results.addItem(f'{entry.formula} | {entry.isotopologue} | {entry.dataset} | {entry.version}')
+                availability = 'Supported download' if supported_entry(entry) else 'Catalogue only — download unverified'
+                self.results.addItem(f'{entry.formula} | {entry.isotopologue} | {entry.dataset} | {entry.version} | {availability}')
             message = f'{result.total_matches} catalogue entries across {len(result.formulas)} molecules.'
             if not result.total_matches:
                 message = 'No matches in this catalogue snapshot. This is not evidence that the molecule or its spectra do not exist.'
@@ -243,7 +267,8 @@ class MolecularReferenceBrowser(QWidget):
             for path,result in records:
                 request=result.request
                 self.cached.addItem(f'{request.service.formula} / {request.service.dataset} | {request.temperature} K | '
-                                    f'{request.minimum}–{request.maximum} cm^-1 | spacing {request.spacing}',str(path))
+                                    f'{request.minimum}–{request.maximum} cm^-1 | spacing {request.spacing} | '
+                                    f'{result.product.source_sha256[:12]} | {path.stem[:8]}',str(path))
                 if selected is not None and path==selected: self.cached.setCurrentIndex(self.cached.count()-1)
             self.reference_status.setText(f'{len(records)} cached references; {invalid} invalid entries excluded.')
         except Exception as error: self.reference_status.setText(f'Reference cache unavailable: {error}')
@@ -256,6 +281,7 @@ class MolecularReferenceBrowser(QWidget):
         for row,point in enumerate(product.points):
             for column,value in enumerate(point): self.reference_table.setItem(row,column,QTableWidgetItem(str(value)))
         self.reference_table.resizeColumnsToContents()
+        self.reference_plot.load_product(product)
         self.current_reference=result
         self.reference_status.setText(f'Calculated {product.provenance.molecule} cross section: {len(product.points)} points; {result.request.temperature} K; zero pressure; Doppler-only. '
             f'{product.provenance.dataset}. Source hash: {product.source_sha256[:12]}… CC BY-SA 4.0; references retained in cache.')

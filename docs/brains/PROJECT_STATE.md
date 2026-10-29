@@ -3,6 +3,76 @@
 **Last Updated:** 2026-10-28
 **Version:** 1.0 (Beta)
 
+**Chunk 6 implementation (local) — 2026-10-28:** User confirmed human desktop UI review
+complete and functional. Stages 6.1—6.7 are implemented and verified under `ecas/comparison/`
+(`eligibility.py`, `inputs.py`, `alignment.py`, `residuals.py`, `candidates.py`,
+`persistence.py`, `forward_model.py`), `ecas/visualization/residual_plot.py`, and
+`ecas/ui/comparison_browser.py` (including interactive `ecas-forward-model-v1` JSON loading, opt-in unit/shared-grid alignment, per-candidate inspection, and active-project comparison record save/reproduce), documented in `docs/SCIENTIFIC_COMPARISON_AND_INTERPRETATION.md`
+and `docs/Chunk_6/IMPLEMENTATION_LOG.md`. Raw ExoMol cross sections remain strictly
+blocked against transit depth pending an explicit radiative-transfer forward model; built-in
+radiative transfer, abundance retrieval, and empirical real-data forward-model validation
+remain deferred. Latest verification: 58 focused UI/persistence passed (7.72 s); full offscreen suite:
+603 passed, 1 skipped (14.41 s), exit 0.
+
+**Latest workflow verification:** Live normal-window CO2 download and repeat both
+updated the display without cached reopening; record count remained four on repeat.
+New Comparisons plots, native units, metadata label and view/selection preservation
+passed desktop checks at 1200 × 800. See
+`docs/Chunk_5_1/verification_final_workflow_20261028/RESULTS.md`.
+Historical display symptom remains non-reproduced, not a claimed causal fix.
+Supported Chunk 5.1 implementation/review is in place; later human plot UX and
+smaller-window acceptance remain open. Next bounded production work is defined in
+`docs/Chunk_5_1/CHUNK_6_ENTRY_SCOPE.md`: eligibility integration, not quantitative
+analysis or invented physical modelling. Latest suite still 576 passed/1 skipped.
+
+**Review update — 2026-10-28:** User confirms batches 9–11 require no fixes per
+Argon. Treat these increments as reviewed on that confirmation, without invented
+JSON/file-scope details. See `docs/Chunk_5_1/review_plot_desktop_20261028/09-11-user-confirmation.md`.
+Current roadmap position: late Chunk 5.1, reference integration and visual input
+inspection implemented; acceptance reconciliation remains before declaring the
+chunk closed. Chunk 6 scientific comparison is not implemented. Latest full
+suite remains 576 passed, 1 skipped; no receipt-only test rerun.
+
+**Native plot desktop correction (local):** Normal Windows inspection revealed
+that automatic magnitude multipliers could be crowded on short reference plots.
+Reference y-axis ticks now show explicit scientific notation with compact native
+units. Molecular References has a manual Hide/Show request settings control to
+give plots/tables more space without changing values. Cached CO2 plot/table was
+visually checked at 1200 × 800; smaller sizes/new Comparisons desktop inspection
+remain open. See `docs/Chunk_5_1/verification_plot_desktop_20261028/RESULTS.md`.
+Final tests: 126 focused passes; 576 passed/1 skipped full. New review batch 11
+is pending, alongside reports for batches 9/10. No publication or scientific claim.
+
+**Issue #4 native plots (local):** Molecular References and both Comparisons panes
+now offer Plot/Data table tabs, sharing inspection space. Reference samples plot
+on original wavenumber/cross-section axes; observations retain imported units or
+unknown labels. Axes remain independent and physical-model comparison blocking
+remains. Catalogue results explicitly mark supported download versus unverified
+retrieval. See `docs/Chunk_5_1/ISSUE_4_NATIVE_PLOTS.md`. New code is not published
+or independently reviewed; normal-desktop plot acceptance remains pending.
+
+**Issue #4 first fixes (local):** exact validated reference products/context are
+reused on repeated saves; preexisting duplicates are grouped in choices without
+deleting files. Distinct records carry hash/record suffixes. Comparison observation
+choices now capture available saved/table publication and instrument descriptions
+with filename fallbacks. Offline initial/repeated download completion redraws
+successfully without manual reopening; the reported live symptom is not reproduced
+and remains open. See `docs/Chunk_5_1/ISSUE_4_FIRST_FIXES.md` and its verification
+folder. New work needs review/desktop confirmation; scientific validation deferred.
+
+**Human desktop feedback received — issue #4, 2026-10-28:** User reviewed published
+build `49e3b96`, confirmed core desktop workflows and authorized further development
+with known follow-ups. See `docs/Chunk_5_1/ISSUE_4_DESKTOP_FEEDBACK_20261028.md`.
+Confirmed code-level concerns: duplicate cache choices on repeated downloads and
+filename-only comparison labels. Manual reopen reportedly needed after download
+is not yet reproduced; the success callback already invokes display refresh.
+Unsupported catalogue mappings remain a deliberate limitation. Native-unit plots
+and an improved graphical inspection layout are requested future work; raw cross
+sections remain incompatible with transit depth without a physical model.
+Human review is received with follow-ups, not blanket checklist completion;
+item 5 did not explicitly confirm CSV sync/restart behavior. Scientific validation
+remains deferred. This receipt/triage is local documentation only.
+
 **Authorized publication — 2026-10-28:** The user requested commit/push of the
 reviewed feedback update for external review. See `docs/REVIEW_FEEDBACK_20261028.md`
 for scope, evidence and remaining acceptance. Earlier local/uncommitted statements

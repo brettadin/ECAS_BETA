@@ -71,6 +71,10 @@ data/ExoMol/cache/ are excluded from Git.
 cached-reference choices, with separate read-only tables and explicit blocked
 comparison explanations. Load/reopen an observation, click **Add current observation**,
 then **Refresh cached choices** and select a reference. Analysis is not implemented.
+Local graphical follow-up adds Plot and Data table tabs in Molecular References
+and in each Comparisons pane. Plots use native units and independent axes; they
+are separate inspection views, not a shared-axis scientific comparison.
+See [graphical inspection notes](docs/Chunk_5_1/ISSUE_4_NATIVE_PLOTS.md).
 See [selection workflow](docs/Chunk_5_1/COMPARISON_SELECTION_IMPLEMENTATION.md).
 Switching pages retains
 the current observation, reference selection and any active reference request.

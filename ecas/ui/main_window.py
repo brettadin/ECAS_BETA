@@ -8,7 +8,17 @@ are handled by ecas.ingestion.csv_importer so that scientific data processing
 does not become tied to the user interface.
 """
 
+from hashlib import sha256
 from pathlib import Path
+
+
+def _hash_file_if_present(path):
+    target = Path(path)
+    if not target.is_file() or target.is_symlink() or target.is_junction():
+        return None
+    with target.open('rb') as stream:
+        raw = stream.read(16 * 1024 * 1024 + 1)
+    return sha256(raw).hexdigest() if len(raw) <= 16 * 1024 * 1024 else None
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QColor
 
@@ -154,6 +164,7 @@ class ECASWindow(QMainWindow):
         self.current_spectrum_details = None
         self.current_spectrum_schema = None
         self.current_project_attachment = None
+        self.current_source_sha256 = None
         self.project_store = ProjectStore(projects_dir if projects_dir is not None
                                           else Path(__file__).resolve().parents[2] / 'projects')
         self.project_browser = None
@@ -226,7 +237,10 @@ class ECASWindow(QMainWindow):
                 layout.addWidget(self.reference_browser)
             elif index == 4:
                 self.comparison_browser = ComparisonBrowser(
-                    self._comparison_observation, self.reference_browser.cache_root, self)
+                    self._comparison_observation, self.reference_browser.cache_root, self,
+                    description_getter=self._comparison_description,
+                    project_store=self.project_store,
+                    active_project_getter=lambda: self.project_browser.projects.currentText())
                 layout.addWidget(self.comparison_browser)
             elif index == 5:
                 self.settings_page = SettingsPage(self.spectrum_schema_selector, {
@@ -288,8 +302,24 @@ class ECASWindow(QMainWindow):
     def _comparison_observation(self):
         """Return the loaded input without rereading files or asserting provenance."""
         source_hash = (self.current_spectrum_details.source_sha256
-                       if self.current_spectrum_details is not None else None)
+                       if self.current_spectrum_details is not None else self.current_source_sha256)
         return self.current_spectrum, source_hash
+
+    def _comparison_description(self):
+        """Use established source facts for session names, without source reads."""
+        details = self.current_spectrum_details
+        table = dict(details.metadata) if details is not None else {}
+        attachment = self.current_project_attachment or {}
+        archive = attachment.get('provenance', {}).get('cache_record', {}).get('metadata', {})
+        if not isinstance(archive, dict):
+            archive = {}
+        def text(value):
+            return ' '.join(value.split()) if isinstance(value, str) else ''
+        planet = text(archive.get('pl_name')) or text(table.get('PL_NAME'))
+        publication = text(archive.get('authors')) or text(table.get('REFERENCE'))
+        instrument = text(archive.get('instrument')) or text(table.get('INSTRUMENT'))
+        return ' — '.join(part for part in (
+            planet, publication or self.current_spectrum.source_file.name, instrument) if part)
 
     def _build_spectral_page(self, layout):
         """Create the controls used to import and inspect a spectrum."""
@@ -408,6 +438,7 @@ class ECASWindow(QMainWindow):
         self.current_spectrum = spectrum
         self.current_spectrum_schema = schema
         self.current_project_attachment = None
+        self.current_source_sha256 = None
         self.project_browser.set_spectrum_available(True)
 
         # Report the imported dataset and any warnings supplied by the importer.
@@ -440,6 +471,7 @@ class ECASWindow(QMainWindow):
         self.current_spectrum_details = None
         self.current_spectrum_schema = None
         self.current_project_attachment = None
+        self.current_source_sha256 = None
         if self.project_browser is not None:
             self.project_browser.set_spectrum_available(False)
 
@@ -490,6 +522,8 @@ class ECASWindow(QMainWindow):
 
         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
+        if self.current_spectrum is spectrum:
+            self.current_source_sha256 = details.source_sha256 if details is not None else _hash_file_if_present(spectrum.source_file)
 
     def _import_csv_from_path(self, path: str):
         """Import a CSV from a specified path."""
@@ -512,6 +546,8 @@ class ECASWindow(QMainWindow):
 
         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
         self.current_spectrum_details = details if self.current_spectrum is spectrum else None
+        if self.current_spectrum is spectrum:
+            self.current_source_sha256 = details.source_sha256 if details is not None else _hash_file_if_present(spectrum.source_file)
 
     def _read_spectrum_file(self, path, schema):
         if Path(path).suffix.lower() == ".tbl":
@@ -544,6 +580,11 @@ class ECASWindow(QMainWindow):
             if self.current_spectrum is record.spectrum:
                 self.current_spectrum_details = record.details
                 self.current_project_attachment = record.attachment
+                self.current_source_sha256 = (
+                    record.details.source_sha256
+                    if record.details is not None
+                    else (record.attachment.get('source_sha256') if isinstance(record.attachment, dict) else None)
+                )
                 self.navigation.setCurrentRow(2)
             else:
                 self.project_browser.fail('Spectrum could not be plotted: no valid plottable measurements.')

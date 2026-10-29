@@ -1,0 +1,26 @@
+{
+  "sha256": "e38eb2eaab66977fabdc7af19a898f307f12bb98ceae08770595c2314cf316fd",
+  "files": [
+    {
+      "sha256": "a5cd386b8a379e852869875ec8359ff316e41bde8ddae9af1954282ed7a149b0",
+      "path": "ecas/visualization/reference_plot.py"
+    },
+    {
+      "sha256": "378848dc05379aed4f329c50d4bfb943307714838c876d71e93b5001cf5fe01f",
+      "path": "ecas/ui/molecular_browser.py"
+    },
+    {
+      "sha256": "2f475573d6d5a47642cc7be6485c326e0e064d670537aae7635fb05d446ccb96",
+      "path": "tests/test_comparison_browser.py"
+    },
+    {
+      "sha256": "4abb371cca530fa0d7dbc40fe0459895292346032a53122452c05f0c6b52edae",
+      "path": "tests/test_exomol_product.py"
+    },
+    {
+      "sha256": "c7465cedb9d6fea5b575a4de7349291a8ba90e077f0f8a2cf59329be5346657b",
+      "path": "docs/Chunk_5_1/verification_plot_desktop_20261028/RESULTS.md"
+    }
+  ],
+  "batch": "11-scientific-axis-and-layout.txt"
+}

@@ -364,3 +364,27 @@ The persistence module provides:
 - ✅ Thread-safe connection management
 
 All functions use proper error handling and resource cleanup (finally blocks).
+
+
+---
+
+## Decision: Chunk 6 Comparison Architecture, Fair Ranking, and Persistence Boundaries
+
+**Date:** 2026-10-28  
+**Status:** Implemented (`ecas/comparison/`, `ecas/visualization/residual_plot.py`, `ecas/ui/comparison_browser.py`)
+
+### Context
+Chunk 6 introduces production spectral compatibility validation, explicit alignment transformations, residual diagnostics, multi-candidate evaluation, and reproducible result persistence while upholding strict physical boundaries between microscopic ExoMol cross sections ($\text{cm}^2/\text{molecule}$ on $\text{cm}^{-1}$) and macroscopic planetary transit-depth observations ($\%$ or fraction on $\mu\text{m}$).
+
+### Key Decisions
+1. **Mandatory Eligibility Gate & `left_minus_right` Residual Convention:**
+   - Every call to `evaluate_residuals()` re-runs `assess()` (`ecas-comparison-eligibility-v1`). Non-eligible pairs raise `IneligibleComparisonError` and never produce zero or fallback scores.
+   - Residuals follow `r = y_left - y_right` (`left_minus_right`) in the shared `signal_unit`.
+2. **Explicit Opt-In Alignment with Index Provenance:**
+   - Unit scaling (`fraction <-> percent` scaling `values`, `sigma`, and $s^2 C$), positive wavelength scaling (`nm`/`angstroms -> microns`), exact shared-coordinate restriction, and forward-model top-hat bin integration are explicit functions in `ecas/comparison/alignment.py` returning `TransformedInput(original, transformed, steps)` with `included_indices` and `excluded_indices`. Observations are never upsampled.
+3. **Multi-Candidate Covariance Parity & Tie Preservation:**
+   - In `weighted_residual_v1` mode, fixed-covariance quadratics omit $\ln\det(2\pi C)$. Cross-candidate ranking is therefore blocked (`candidates.combined_covariance.differs_across_candidates`) whenever eligible candidates yield unequal combined covariance matrices. Exact ties within `1e-12` are preserved together in `closest_candidate_indices`.
+4. **SQLite-Safe Project Comparison Envelopes (`ecas-comparison-record-v1`):**
+   - Comparison records are stored atomically (`NamedTemporaryFile` + `os.fsync` + `os.replace`) as canonical SHA-256-signed JSON files under `projects/<project_id>/comparisons/*.json`, avoiding destructive SQLite migrations to `data.sqlite` while binding records to validated project folders.
+5. **Explicit Forward-Model Physical Boundary:**
+   - Raw cross sections cannot be rescaled into transit depth (`project_cross_section_to_transit_depth()` raises `UnsupportedProjectionError`). Precomputed radiative-transfer curves must supply validated `AtmosphericModelProvenance` before entering `ComparisonInput(role='forward_model')`.
