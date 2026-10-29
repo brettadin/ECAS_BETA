@@ -3,16 +3,9 @@
 **Last Updated:** 2026-10-28
 **Version:** 1.0 (Beta)
 
-**Chunk 6 implementation (local) — 2026-10-28:** User confirmed human desktop UI review
-complete and functional. Stages 6.1—6.7 are implemented and verified under `ecas/comparison/`
-(`eligibility.py`, `inputs.py`, `alignment.py`, `residuals.py`, `candidates.py`,
-`persistence.py`, `forward_model.py`), `ecas/visualization/residual_plot.py`, and
-`ecas/ui/comparison_browser.py` (including interactive `ecas-forward-model-v1` JSON loading, opt-in unit/shared-grid alignment, per-candidate inspection, and active-project comparison record save/reproduce), documented in `docs/SCIENTIFIC_COMPARISON_AND_INTERPRETATION.md`
-and `docs/Chunk_6/IMPLEMENTATION_LOG.md`. Raw ExoMol cross sections remain strictly
-blocked against transit depth pending an explicit radiative-transfer forward model; built-in
-radiative transfer, abundance retrieval, and empirical real-data forward-model validation
-remain deferred. Latest verification: 58 focused UI/persistence passed (7.72 s); full offscreen suite:
-603 passed, 1 skipped (14.41 s), exit 0.
+**Chunk 7 implemented locally — 2026-10-28:** Stages 7.1–7.6 (`ecas/resources/catalog.py`, `ecas/ui/resources_browser.py`, `ecas/ingestion/tabular_formats.py`, `convert_wavenumber_to_microns` in `ecas/comparison/alignment.py`, `ecas/comparison/model_adapters.py`, `docs/Chunk_7/RESEARCH_AND_MODELING_FOUNDATION.md`, `docs/Chunk_7/IMPLEMENTATION_LOG.md`, and `tests/test_chunk7_resources_and_modeling.py`) are implemented and verified locally (`610 passed, 1 skipped`, exit 0). Removed 0-byte `ecas/ui/main_window_temp.py`.
+
+**Chunk 6 completed — 2026-10-28:** User confirmed Chunk 6 complete and authorized pending work instructions for Chunk 7. Stages 6.1—6.7 are fully implemented, verified, and published on GitHub (`codex/roadmap-reconciliation-20261028` at commit `9a8150d`). Full offscreen test suite: 603 passed, 1 skipped (14.41 s), exit 0. Raw cross sections remain strictly blocked against transit depth without an explicit radiative-transfer model; empirical validation and abundance retrieval remain deferred. Current position: Chunk 6 complete; ready for Chunk 7 (Integration and reliability).
 
 **Latest workflow verification:** Live normal-window CO2 download and repeat both
 updated the display without cached reopening; record count remained four on repeat.

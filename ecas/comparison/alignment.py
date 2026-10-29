@@ -19,12 +19,19 @@ _SIGNAL_FACTORS = {
     ('percent', 'fraction'): 0.01,
     ('percent', 'percent'): 1.0,
     ('fraction', 'fraction'): 1.0,
+    ('ppm', 'fraction'): 1e-6,
+    ('ppm', 'percent'): 1e-4,
+    ('fraction', 'ppm'): 1e6,
+    ('percent', 'ppm'): 1e4,
+    ('ppm', 'ppm'): 1.0,
 }
 
 _AXIS_FACTORS = {
     ('nanometers', 'microns'): 1e-3,
     ('nm', 'microns'): 1e-3,
     ('angstroms', 'microns'): 1e-4,
+    ('angstrom', 'microns'): 1e-4,
+    ('um', 'microns'): 1.0,
     ('microns', 'microns'): 1.0,
 }
 
@@ -148,6 +155,77 @@ def convert_axis_unit(
         coordinates=tuple(float(v) for v in scaled),
     )
     return TransformedInput(original=original, transformed=updated, steps=prior_steps + (step,))
+
+
+def convert_wavenumber_to_microns(
+    item: ComparisonInput | TransformedInput,
+    target_unit: str = 'microns',
+) -> TransformedInput:
+    """Explicitly convert strictly increasing wavenumbers (cm^-1) to strictly increasing microns.
+
+    Because lambda(um) = 1e4 / nu(cm^-1) is monotonically decreasing, converting
+    strictly increasing wavenumbers into strictly increasing wavelengths reverses
+    the coordinate order and applies the exact reversal permutation P to values,
+    sigma, and covariance (C' = P C P^T), preserving quadratic forms r^T C^-1 r.
+    """
+    original, current, prior_steps = _unwrap(item)
+    if current.axis_unit not in ('cm^-1', 'cm-1', '1/cm') or target_unit != 'microns':
+        raise ValueError(
+            f'Unsupported wavenumber conversion: {current.axis_unit!r} -> {target_unit!r}'
+        )
+    coords = np.asarray(current.coordinates, dtype=float)
+    values = np.asarray(current.values, dtype=float)
+    n = len(coords)
+    if coords.ndim != 1 or n < 3 or not np.isfinite(coords).all() or np.any(coords <= 0):
+        raise ValueError('Wavenumber conversion requires at least 3 positive finite coordinates')
+    if values.shape != coords.shape or not np.isfinite(values).all():
+        raise ValueError('Wavenumber conversion requires finite 1D values matching coordinates')
+    if not np.all(np.diff(coords) > 0):
+        raise ValueError('Wavenumber conversion requires strictly increasing wavenumbers')
+
+    perm = tuple(reversed(range(n)))
+    with np.errstate(divide='raise', over='raise', invalid='raise'):
+        wavelengths_um = (10000.0 / coords)[list(perm)]
+    if not np.isfinite(wavelengths_um).all() or not np.all(np.diff(wavelengths_um) > 0):
+        raise ValueError('Converted wavelengths lost finiteness or strict increasing ordering')
+
+    reordered_values = tuple(float(v) for v in values[list(perm)])
+    reordered_sigma = None
+    if current.sigma is not None:
+        sigma = np.asarray(current.sigma, dtype=float)
+        if sigma.shape != coords.shape or not np.isfinite(sigma).all():
+            raise ValueError('Wavenumber conversion encountered invalid sigma array')
+        reordered_sigma = tuple(float(v) for v in sigma[list(perm)])
+
+    reordered_cov = None
+    if current.covariance is not None:
+        cov = np.asarray(current.covariance, dtype=float)
+        if cov.shape != (n, n) or not np.isfinite(cov).all():
+            raise ValueError('Wavenumber conversion encountered invalid covariance matrix')
+        perm_cov = cov[np.ix_(perm, perm)]
+        reordered_cov = tuple(tuple(float(v) for v in row) for row in perm_cov)
+
+    step = TransformationStep(
+        operation='convert_wavenumber_to_microns_v1',
+        parameters=(
+            ('from_unit', current.axis_unit),
+            ('to_unit', target_unit),
+            ('formula', '10000.0 / wavenumber_cm_inv'),
+            ('axis_order_reversed', True),
+        ),
+        included_indices=perm,
+        excluded_indices=(),
+    )
+    updated = replace(
+        current,
+        axis_unit=target_unit,
+        coordinates=tuple(float(v) for v in wavelengths_um),
+        values=reordered_values,
+        sigma=reordered_sigma,
+        covariance=reordered_cov,
+    )
+    return TransformedInput(original=original, transformed=updated, steps=prior_steps + (step,))
+
 
 
 def _subset_input(

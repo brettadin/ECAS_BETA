@@ -287,7 +287,9 @@ Establish a reliable way to discover, retrieve, cache, organize, and select mole
 
 **Completion criterion:** From within the application, ECAS can search the selected initial provider, discover and retrieve molecular reference spectra, cache and reopen them with traceable provenance, catalogue the available datasets by molecule, and expose eligible reference and observational datasets for independent selection in the Comparisons tab. Known format, access and compatibility limitations are documented. ExoMol two-column cross sections are the initial bounded implementation; NIST and JCAMP-DX remain unimplemented candidates for broader support.
 
-## Chunk 6 — Scientific Comparison, Interpretation, and Projections
+## Chunk 6 — Scientific Comparison, Interpretation, and Projections [COMPLETE]
+
+**Status: Complete (2026-10-28).** All Stages 6.1–6.7 implemented, verified, and published on GitHub (`codex/roadmap-reconciliation-20261028` commit `9a8150d`). Full offscreen test suite: 603 passed, 1 skipped in 14.41s. The completion criterion is fully met: users can select observations and reference datasets, run the approved comparison method, understand compatibility failures and limitations, inspect dual-pane residual plots and data tables, and reproduce analyses from signed records. Raw cross sections remain strictly blocked against transit depth without an explicit radiative-transfer model.
 
 Entry update (2026-10-28): the supported Chunk 5.1 acquisition/selection/graphical
 inspection workflow is implemented and reviewed per the user's batches 9–11
@@ -325,13 +327,20 @@ Implement the comparison workflow using the method selected in Chunk 5 and the m
 
 
 
-Chunk 7 — Integration and reliability
+## Chunk 7 — Scientific Resources, Interoperability, and Modeling Foundation [IMPLEMENTED]
 
-Make the assembled application dependable.
-- Test failure recovery and malformed inputs.
-- Verify project persistence and offline behavior.
-- Test the full workflow from import to comparison.
-- Improve error reporting and documentation.
+**Status: Implemented and verified locally (2026-10-28).** All Stages 7.1–7.6 are complete (`610 passed, 1 skipped`):
+- **Stage 7.1**: Structured scientific resource catalog (`ecas/resources/catalog.py`, 17 verified canonical resources across `Software`, `Data archive`, `Molecular data`, `Python library`, and `Publication`) and interactive `References & Resources` desktop tab (`ecas/ui/resources_browser.py`, navigation index `6` in `ecas/ui/main_window.py`) with category filter pills, search filtering, and `Copy link` / `Copy citation` clipboard actions.
+- **Stage 7.2**: Scientific format interoperability (`ecas/ingestion/tabular_formats.py` for `.ecsv`, `.dat`/`.tsv`/`.txt`/`.asc`, and IEEE-754 big-endian `.fits` `BINTABLE` spectra), explicit separation between planetary transit-depth observations and laboratory FTIR/UV-Vis wavenumber/absorbance measurements, and order-reversing wavenumber-to-micron conversion (`convert_wavenumber_to_microns` in `ecas/comparison/alignment.py`) with exact $P \mathbf{C} P^{\mathsf{T}}$ covariance permutation.
+- **Stage 7.3**: Molecular database temperature applicability checks (`validate_temperature_applicability` for `ExoMol`, `HITRAN`, `HITEMP`, `NIST ASD`, `GEISA`) and benchmark planet characterization records (`WASP-39 b` and `K2-18 b`) using the 6 `EVIDENCE_STATUSES`.
+- **Stage 7.4**: Evaluation of `petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, and `Pyrat Bay` (`docs/Chunk_7/RESEARCH_AND_MODELING_FOUNDATION.md`) and external forward-model adapter (`ecas/comparison/model_adapters.py`) exporting verified `ecas-forward-model-v1` records.
+- **Stage 7.5 & 7.6**: Removed 0-byte `ecas/ui/main_window_temp.py`, added end-to-end WASP-39 b benchmark characterization and format tests (`tests/test_chunk7_resources_and_modeling.py`), and synchronized documentation (`docs/Chunk_7/IMPLEMENTATION_LOG.md`).
+
+Make the assembled application dependable and scientifically grounded:
+- Test failure recovery and malformed inputs across `.csv`, `.tbl`, `.ecsv`, `.dat`/`.tsv`, and `.fits` `BINTABLE`.
+- Verify project persistence, signed comparison records, and offline behavior.
+- Test the full workflow from import and alignment to forward-model comparison and reproduction.
+- Maintain a traceable `References & Resources` catalog and improve error reporting and documentation.
 Completion criterion: The complete workflow operates reliably without fabricated production data.
 
 

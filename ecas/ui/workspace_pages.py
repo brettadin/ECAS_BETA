@@ -37,6 +37,7 @@ class OverviewPage(QWidget):
             (3, 'Find molecular references', 'Search ExoMol; retrieve supported CO2, H2O or CH4 cross sections, or reopen cached products.'),
             (4, 'Inspect selected inputs', 'Add observation snapshots and independently select cached references. Choices last for this session.'),
             (5, 'View settings and data locations', 'Check storage paths and choose how local CSV files are interpreted.'),
+            (6, 'Browse references and resources', 'Inspect canonical scientific software, archives, molecular databases, libraries, and benchmark publications.'),
         )
         for index, caption, description in steps:
             button = QPushButton(caption)

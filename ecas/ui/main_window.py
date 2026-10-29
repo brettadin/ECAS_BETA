@@ -57,6 +57,8 @@ from ecas.ui.source_links import source_link
 from ecas.ui.molecular_browser import MolecularReferenceBrowser
 from ecas.ui.comparison_browser import ComparisonBrowser
 from ecas.ui.workspace_pages import OverviewPage, SettingsPage
+from ecas.ui.resources_browser import ResourcesBrowser
+from ecas.ingestion.tabular_formats import import_tabular_spectrum
 
 
 class ECASWindow(QMainWindow):
@@ -147,6 +149,7 @@ class ECASWindow(QMainWindow):
             "Molecular References",
             "Comparisons",
             "Settings",
+            "References & Resources",
         ])
         self.navigation.setFixedWidth(200)
 
@@ -209,6 +212,7 @@ class ECASWindow(QMainWindow):
             ("Molecular References", "Search and manage molecular reference data."),
             ("Comparisons", "Inspect independently selected inputs."),
             ("Settings", "Application preferences and data locations."),
+            ("References & Resources", "Scientific software, archives, molecular databases, and publications."),
         ]
 
         for index, (heading, description) in enumerate(definitions):
@@ -250,6 +254,9 @@ class ECASWindow(QMainWindow):
                     'ExoMol reference cache': self.reference_browser.cache_root / 'references',
                 }, self)
                 layout.addWidget(self.settings_page)
+            elif index == 6:
+                self.resources_browser = ResourcesBrowser(self)
+                layout.addWidget(self.resources_browser)
             else:
                 # The remaining pages currently contain headings and
                 # descriptions only; they are not fully implemented yet.
@@ -553,6 +560,8 @@ class ECASWindow(QMainWindow):
         if Path(path).suffix.lower() == ".tbl":
             details = import_transmission_table(path)
             return details.spectrum, details
+        if Path(path).suffix.lower() in (".ecsv", ".dat", ".tsv", ".fits", ".fit", ".fts"):
+            return import_tabular_spectrum(path), None
         return import_spectrum(path, archive_schema=schema), None
 
     def closeEvent(self, event):

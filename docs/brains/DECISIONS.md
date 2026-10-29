@@ -388,3 +388,26 @@ Chunk 6 introduces production spectral compatibility validation, explicit alignm
    - Comparison records are stored atomically (`NamedTemporaryFile` + `os.fsync` + `os.replace`) as canonical SHA-256-signed JSON files under `projects/<project_id>/comparisons/*.json`, avoiding destructive SQLite migrations to `data.sqlite` while binding records to validated project folders.
 5. **Explicit Forward-Model Physical Boundary:**
    - Raw cross sections cannot be rescaled into transit depth (`project_cross_section_to_transit_depth()` raises `UnsupportedProjectionError`). Precomputed radiative-transfer curves must supply validated `AtmosphericModelProvenance` before entering `ComparisonInput(role='forward_model')`.
+
+
+---
+
+## Decision: Chunk 7 Scientific Resource Catalog, Interoperability, and External Forward-Model Adapter Architecture
+
+**Date:** 2026-10-28  
+**Status:** Implemented (`ecas/resources/catalog.py`, `ecas/ui/resources_browser.py`, `ecas/ingestion/tabular_formats.py`, `ecas/comparison/alignment.py`, `ecas/comparison/model_adapters.py`)
+
+### Context
+Chunk 7 extends ECAS with a traceable `References & Resources` catalog, broader astronomical and laboratory spectral file interoperability (`.ecsv`, `.dat`/`.tsv`, `.fits` `BINTABLE`), explicit wavenumber-to-micron conversion with covariance permutation, and a scientifically grounded integration path for established community atmospheric modeling codes (`petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, `Pyrat Bay`).
+
+### Key Decisions
+1. **Approach C for Atmospheric Modeling Integration (Verified External Forward-Model Adapters):**
+   - Rather than bundling heavy Fortran/C/CUDA binaries and multi-gigabyte opacity grids (Approach A) or implementing an unvalidated single-scale-height toy formula (Approach B), ECAS implements `export_external_forward_model()` in `ecas/comparison/model_adapters.py`.
+   - Precomputed spectra from `petitRADTRANS`, `POSEIDON`, `TauREx 3`, `PLATON`, and `Pyrat Bay` are converted from their native coordinate/signal conventions (`microns`, SI `m`, cgs `cm`, `nm`, `angstroms`, or wavenumber `cm^-1`; `fraction`, `percent`, or `ppm`) into SHA-256-verified `ecas-forward-model-v1` JSON records with complete `AtmosphericModelProvenance` and molecular-database temperature-applicability checks (`validate_temperature_applicability`).
+   - Copyleft packages (`Pyrat Bay` GPL-2.0, `PLATON` GPL-3.0) are never linked or copied into ECAS; only their external output files are ingested via clean schema adapters.
+2. **Laboratory FTIR vs. Planetary Observation Separation:**
+   - `ecas/ingestion/tabular_formats.py` distinguishes astronomical transmission spectra from laboratory FTIR/UV-Vis spectra (`wavenumber` + `absorbance`/`transmittance`), tagging laboratory files with `axis_unit='cm^-1'` and `signal_type='Laboratory FTIR Absorbance'` / `'Laboratory FTIR Transmittance'` so `observation_input()` leaves `observable=None` and `assess()` blocks direct comparison against planetary transit depth.
+3. **Order-Reversing Wavenumber-to-Wavelength Covariance Permutation:**
+   - Converting strictly increasing wavenumbers ($\tilde{\nu}$ in $\text{cm}^{-1}$) to strictly increasing wavelengths ($\lambda = 10^4 / \tilde{\nu}$ in $\mu\text{m}$) reverses coordinate ordering. `convert_wavenumber_to_microns()` in `ecas/comparison/alignment.py` applies the exact reversal permutation $P$ to coordinates, values, `sigma`, and `covariance` ($\mathbf{C}' = P \mathbf{C} P^{\mathsf{T}}$), preserving $\mathbf{r}^{\mathsf{T}}\mathbf{C}^{-1}\mathbf{r}$ to machine precision.
+4. **Canonical HTTPS Resource & Evidence Status Governance:**
+   - Every resource in `ecas/resources/catalog.py` is validated to use clean canonical HTTPS URLs without tracking parameters (`utm_*`, `gclid`, `fbclid`) and is linked to concrete `ecas_components`. Benchmark planet species records (`WASP-39 b`, `K2-18 b`) use the 6 `EVIDENCE_STATUSES` to separate independent confirmations from tentative/disputed claims and upper limits.
