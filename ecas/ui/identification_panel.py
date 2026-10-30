@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 from ecas.identification.engine import identify, result_to_record
 from ecas.identification.library import discover_library
 from ecas.identification.attestation import audit_observation_attestation
+from ecas.analysis.readiness import evaluate_readiness
+from ecas.ui.readiness_widget import ReadinessBannerWidget
 from ecas.observations import hash_source_file, independent_observations, observation_context, project_observation
 
 
@@ -113,6 +115,8 @@ class IdentificationPanel(QWidget):
         obs_btn_row.addWidget(self.attest_button)
         obs_btn_row.addStretch(1)
         layout.addLayout(obs_btn_row)
+        self.readiness_banner = ReadinessBannerWidget()
+        layout.addWidget(self.readiness_banner)
         self.selection_status = _label('No observations added. Select one or more files, or add project observations.')
         layout.addWidget(self.selection_status)
         self.molecule_tabs = QTabWidget()
@@ -277,6 +281,8 @@ class IdentificationPanel(QWidget):
         self.plot.setLabel('left', spectrum.signal_type or 'Signal', units=spectrum.signal_unit or 'unknown')
         count = self._plot_measurements(self.plot, spectrum, name='Measured input', color='#d8dee9')
         self.plot.enableAutoRange()
+        report = evaluate_readiness('laboratory_fit', context, references=self.selected_references(), source_sha256=context.source_sha256)
+        self.readiness_banner.set_report(report)
         audit = audit_observation_attestation(context)
         message = f'{context.label}: {count} measured points shown in original units. '
         if self._is_transit(context):
