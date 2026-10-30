@@ -23,6 +23,11 @@ from ecas.models.spectrum import CellValue, SpectrumData
 
 MAX_FILE_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 100_000
+MAX_FITS_FILE_BYTES = 8 * 1024**3
+MAX_FITS_HDUS = 128
+MAX_FITS_HEADER_BLOCKS = 128
+MAX_FITS_COLUMNS = 128
+MAX_FITS_CELLS = 1_000_000
 
 _CANONICAL_UNIT_MAP = {
     "um": "um",
@@ -514,122 +519,221 @@ def import_ascii_spectrum(path: str | Path) -> SpectrumData:
     )
 
 
-def _parse_fits_header_block(raw: bytes, offset: int) -> tuple[dict[str, str], int]:
-    """Parse one 2880-byte aligned FITS header unit starting at offset."""
+def _fits_card_value(text: str) -> str:
+    """Split comments only outside quoted FITS strings; unescape doubled quotes."""
+    text = text.strip()
+    if not text.startswith("'"):
+        return text.split("/", 1)[0].strip()
+    value, index = [], 1
+    while index < len(text):
+        if text[index] == "'":
+            if index + 1 < len(text) and text[index + 1] == "'":
+                value.append("'"); index += 2
+                continue
+            if text[index + 1:].strip() and not text[index + 1:].lstrip().startswith("/"):
+                raise SpectrumImportError("Unsupported FITS continued string/header value")
+            parsed = "".join(value).strip()
+            if parsed.endswith("&"):
+                raise SpectrumImportError("FITS CONTINUE long strings are unsupported; explicit extraction required")
+            return parsed
+        value.append(text[index]); index += 1
+    raise SpectrumImportError("Unterminated FITS header string")
+
+
+def _parse_fits_header_block(stream, offset: int) -> tuple[dict[str, str], int]:
+    """Read bounded 2880-byte blocks; never load image arrays or the whole file."""
     cards: dict[str, str] = {}
-    pos = offset
-    while pos + 2880 <= len(raw):
-        block = raw[pos : pos + 2880]
-        pos += 2880
+    stream.seek(offset)
+    for _ in range(MAX_FITS_HEADER_BLOCKS):
+        block = stream.read(2880)
+        if len(block) != 2880:
+            raise SpectrumImportError("Malformed/truncated FITS header: missing END card or 2880-byte block")
         for i in range(0, 2880, 80):
-            card = block[i : i + 80].decode("ascii", errors="replace")
+            try:
+                card = block[i : i + 80].decode("ascii")
+            except UnicodeDecodeError as exc:
+                raise SpectrumImportError("Non-ASCII FITS header") from exc
             keyword = card[:8].strip()
             if keyword == "END":
-                return cards, pos
+                return cards, stream.tell()
             if not keyword or card[8:10] != "= ":
                 continue
-            val_part = card[10:].split("/")[0].strip()
-            if val_part.startswith("'") and "'" in val_part[1:]:
-                val_part = val_part[1 : val_part.index("'", 1)].strip()
-            cards[keyword] = val_part
-    raise SpectrumImportError("Malformed FITS header: missing END card or misaligned 2880-byte block.")
+            if keyword in cards:
+                raise SpectrumImportError(f"Duplicate FITS header keyword {keyword}")
+            cards[keyword] = _fits_card_value(card[10:])
+    raise SpectrumImportError(f"FITS header exceeds {MAX_FITS_HEADER_BLOCKS} blocks")
+
+
+def _fits_integer(cards, key, *, default=None, minimum=0, maximum=None):
+    try:
+        text = cards.get(key, default)
+        if not re.fullmatch(r"[+-]?\d+", str(text)):
+            raise ValueError()
+        value = int(text)
+        if value < minimum or (maximum is not None and value > maximum):
+            raise ValueError()
+        return value
+    except (ValueError, TypeError) as exc:
+        raise SpectrumImportError(f"Invalid/unsupported FITS {key}: {cards.get(key)!r}") from exc
+
+
+def _fits_hdu_size(cards, *, primary=False):
+    bitpix = _fits_integer(cards, "BITPIX", minimum=-64)
+    if bitpix not in (8, 16, 32, 64, -32, -64):
+        raise SpectrumImportError("Unsupported FITS BITPIX")
+    naxis = _fits_integer(cards, "NAXIS", maximum=999)
+    if cards.get("GROUPS") == "T":
+        raise SpectrumImportError("FITS random groups are unsupported")
+    elements = 0 if naxis == 0 else 1
+    for axis in range(1, naxis + 1):
+        elements *= _fits_integer(cards, f"NAXIS{axis}")
+        if elements > MAX_FITS_FILE_BYTES:
+            raise SpectrumImportError("FITS dimensions exceed supported container bounds")
+    pcount = _fits_integer(cards, "PCOUNT", default="0" if primary else None)
+    gcount = _fits_integer(cards, "GCOUNT", default="1" if primary else None, minimum=1)
+    size = abs(bitpix) // 8 * gcount * (elements + pcount)
+    if size > MAX_FITS_FILE_BYTES:
+        raise SpectrumImportError("FITS declared data size exceeds 8 GiB limit")
+    return ((size + 2879) // 2880) * 2880
+
+
+def _fits_table_descriptor(cards, primary):
+    """Validate one supported table without decoding any rows yet."""
+    if cards.get("BITPIX") != "8" or cards.get("NAXIS") != "2" or cards.get("GCOUNT") != "1":
+        raise SpectrumImportError("FITS BINTABLE requires BITPIX=8, NAXIS=2 and GCOUNT=1")
+    width = _fits_integer(cards, "NAXIS1", minimum=1)
+    count = _fits_integer(cards, "NAXIS2", minimum=1, maximum=MAX_ROWS)
+    fields = _fits_integer(cards, "TFIELDS", minimum=1, maximum=MAX_FITS_COLUMNS)
+    if count * fields > MAX_FITS_CELLS:
+        raise SpectrumImportError(f"FITS decoded table exceeds {MAX_FITS_CELLS} cell limit")
+    names = [cards.get(f"TTYPE{i}", f"col{i}").strip() for i in range(1, fields + 1)]
+    if any(not name for name in names) or len({name.casefold() for name in names}) != fields:
+        raise SpectrumImportError("FITS table has empty or duplicate column names")
+    units = {name: cards.get(f"TUNIT{i}") for i, name in enumerate(names, 1)}
+    meta = {"signal_type": cards.get("SPEC_TYP") or primary.get("SPEC_TYP") or "",
+            "pl_name": cards.get("OBJECT") or primary.get("OBJECT") or "",
+            "fits_extname": cards.get("EXTNAME", ""),
+            "fits_numeric_conversion": "physical=TSCALn*stored+TZEROn; integer TNULLn retained as missing"}
+    for key in ("MODALITY", "PHASE", "TEMP_K"):
+        if cards.get(key) or primary.get(key):
+            meta[{"MODALITY": "modality", "PHASE": "phase", "TEMP_K": "temperature_K"}[key]] = cards.get(key) or primary[key]
+    semantics = _classify_columns_and_semantics(names, units, meta)
+    formats, scales, zeros, nulls = [], [], [], []
+    supported = {"D": "d", "E": "f", "J": "i", "K": "q", "I": "h", "B": "B"}
+    for i, name in enumerate(names, 1):
+        form = cards.get(f"TFORM{i}", "").upper().strip()
+        match = re.fullmatch(r"1?([DEJKIB])", form)
+        if not match:
+            raise SpectrumImportError(f"Unsupported FITS column {name!r} format {form!r}; only scalar numeric D/E/J/K/I/B are supported, not vectors or variable-length arrays")
+        formats.append(supported[match[1]])
+        try:
+            scale = float(cards.get(f"TSCAL{i}", "1").replace("D", "E"))
+            zero = float(cards.get(f"TZERO{i}", "0").replace("D", "E"))
+            if not math.isfinite(scale) or not math.isfinite(zero):
+                raise ValueError()
+        except ValueError as exc:
+            raise SpectrumImportError("Non-finite/invalid FITS TSCAL/TZERO") from exc
+        null = cards.get(f"TNULL{i}")
+        if null is not None and match[1] in ("D", "E"):
+            raise SpectrumImportError("TNULL is only supported on integer FITS columns")
+        nulls.append(_fits_integer(cards, f"TNULL{i}", minimum=-(2**63)) if null is not None else None)
+        scales.append(scale); zeros.append(zero)
+    unpacker = struct.Struct(">" + "".join(formats))
+    if unpacker.size != width:
+        raise SpectrumImportError("FITS BINTABLE NAXIS1 does not match scalar TFORM byte widths")
+    meta["fits_column_scaling"] = repr(tuple(zip(names, scales, zeros, nulls)))
+    return names, meta, semantics, unpacker, scales, zeros, nulls, count
 
 
 def import_fits_bintable_spectrum(path: str | Path) -> SpectrumData:
-    """Import a 1D spectral binary table from a FITS (.fits, .fit, .fts) file."""
-    resolved, raw = _read_bounded_bytes(
-        path, expected_suffixes=(".fits", ".fit", ".fts")
-    )
-    if len(raw) % 2880 != 0:
-        raise SpectrumImportError("Invalid FITS file: byte length is not a multiple of 2880.")
+    """Stream one unambiguous scalar spectral BINTABLE from a FITS container.
 
-    primary_cards, pos = _parse_fits_header_block(raw, 0)
-    if primary_cards.get("SIMPLE") != "T":
-        raise SpectrumImportError("Invalid FITS primary header: SIMPLE = T required.")
-
-    # Skip primary data array if present
-    naxis = int(primary_cards.get("NAXIS", "0"))
-    if naxis > 0:
-        bitpix = abs(int(primary_cards.get("BITPIX", "8")))
-        n_elems = 1
-        for ax in range(1, naxis + 1):
-            n_elems *= int(primary_cards.get(f"NAXIS{ax}", "0"))
-        n_bytes = (n_elems * bitpix) // 8
-        padded = ((n_bytes + 2879) // 2880) * 2880
-        pos += padded
-
-    if pos >= len(raw):
-        raise SpectrumImportError("FITS file contains no BINTABLE spectral extension.")
-
-    ext_cards, pos = _parse_fits_header_block(raw, pos)
-    if ext_cards.get("XTENSION") != "BINTABLE":
-        raise SpectrumImportError(
-            f"Unsupported FITS extension {ext_cards.get('XTENSION')!r}; expected 'BINTABLE'."
-        )
-
-    row_byte_len = int(ext_cards.get("NAXIS1", "0"))
-    n_rows = int(ext_cards.get("NAXIS2", "0"))
-    tfields = int(ext_cards.get("TFIELDS", "0"))
-    if row_byte_len <= 0 or n_rows <= 0 or tfields <= 0:
-        raise SpectrumImportError("FITS BINTABLE has zero rows or columns.")
-    if n_rows > MAX_ROWS:
-        raise SpectrumImportError(f"FITS BINTABLE exceeds {MAX_ROWS} row limit.")
-    if pos + row_byte_len * n_rows > len(raw):
-        raise SpectrumImportError("FITS BINTABLE data block is truncated.")
-
-    col_names: list[str] = []
-    col_units: dict[str, str | None] = {}
-    fmt_parts = [">"]
-    for idx in range(1, tfields + 1):
-        ttype = ext_cards.get(f"TTYPE{idx}", f"col{idx}").strip()
-        tform = ext_cards.get(f"TFORM{idx}", "").strip().upper()
-        tunit = ext_cards.get(f"TUNIT{idx}")
-        col_names.append(ttype)
-        col_units[ttype] = tunit
-        if tform in ("D", "1D"):
-            fmt_parts.append("d")
-        elif tform in ("E", "1E"):
-            fmt_parts.append("f")
-        elif tform in ("J", "1J"):
-            fmt_parts.append("i")
-        elif tform in ("K", "1K"):
-            fmt_parts.append("q")
-        else:
-            raise SpectrumImportError(
-                f"Unsupported FITS BINTABLE column format {tform!r} for column {ttype!r}; "
-                "only scalar numeric columns (1D, 1E, 1J, 1K) are supported."
-            )
-
-    struct_fmt = "".join(fmt_parts)
-    if struct.calcsize(struct_fmt) != row_byte_len:
-        raise SpectrumImportError("FITS BINTABLE NAXIS1 does not match column TFORM byte width.")
-
-    raw_rows: list[dict[str, str | float | None]] = []
-    for r_idx in range(n_rows):
-        row_bytes = raw[pos + r_idx * row_byte_len : pos + (r_idx + 1) * row_byte_len]
-        unpacked = struct.unpack(struct_fmt, row_bytes)
-        raw_rows.append(
-            {col_names[c_idx]: float(unpacked[c_idx]) for c_idx in range(tfields)}
-        )
-
-    header_meta = {
-        "signal_type": ext_cards.get("SPEC_TYP") or primary_cards.get("SPEC_TYP") or "",
-        "pl_name": ext_cards.get("OBJECT") or primary_cards.get("OBJECT") or "",
-    }
-    coord_col, signal_col, unc_col, axis_unit, signal_unit, signal_type = (
-        _classify_columns_and_semantics(col_names, col_units, header_meta)
-    )
+    Image and unrelated table HDUs are skipped by validated offsets. Container
+    size is bounded at 8 GiB; decoded spectra at 100,000 rows, 128 columns and
+    1,000,000 cells. Vector/variable-length spectra and image-only FITS need a
+    separate scientifically explicit extraction workflow.
+    """
+    target = Path(path)
+    if (not target.is_file() or target.is_symlink() or target.is_junction()
+            or target.suffix.lower() not in ('.fits', '.fit', '.fts')):
+        raise SpectrumImportError('FITS import requires a regular .fits/.fit/.fts file')
+    size = target.stat().st_size
+    if not size or size > MAX_FITS_FILE_BYTES:
+        raise SpectrumImportError('FITS container must be nonempty and at most 8 GiB')
+    if size % 2880:
+        raise SpectrumImportError('Invalid FITS file: byte length is not a multiple of 2880')
+    resolved = target.resolve()
+    candidates, issues, offset, hdu = [], [], 0, 0
+    try:
+        with resolved.open('rb') as stream:
+            primary = {}
+            while offset < size:
+                if hdu >= MAX_FITS_HDUS:
+                    raise SpectrumImportError(f'FITS exceeds {MAX_FITS_HDUS} HDU limit')
+                cards, data_start = _parse_fits_header_block(stream, offset)
+                if hdu == 0:
+                    primary = cards
+                    if primary.get('SIMPLE') != 'T':
+                        raise SpectrumImportError('Invalid FITS primary header: SIMPLE = T required')
+                elif not cards.get('XTENSION'):
+                    raise SpectrumImportError('FITS extension missing XTENSION')
+                padded = _fits_hdu_size(cards, primary=hdu == 0)
+                next_offset = data_start + padded
+                if next_offset > size:
+                    raise SpectrumImportError(f'FITS HDU {hdu} data block is truncated')
+                if cards.get('XTENSION') == 'BINTABLE':
+                    # Classify by header before parsing formats: unrelated archive
+                    # tables may use strings/vectors and are safely skipped.
+                    fields = _fits_integer(cards, 'TFIELDS', minimum=1, maximum=999)
+                    names = [cards.get(f'TTYPE{i}', f'col{i}').strip() for i in range(1, fields + 1)]
+                    units = {name: cards.get(f'TUNIT{i}') for i, name in enumerate(names, 1)}
+                    meta = {'signal_type': cards.get('SPEC_TYP') or primary.get('SPEC_TYP') or ''}
+                    try:
+                        _classify_columns_and_semantics(names, units, meta)
+                    except SpectrumImportError as exc:
+                        event_names = {name.upper() for name in names}
+                        is_event = (cards.get('EXTNAME', '').upper() in ('EVENTS', 'EVENT')
+                                    or ('TIME' in event_names and bool(event_names & {'DETX', 'DETY', 'PHA', 'PI'})))
+                        issues.append(f'HDU {hdu}: event-list data require instrument calibration and spectral extraction; individual events are not a sampled spectrum'
+                                      if is_event else f'HDU {hdu}: {exc}')
+                    else:
+                        descriptor = _fits_table_descriptor(cards, primary)
+                        candidates.append((data_start, hdu, descriptor))
+                offset, hdu = next_offset, hdu + 1
+            if len(candidates) > 1:
+                raise SpectrumImportError('Ambiguous FITS: multiple spectral BINTABLE extensions; extract/select one explicit spectrum first')
+            if not candidates:
+                detail = '; '.join(issues[:3])
+                raise SpectrumImportError('FITS contains no supported scalar spectral BINTABLE; image-only/vector products require extraction. ' + detail)
+            data_start, selected_hdu, descriptor = candidates[0]
+            names, meta, semantics, unpacker, scales, zeros, nulls, count = descriptor
+            meta['fits_hdu_index'] = str(selected_hdu)
+            stream.seek(data_start)
+            raw_rows = []
+            for _ in range(count):
+                row_bytes = stream.read(unpacker.size)
+                if len(row_bytes) != unpacker.size:
+                    raise SpectrumImportError('FITS BINTABLE data block changed or truncated during import')
+                values = unpacker.unpack(row_bytes)
+                row = {}
+                for i, value in enumerate(values):
+                    if nulls[i] is not None and value == nulls[i]:
+                        row[names[i]] = None
+                    else:
+                        # Reject loss of integer information rather than silently
+                        # rounding it into SpectrumData's floating representation.
+                        if isinstance(value, int) and abs(value) > 2**53:
+                            raise SpectrumImportError('FITS integer exceeds exact float64 range; explicit precision-preserving extraction required')
+                        row[names[i]] = value * scales[i] + zeros[i]
+                raw_rows.append(row)
+    except (OSError, OverflowError, struct.error) as exc:
+        raise SpectrumImportError(f'Cannot read FITS spectrum: {exc}') from exc
+    coord, signal, uncertainty, axis_unit, signal_unit, signal_type = semantics
     return _build_spectrum_from_parsed_rows(
-        resolved_path=resolved,
-        col_names=col_names,
-        raw_rows=raw_rows,
-        coord_col=coord_col,
-        signal_col=signal_col,
-        unc_col=unc_col,
-        axis_unit=axis_unit,
-        signal_unit=signal_unit,
-        signal_type=signal_type,
-        metadata=header_meta,
+        resolved_path=resolved, col_names=names, raw_rows=raw_rows,
+        coord_col=coord, signal_col=signal, unc_col=uncertainty,
+        axis_unit=axis_unit, signal_unit=signal_unit, signal_type=signal_type,
+        metadata=meta,
     )
 
 

@@ -8,17 +8,15 @@ are handled by ecas.ingestion.csv_importer so that scientific data processing
 does not become tied to the user interface.
 """
 
-from hashlib import sha256
 from pathlib import Path
+from ecas.observations import hash_source_file
 
 
 def _hash_file_if_present(path):
     target = Path(path)
     if not target.is_file() or target.is_symlink() or target.is_junction():
         return None
-    with target.open('rb') as stream:
-        raw = stream.read(16 * 1024 * 1024 + 1)
-    return sha256(raw).hexdigest() if len(raw) <= 16 * 1024 * 1024 else None
+    return hash_source_file(target)
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QColor
 

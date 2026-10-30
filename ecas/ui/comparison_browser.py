@@ -442,9 +442,47 @@ class ComparisonBrowser(QWidget):
                 description_getter=self.description_getter, project_store=self.project_store,
                 active_project_getter=self.active_project_getter, parent=self)
             self.identification_layout.addWidget(self.identification_panel)
+            self.identification_panel.atmospheric_requested.connect(self.open_identification_observations)
+            if self.observation_getter()[0] is not None:
+                self.identification_panel.add_current_input()
         self.identification_panel.show()
         self.identification_toggle.setText('Hide local molecular identification')
         return self.identification_panel
+
+    def open_identification_observations(self, contexts):
+        """Carry checked transit snapshots into the physical-model workspace.
+
+        Laboratory reference curves are not opacities and are never transferred
+        as atmospheric candidates. Model generation remains an explicit action.
+        """
+        transit = [context for context in contexts
+                   if 'transit' in (context.spectrum.signal_type or '').lower()
+                   or (context.spectrum.signal_type or '').lower() == 'transmission']
+        if not transit:
+            return
+        indices = []
+        for context in transit:
+            index = next((i for i, metadata in enumerate(self._observation_metadata_list)
+                          if metadata.get('identification_observation_id') == context.observation_id), None)
+            if index is None:
+                metadata = deepcopy(context.metadata)
+                metadata['identification_observation_id'] = context.observation_id
+                index = self.add_observation_snapshot(context.spectrum, context.source_sha256, metadata, context.label)
+            indices.append(index)
+        self.observation_selector.setCurrentIndex(indices[0])
+        self.gen_source_selector.setCurrentIndex(self.gen_source_selector.findData('cached_only'))
+        self.auto_fill_observation_metadata()
+        if self.workflow_panel.isHidden():
+            self._toggle_workflow_panel()
+        self.identification_panel.hide()
+        self.identification_toggle.setText('Local library: Identify Molecules')
+        self.candidate_status.setText(
+            f'{len(transit)} transit observation(s) available in Observation / input; '
+            f'{len(contexts) - len(transit)} laboratory input(s) retained in Identify. '
+            'Review the planet, atmospheric parameters and cached ExoMol coverage, then Generate, Auto-Align & Compare. '
+            'Run each observation separately here. Local IR/UV reference curves are not atmospheric opacities; '
+            'this workflow reports model sensitivity, not laboratory sigma.')
+        self.scroll_area.ensureWidgetVisible(self.generate_model_button)
 
     def _toggle_identification(self):
         if self.identification_panel is not None and not self.identification_panel.isHidden():
@@ -1754,15 +1792,20 @@ class ComparisonBrowser(QWidget):
         if spectrum is None:
             self.observation_status.setText('Load an observation in Spectral Data or Projects first. Previous selection retained.')
             return
-        snapshot = deepcopy(spectrum)
         raw_meta = self.metadata_getter() if self.metadata_getter is not None else None
         meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
-        description = self.description_getter() if self.description_getter else snapshot.source_file.name
-        self._observation_metadata_list.append(meta)
+        description = self.description_getter() if self.description_getter else spectrum.source_file.name
+        self.add_observation_snapshot(spectrum, source_hash, meta, description)
+
+    def add_observation_snapshot(self, spectrum, source_hash, metadata, description):
+        """Add an immutable observation supplied by import or identification."""
+        snapshot = deepcopy(spectrum)
+        self._observation_metadata_list.append(deepcopy(metadata))
         self.observation_selector.addItem(
             f'{self.observation_selector.count() + 1}: {description} | {snapshot.row_count} rows',
             (snapshot, source_hash))
         self.observation_selector.setCurrentIndex(self.observation_selector.count() - 1)
+        return self.observation_selector.count() - 1
 
     def _select_observation(self, *_):
         idx = self.observation_selector.currentIndex()
