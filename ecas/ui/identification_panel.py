@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from ecas.identification.engine import identify, result_to_record
 from ecas.identification.library import discover_library
+from ecas.identification.attestation import audit_observation_attestation
 from ecas.observations import hash_source_file, independent_observations, observation_context, project_observation
 
 
@@ -104,6 +105,14 @@ class IdentificationPanel(QWidget):
         self.observations = QListWidget()
         self.observations.setMaximumHeight(110)
         layout.addWidget(self.observations)
+        obs_btn_row = QHBoxLayout()
+        self.attest_button = QPushButton('Attest Observation Metadata...')
+        self.attest_button.setToolTip('Explicitly declare or review modality, spectral coordinates, and signal units for generic laboratory measurements.')
+        self.attest_button.setEnabled(False)
+        self.attest_button.clicked.connect(self.open_attestation_dialog)
+        obs_btn_row.addWidget(self.attest_button)
+        obs_btn_row.addStretch(1)
+        layout.addLayout(obs_btn_row)
         self.selection_status = _label('No observations added. Select one or more files, or add project observations.')
         layout.addWidget(self.selection_status)
         self.molecule_tabs = QTabWidget()
@@ -170,6 +179,7 @@ class IdentificationPanel(QWidget):
         self.planet_selector.currentIndexChanged.connect(self._filter_observations)
         self.observations.itemChanged.connect(self.invalidate_results)
         self.observations.currentRowChanged.connect(self._show_current_input)
+        self.observations.itemDoubleClicked.connect(self.open_attestation_dialog)
         self.threshold.valueChanged.connect(self.invalidate_results)
         self.reference_toggle.clicked.connect(self._toggle_reference_plots)
         self.atmospheric_button.clicked.connect(lambda: self.atmospheric_requested.emit(self.selected_contexts()))
@@ -228,8 +238,10 @@ class IdentificationPanel(QWidget):
             self.plot.clear()
             self.plot.setTitle('Observation preview')
             self.plot_status.setText('Add an observation to preview it. Selected references can be viewed separately below.')
+            self.attest_button.setEnabled(False)
             return
         context = self.contexts[index]
+        self.attest_button.setEnabled(not self._is_transit(context))
         if self.batch_results:
             result_index = next((i for i, (c, _) in enumerate(self.batch_results)
                                  if c.observation_id == context.observation_id), None)
@@ -239,6 +251,24 @@ class IdentificationPanel(QWidget):
                 return
         self._preview_observation(context)
 
+    def open_attestation_dialog(self, *_):
+        index = self.observations.currentRow()
+        if index < 0 or index >= len(self.contexts):
+            return
+        context = self.contexts[index]
+        from ecas.ui.observation_attestation_dialog import ObservationAttestationDialog
+        dialog = ObservationAttestationDialog(context, parent=self)
+        if dialog.exec():
+            updated = dialog.attested_context
+            if updated is not None:
+                self.contexts[index] = updated
+                item = self.observations.item(index)
+                audit = audit_observation_attestation(updated)
+                item.setToolTip(f'{updated.spectrum.source_file}\nSHA-256: {updated.source_sha256 or "unknown"}\n{audit.summary_message}')
+                self.invalidate_results()
+                self._preview_observation(updated)
+                self.status.setText(f"Observation '{updated.label}' attested: {audit.summary_message}")
+
     def _preview_observation(self, context):
         self.plot.clear()
         spectrum = context.spectrum
@@ -247,15 +277,33 @@ class IdentificationPanel(QWidget):
         self.plot.setLabel('left', spectrum.signal_type or 'Signal', units=spectrum.signal_unit or 'unknown')
         count = self._plot_measurements(self.plot, spectrum, name='Measured input', color='#d8dee9')
         self.plot.enableAutoRange()
+        audit = audit_observation_attestation(context)
         message = f'{context.label}: {count} measured points shown in original units. '
         if self._is_transit(context):
             message += ('This is planetary transit depth, not laboratory transmittance. '
                         'Use atmospheric comparison for a physical model; a local-library sigma is unavailable.')
+        elif not audit.is_complete:
+            message += f'Attestation required: missing {", ".join(audit.missing_fields)}. Click "Attest Observation Metadata..." to declare modality and physical units.'
         else:
-            message += 'Select compatible references and run Identify Molecules to calculate a fit.'
+            mod = audit.effective_facts.get('modality')
+            message += f'[{mod} {spectrum.signal_type}] Select compatible {mod} references and run Identify Molecules to calculate a fit.'
         self.plot_status.setText(message)
-        self.details.setPlainText(f'Input: {context.observation_id}\nSource: {spectrum.source_file}\n'
-                                  'Measured preview only; no fit or sigma is displayed.')
+
+        details_lines = [f'Input: {context.observation_id}', f'Source: {spectrum.source_file}']
+        if not audit.is_complete:
+            details_lines.append(f'Missing Metadata: {", ".join(audit.missing_fields)}')
+            details_lines.append('Measured preview only; explicit attestation required before fitting.')
+        else:
+            eff = audit.effective_facts
+            unit_str = f" [{eff.get('signal_unit')}]" if eff.get('signal_unit') else ""
+            details_lines.append(f"Modality: {eff.get('modality')} | Observable: {eff.get('signal_type')}{unit_str} vs {eff.get('axis_unit')}")
+            prov = context.metadata.get('metadata_provenance')
+            if isinstance(prov, dict):
+                notes = prov.get('attestation_notes') or prov.get('user_attested', {}).get('notes')
+                if notes:
+                    details_lines.append(f'Attestation notes: {notes}')
+            details_lines.append('Measured preview only; no fit or sigma is displayed.')
+        self.details.setPlainText('\n'.join(details_lines))
 
     def _toggle_reference_plots(self):
         visible = self.reference_plots.isHidden()
@@ -442,7 +490,8 @@ class IdentificationPanel(QWidget):
     def _set_busy(self, busy):
         for widget in (self.identify_button, self.import_button, self.add_input_button, self.project_button,
                        self.refresh_button, self.molecule_tabs, self.observations,
-                       self.threshold, self.planet_selector, self.reproduce_button, self.atmospheric_button):
+                       self.threshold, self.planet_selector, self.reproduce_button, self.atmospheric_button,
+                       self.attest_button):
             widget.setEnabled(not busy)
 
     def _failed(self, message):
