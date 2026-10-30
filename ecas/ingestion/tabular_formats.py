@@ -239,6 +239,7 @@ def _build_spectrum_from_parsed_rows(
     axis_unit: str | None,
     signal_unit: str | None,
     signal_type: str | None,
+    metadata: dict[str, str] | None = None,
 ) -> SpectrumData:
     if not raw_rows:
         raise SpectrumImportError("Spectrum file contains no measurement rows.")
@@ -319,6 +320,7 @@ def _build_spectrum_from_parsed_rows(
         signal_unit=signal_unit,
         signal_type=signal_type,
         warnings=tuple(warnings),
+        metadata=tuple(sorted((str(k), str(v)) for k, v in (metadata or {}).items())),
     )
 
 
@@ -415,6 +417,7 @@ def import_ecsv_spectrum(path: str | Path) -> SpectrumData:
         axis_unit=axis_unit,
         signal_unit=signal_unit,
         signal_type=signal_type,
+        metadata=header_meta,
     )
 
 
@@ -507,6 +510,7 @@ def import_ascii_spectrum(path: str | Path) -> SpectrumData:
         axis_unit=axis_unit,
         signal_unit=signal_unit,
         signal_type=signal_type,
+        metadata=header_meta,
     )
 
 
@@ -625,6 +629,7 @@ def import_fits_bintable_spectrum(path: str | Path) -> SpectrumData:
         axis_unit=axis_unit,
         signal_unit=signal_unit,
         signal_type=signal_type,
+        metadata=header_meta,
     )
 
 

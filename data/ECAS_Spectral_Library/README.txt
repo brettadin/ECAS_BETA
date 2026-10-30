@@ -84,7 +84,7 @@ DOCUMENTATION GUIDE
 IR:
     Documentation/IR/manifest.csv
         Historical NIST acquisition records.
-    Documentation/IR/validation_inventory.csv
+    Documentation/IR/validation_inventory.md
         Current file-level IR inventory.
     Documentation/IR/validation_summary.txt
         Current IR collection summary and validation status.

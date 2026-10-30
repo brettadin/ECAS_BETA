@@ -235,5 +235,5 @@ These checks establish basic structural consistency only. They do not certify sc
 - `dataset_manifest.csv` — selected dataset provenance, source details and local file mapping.
 - `candidate_inventory.csv` — historical source archive candidate records.
 - `validation_summary.txt` — prepared CSV structural validation.
-- `../IR/validation_inventory.csv` — current IR file inventory.
+- `../IR/validation_inventory.md` — current IR file inventory.
 - `../IR/validation_summary.txt` — current IR inventory summary.

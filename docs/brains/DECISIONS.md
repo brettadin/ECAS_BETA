@@ -5,6 +5,37 @@ ECAS — Exoplanetary Characterization & Astrochemistry Suite is a scientific de
 application for exoplanet spectroscopy. It uses SQLite for project spectrum
 persistence and currently has a separate NASA raw-product/provenance cache.
 
+## Local identification / v1 recovery — 2026-10-29
+
+- Restore the actual v1 optical-depth BVLS mixture, continuum, residual MAD and
+  same-weight reduced-model refits; preserve the historical default score
+  threshold of 3. Describe `sqrt(delta chi-square)` as a conditional fit statistic,
+  never calibrated molecular detection. Do not port simulator-reference merging,
+  negative clipping, out-of-coverage zero fill or heuristic transit-depth to
+  pseudo-transmittance conversion.
+- Keep laboratory identification separate from transit-depth eligibility and
+  atmospheric radiative transfer. Signed UV cross-section-to-cross-section fits
+  are explicit exploratory measured-template fits with a separately recorded
+  unit-scaled MAD floor. Cross-section/optical-depth mixing is blocked.
+- Discover actual local files. Preserve source variants/conditions, raw numerical
+  values and hashes; use one explicit variant per molecule per fit. Source-provided
+  metadata cannot be contradicted by optional caller attestations. Known phase
+  mismatch blocks; unknown conditions and differing temperatures are warnings.
+- Preserve source metadata in an optional SpectrumData field. Omit empty metadata
+  from legacy integrity payloads so existing project hashes remain readable.
+- Analyse observations independently with stable project/record or source/snapshot
+  identity. Deduplicate identical raw products for evaluation; retain excluded
+  identities in result records. Never combine sigma automatically.
+- Use versioned checksum-bound input/result snapshots and reproducible batch
+  exports. Checksums are internal integrity checks, not authenticity signatures.
+  Keep SciPy BVLS as the recovered solver; dependency failure blocks visibly.
+- Linear interpolation assumes continuous reference support within the common
+  endpoint interval; gaps, instrumental resolution and reference uncertainty are
+  unverified limitations. No new physical claim follows from a successful fit.
+
+See `../architecture/LABORATORY_IDENTIFICATION.md` for equations, original archive
+line references, supported formats, numerical adaptations and known limits.
+
 ## Current decision context — 2026-10-28
 
 Workspace pages: Overview summarizes already loaded state on entry without

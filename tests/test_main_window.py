@@ -189,7 +189,7 @@ def test_manager_format_rejection_clears_previous_table_metadata(window, tmp_pat
     window._import_csv_from_path(str(Path(__file__).resolve().parents[1] /
                                     'data/NASA/2026-10-27/feinstein-2023.tbl'))
     assert window.current_spectrum_details is not None
-    source = tmp_path / 'unsupported.txt'
+    source = tmp_path / 'unsupported.bin'
     source.write_text('wavelength,signal\n1.0,2.0\n', encoding='utf-8')
     with patch.object(main_window.QMessageBox, 'warning') as warning, \
          patch.object(main_window.QFileDialog, 'getOpenFileName', return_value=(str(source), '')):
@@ -198,7 +198,7 @@ def test_manager_format_rejection_clears_previous_table_metadata(window, tmp_pat
         else:
             window._import_csv_from_path(str(source))
     warning.assert_called_once()
-    assert 'only CSV files are supported' in warning.call_args.args[2]
+    assert 'Unsupported file format' in warning.call_args.args[2]
     assert window.current_spectrum is None and window.current_spectrum_details is None
     assert window.spectrum_table.rowCount() == 0
     assert window.spectra_plot._current_spectrum is None

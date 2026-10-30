@@ -4,7 +4,7 @@ ECAS is a scientific desktop software suite for exoplanetary atmospheric charact
 
 The suite consolidates physical radiative-transfer modeling, molecular reference data handling, and statistical residual diagnostics with an intuitive, reproducible research workflow.
 
-> **Project status (Beta Consolidation Baseline):** The core physical, numerical, and persistence capabilities are fully implemented, verified, and backed by automated benchmark tests. Automated test suite status: **672 passed, 21 skipped (network), 0 failed, 0 warnings** under `pytest -W error`. Authoritative implementation records and technical decisions are maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
+> **Latest local status (2026-10-29):** Local laboratory molecular identification is implemented alongside the atmospheric comparison workflow. Full offscreen regression: **688 passed, 22 skipped, 0 failed, 0 warnings** under `pytest -W error` (21 opt-in network checks and one unavailable directory-symlink check). This is software verification, not calibrated molecular detection. Authoritative implementation records and limitations are maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
 
 ---
 
@@ -18,6 +18,7 @@ The suite consolidates physical radiative-transfer modeling, molecular reference
   - [5. Transit & Orbit Visualizer](#5-transit--orbit-visualizer)
   - [6. Research Projects & Provenance](#6-research-projects--provenance)
   - [7. Scientific References & Resources](#7-scientific-references--resources)
+  - [8. Local Molecular Identification](#8-local-molecular-identification)
 - [Scientific Principles & Boundaries](#scientific-principles--boundaries)
 - [Evidence Framework & Evidence Labels](#evidence-framework--evidence-labels)
 - [Definition of Done](#definition-of-done)
@@ -36,7 +37,7 @@ The suite consolidates physical radiative-transfer modeling, molecular reference
 +--------------------------+------------------------------+------------------------------------------+
 |  OBSERVATIONAL DATA      |  FORWARD MODEL & REFERENCES  |  COMPARISON & SIMULATION                 |
 |  - NASA Archive (.tbl)   |  - 1D Isothermal Limb RT     |  - Passband Bin Integration              |
-|  - Astropy ECSV (.ecsv)  |  - Lecavelier Rayleigh slope |  - Linear Point Interpolation            |
+|  - Astropy ECSV (.ecsv)  |  - Lecavelier Rayleigh slope |  - Exact Shared-Grid Alignment           |
 |  - FITS 1D Tables        |  - ExoMol Line Lists (H2O,   |  - Residuals & Reduced Chi-Square (χ_ν²) |
 |  - Generic / WASP-39 CSV |    CO2, CH4 cached sigma)    |  - Geometric Transit Simulator           |
 |  - Lab FTIR / UV-Vis     |  - Multi-Molecule LOO Sens.  |  - Limb-Darkened Light Curves            |
@@ -48,6 +49,7 @@ The suite consolidates physical radiative-transfer modeling, molecular reference
 ### 1. Spectral Data & Ingestion
 * **NASA Exoplanet Archive Integration**: Search planets by canonical name or alias (e.g. `WASP39b`), preview published transmission spectra, retrieve raw IPAC tables (`.tbl`), and reopen cached products offline. Preserves signed uncertainties, source URLs, retrieval dates, and all 29 original columns alongside canonical coordinate/signal aliases.
 * **Broad Tabular & FITS Format Support**: Ingests Astropy ECSV (`.ecsv`), delimited ASCII tables (`.dat`, `.tsv`, `.txt`, `.asc`), and FITS 1D binary tables (`.fits`, `.fit`, `.fts` with `XTENSION = 'BINTABLE'`).
+* **Local Laboratory Reference Formats**: Imports uncompressed AFFN JCAMP-DX (`.jdx`, `.dx`, `.jcamp`, `.jcm`) and the curated UV–Vis CSV schema, preserving signed measurements and source metadata through project storage.
 * **Observable & Unit Distinction**: Distinguishes exoplanet transmission spectra (`observable = 'transit_depth'`, units `%`, `fraction`, or `ppm`) from laboratory FTIR/UV-Vis spectroscopy (`wavenumber` in $\text{cm}^{-1}$, `absorbance`, `transmittance`, or cross section in $\text{cm}^2/\text{molecule}$). Laboratory spectra are blocked from being mistakenly compared directly against planetary transit depths.
 
 ### 2. Atmospheric Forward Modeling
@@ -86,6 +88,16 @@ The suite consolidates physical radiative-transfer modeling, molecular reference
 * **Curated Resource Directory**: Fast-access reference library linking canonical software, archives, molecular databases, and literature citations.
 * **Literature Benchmarks**: Preconfigured reference parameters for standard exoplanet benchmarks (WASP-39 b, HD 209458 b, HD 189733 b, K2-18 b, TRAPPIST-1 e).
 
+### 8. Local Molecular Identification
+
+Open **Comparisons → Local library: Identify Molecules**. Import a compatible laboratory observation in Spectral Data, add it to identification, and select molecules using the **IR** and **UV–Vis** checkbox groups. The real local library contains 18 IR datasets across 13 molecules and 22 UV–Vis datasets across 15 molecules; choose one explicit source/condition variant per molecule. Colours stay consistent between the plot and compact results table.
+
+The absorption engine recovers v1's nonnegative optical-depth mixture fit, continuum terms, and same-weight **refitted drop-one** score `sqrt(max(chi²_without - chi²_full, 0))`. The historical default threshold is 3. Scores are conditional fit statistics, including an explicitly labelled residual-noise estimate when errors are absent; they are **not calibrated detection significance or evidence of atmospheric presence**.
+
+UV–Vis cross-section-to-cross-section fitting is a separate exploratory measured-template adaptation that retains negative values. Cross-section/optical-depth mixing and planetary transit-depth inputs are blocked here. Phase conflicts, missing coverage and repeated coordinates produce explicit reasons rather than invented scores. Unknown conditions and temperature differences limit interpretation. Reference interpolation assumes continuous support; resolution and internal gaps require independent review.
+
+Add multiple observations from the active project, filter by planet, and inspect independent results for each input. Duplicate raw products are reported without counting them as independent evidence. Export and reproduce checksum-bound input arrays, provenance, settings and results. No combined sigma across observations is calculated. See [methodology, workflow, and limits](docs/architecture/LABORATORY_IDENTIFICATION.md).
+
 ---
 
 ## Scientific Principles & Boundaries
@@ -95,7 +107,7 @@ Scientific integrity is a non-negotiable requirement in ECAS:
 1. **Residual Agreement $\ne$ Molecular Detection**: A low residual, reduced chi-square $\chi_\nu^2 \approx 1$, or favorable candidate ranking indicates numerical consistency with the specified model; it does **not** prove molecular detection, chemical abundance, or atmospheric presence. Detection claims require rigorous Bayesian model selection, nested sampling, and systematic noise characterization.
 2. **Cross Sections $\ne$ Transit Depth**: Molecular cross sections ($\sigma$ in $\text{cm}^2/\text{molecule}$) describe microscopic absorption probability and cannot be rescaled into transit depth without radiative transfer.
 3. **No Silent Synthetic Substitution**: When real data is selected, the application will never silently fall back to synthetic or illustrative templates.
-4. **Transparent Data Provenance**: Every plot, comparison, and saved record preserves an unbroken provenance trail (source URLs, file checksums, user attestations, and processing steps).
+4. **Transparent Data Provenance**: Imported and saved analyses preserve available source metadata, file checksums, user attestations, and recorded processing steps. Unknown conditions remain explicit; internal checksums do not authenticate external sources.
 
 ---
 
@@ -136,6 +148,7 @@ Any new capability or modification to ECAS must satisfy these non-negotiable cri
 | [`docs/ecas v1 and beta comparison documents/ECAS_going_forward_considerations.md`](docs/ecas%20v1%20and%20beta%20comparison%20documents/ECAS_going_forward_considerations.md) | Long-term architectural, scientific, and UX consolidation strategy |
 | [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) | System layering and subsystem responsibilities |
 | [`docs/architecture/VALIDATION_STRATEGY.md`](docs/architecture/VALIDATION_STRATEGY.md) | Validation pyramid, benchmark registry, and tolerance rationales |
+| [`docs/architecture/LABORATORY_IDENTIFICATION.md`](docs/architecture/LABORATORY_IDENTIFICATION.md) | Recovered v1 method, local library, independent observations, reproduction, and scientific limits |
 
 ---
 

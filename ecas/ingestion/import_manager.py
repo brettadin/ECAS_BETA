@@ -17,15 +17,37 @@ def import_spectrum(
 ) -> SpectrumData:
     """Import a spectrum using the parser for its supported file format.
 
-    CSV is the only supported format in this initial implementation.
-    Format-specific parsing and validation remain in csv_importer.
+    Legacy CSV behavior remains unchanged. Explicit laboratory CSV and JCAMP
+    schemas are dispatched to the local-library adapter; other scientific
+    tables use the existing tabular parsers.
     """
     path = Path(file_path)
 
-    if path.suffix.lower() != ".csv":
+    suffix = path.suffix.lower()
+    if suffix in (".jdx", ".dx", ".jcamp", ".jcm"):
+        from ecas.identification.library import load_library_spectrum
+        try:
+            return load_library_spectrum(path)
+        except (OSError, ValueError) as exc:
+            raise SpectrumImportError(str(exc)) from exc
+    if suffix in (".ecsv", ".dat", ".tsv", ".txt", ".asc", ".fits", ".fit", ".fts"):
+        from ecas.ingestion.tabular_formats import import_tabular_spectrum
+        return import_tabular_spectrum(path)
+    if suffix == ".csv" and archive_schema is None:
+        # Recognize an explicit physical schema, never numeric-range guessing.
+        import csv
+        try:
+            with path.open(encoding="utf-8-sig", newline="") as stream:
+                headers = next(csv.reader(stream), [])
+            if headers == ["wavelength_nm", "absorption_cross_section_cm2_per_molecule"]:
+                from ecas.identification.library import load_library_spectrum
+                return load_library_spectrum(path)
+        except (OSError, ValueError) as exc:
+            raise SpectrumImportError(str(exc)) from exc
+    if suffix != ".csv":
         raise SpectrumImportError(
             f"Unsupported file format '{path.suffix or '(no extension)'}'. "
-            "Currently, only CSV files are supported."
+            "Use CSV, supported scientific tables, or uncompressed JCAMP-DX."
         )
 
     return import_spectrum_csv(

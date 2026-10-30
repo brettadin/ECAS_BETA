@@ -16,3 +16,6 @@ docs/Chunk_5/review_20261028/*.txt -whitespace
 docs/Chunk_5_1/verification_catalogue_20261028/initial-count-assumption.log -whitespace
 # Preserve hashed feedback-review prompts byte-for-byte across checkouts.
 docs/Chunk_5_1/review_*_20261028/*.txt -text -whitespace
+# Preserve scientific library bytes and checksums across checkout.
+data/ECAS_Spectral_Library/Raw_Sources/** -text
+data/ECAS_Spectral_Library/Ready_For_ECAS/** -text
