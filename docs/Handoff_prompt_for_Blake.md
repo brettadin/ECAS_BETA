@@ -115,7 +115,7 @@ The goal is to improve the existing comparison functionality by introducing a su
 
 # 4. Investigate ECAS v1 — use its Identify tab as the reference
 
-There is an older version of the application called `ecas_v1`.
+There is an older version of the application called `ecas_v1`. (https://github.com/brettadin/ecas)
 
 It is included in the project history/archive.
 
@@ -487,3 +487,7 @@ Investigate the existing code and v1 methodology, agree on the approach between 
 Prioritize getting a scientifically defensible, working molecular identification tool into the current ECAS application.
 
 We can refine thresholds, presentation and advanced functionality later. The immediate objective is to restore the stronger identification approach from ECAS v1 using the real local spectral library.
+
+### last minute manual edit
+
+make sure you update the readme and other documents and records as you go. if we get this new version of the identify thing in, the readme and other stuff will be out of date. so if you get bored, make sure all our documents are up to date and accurate. verify all your stuff by reading through the code before you claim something to be true in the documents. 
