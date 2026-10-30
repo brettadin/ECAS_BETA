@@ -115,7 +115,7 @@ The goal is to improve the existing comparison functionality by introducing a su
 
 # 4. Investigate ECAS v1 — use its Identify tab as the reference
 
-There is an older version of the application called `ecas_v1`.
+There is an older version of the application called `ecas_v1`. (https://github.com/brettadin/ecas)
 
 It is included in the project history/archive.
 
