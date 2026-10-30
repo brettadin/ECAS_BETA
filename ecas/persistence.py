@@ -143,6 +143,7 @@ def _to_spectrums_dict(data_dict: dict) -> SpectrumData:
         signal_unit=data_dict.get("signal_unit"),
         signal_type=data_dict.get("signal_type"),
         warnings=warnings,
+        metadata=tuple(tuple(pair) for pair in data_dict.get("metadata", ())),
     )
 
 
@@ -188,6 +189,7 @@ def save_spectrum_to_database(
                 "signal_unit": spectrum.signal_unit,
                 "signal_type": spectrum.signal_type,
                 "warnings": spectrum.warnings,
+                **({"metadata": spectrum.metadata} if spectrum.metadata else {}),
                 **({"attachment": attachment} if attachment is not None else {}),
             })
 
@@ -215,6 +217,7 @@ def save_spectrum_to_database(
             "signal_unit": spectrum.signal_unit,
             "signal_type": spectrum.signal_type,
             "warnings": spectrum.warnings,
+            **({"metadata": spectrum.metadata} if spectrum.metadata else {}),
             **({"attachment": attachment} if attachment is not None else {}),
         })
         cursor = database_if_exists.execute(

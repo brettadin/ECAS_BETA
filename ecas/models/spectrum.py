@@ -34,6 +34,10 @@ class SpectrumData:
     # Non-fatal import limitations, such as missing uncertainty values.
     warnings: tuple[str, ...] = ()
 
+    # Explicit source header/curation facts. Empty for legacy imports; never
+    # inferred from the shape or magnitude of the measurements.
+    metadata: tuple[tuple[str, str], ...] = ()
+
     @property
     def row_count(self) -> int:
         """Return the number of imported measurement rows."""

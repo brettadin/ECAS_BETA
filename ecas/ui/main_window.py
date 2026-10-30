@@ -170,6 +170,8 @@ class ECASWindow(QMainWindow):
         self.current_spectrum_schema = None
         self.current_project_attachment = None
         self.current_source_sha256 = None
+        self.current_project_record_id = None
+        self.current_project_id = None
         self.project_store = ProjectStore(projects_dir if projects_dir is not None
                                           else Path(__file__).resolve().parents[2] / 'projects')
         self.project_browser = None
@@ -349,7 +351,7 @@ class ECASWindow(QMainWindow):
         return ' — '.join(part for part in (
             planet, publication or self.current_spectrum.source_file.name, instrument) if part)
 
-    def _comparison_metadata(self) -> dict[str, str]:
+    def _comparison_metadata(self) -> dict[str, object]:
         """Return established header/archive metadata without rereading source files."""
         details = self.current_spectrum_details
         table = dict(details.metadata) if details is not None else {}
@@ -361,7 +363,17 @@ class ECASWindow(QMainWindow):
         def clean(value):
             return ' '.join(value.split()) if isinstance(value, str) else ''
 
-        meta: dict[str, str] = {}
+        meta: dict[str, object] = dict(self.current_spectrum.metadata) if self.current_spectrum else {}
+        if table:
+            meta['source_table_metadata'] = dict(table)
+        if archive:
+            meta['archive_metadata'] = dict(archive)
+        if self.current_project_record_id is not None:
+            meta['project_record_id'] = str(self.current_project_record_id)
+            meta['project_id'] = self.current_project_id
+        for key in ('bibcode', 'spec_path'):
+            if archive.get(key):
+                meta[key] = str(archive[key])
         planet = clean(archive.get('pl_name')) or clean(table.get('PL_NAME'))
         instrument = clean(archive.get('instrument')) or clean(table.get('INSTRUMENT'))
         facility = clean(archive.get('facility')) or clean(table.get('FACILITY'))
@@ -496,6 +508,8 @@ class ECASWindow(QMainWindow):
 
         self.spectrum_table.resizeColumnsToContents()
         self.current_spectrum = spectrum
+        self.current_project_record_id = None
+        self.current_project_id = None
         self.current_spectrum_schema = schema
         self.current_project_attachment = None
         self.current_source_sha256 = None
@@ -528,6 +542,8 @@ class ECASWindow(QMainWindow):
             self.spectrum_table.setColumnCount(0)
 
         self.current_spectrum = None
+        self.current_project_record_id = None
+        self.current_project_id = None
         self.current_spectrum_details = None
         self.current_spectrum_schema = None
         self.current_project_attachment = None
@@ -551,10 +567,10 @@ class ECASWindow(QMainWindow):
             self,
             "Import Spectrum",
             "",
-            "Spectrum files (*.csv *.tbl *.ecsv *.dat *.tsv *.fits *.fit *.fts);;"
+            "Spectrum files (*.csv *.tbl *.ecsv *.dat *.tsv *.txt *.asc *.fits *.fit *.fts *.jdx *.dx *.jcamp *.jcm);;"
             "CSV files (*.csv);;NASA IPAC tables (*.tbl);;"
-            "Astropy ECSV / ASCII (*.ecsv *.dat *.tsv);;"
-            "FITS binary tables (*.fits *.fit *.fts);;All files (*)",
+            "Astropy ECSV / ASCII (*.ecsv *.dat *.tsv *.txt *.asc);;"
+            "FITS binary tables (*.fits *.fit *.fts);;JCAMP-DX (*.jdx *.dx *.jcamp *.jcm);;All files (*)",
         )
 
         # Cancelling the dialog does not count as a failed import.
@@ -621,6 +637,8 @@ class ECASWindow(QMainWindow):
         return import_spectrum(path, archive_schema=schema), None
 
     def closeEvent(self, event):
+        if self.comparison_browser.identification_panel is not None:
+            self.comparison_browser.identification_panel.shutdown()
         self.nasa_browser.cancel()
         self.reference_browser.shutdown()
         super().closeEvent(event)
@@ -643,6 +661,8 @@ class ECASWindow(QMainWindow):
         try:
             self._display_spectrum(record.spectrum, schema=record.import_schema, nasa_source=record.details is not None)
             if self.current_spectrum is record.spectrum:
+                self.current_project_record_id = record.record_id
+                self.current_project_id = self.project_browser.projects.currentText()
                 self.current_spectrum_details = record.details
                 self.current_project_attachment = record.attachment
                 self.current_source_sha256 = (

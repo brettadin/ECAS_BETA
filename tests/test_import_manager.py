@@ -9,10 +9,10 @@ from ecas.ingestion.import_manager import import_spectrum
 
 
 def test_import_manager_rejects_unsupported_format(tmp_path):
-    source = tmp_path / "spectrum.txt"
+    source = tmp_path / "spectrum.bin"
     source.write_text("wavelength signal\n1.0 2.0\n", encoding="utf-8")
 
-    with pytest.raises(SpectrumImportError, match="only CSV files are supported"):
+    with pytest.raises(SpectrumImportError, match="Unsupported file format"):
         import_spectrum(source)
 
 
@@ -20,7 +20,7 @@ def test_import_manager_rejects_file_without_extension(tmp_path):
     source = tmp_path / "spectrum"
     source.write_text("wavelength,signal\n1.0,2.0\n", encoding="utf-8")
 
-    with pytest.raises(SpectrumImportError, match="only CSV files are supported"):
+    with pytest.raises(SpectrumImportError, match="Unsupported file format"):
         import_spectrum(source)
 
 

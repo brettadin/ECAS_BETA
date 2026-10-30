@@ -424,6 +424,35 @@ class ComparisonBrowser(QWidget):
         self.technical_toggle_button.clicked.connect(self._toggle_technical_details)
         self.copy_technical_button.clicked.connect(self._copy_technical_details)
 
+        self.identification_panel = None
+        self.identification_container = QWidget()
+        self.identification_layout = QVBoxLayout(self.identification_container)
+        self.identification_layout.setContentsMargins(0, 0, 0, 0)
+        self.identification_toggle = QPushButton('Local library: Identify Molecules')
+        self.identification_toggle.clicked.connect(self._toggle_identification)
+        self.identification_layout.addWidget(self.identification_toggle)
+        layout.insertWidget(2, self.identification_container)
+
+    def open_identification(self):
+        """Discover the library on explicit entry, preserving fast page startup."""
+        if self.identification_panel is None:
+            from ecas.ui.identification_panel import IdentificationPanel
+            self.identification_panel = IdentificationPanel(
+                self.observation_getter, metadata_getter=self.metadata_getter,
+                description_getter=self.description_getter, project_store=self.project_store,
+                active_project_getter=self.active_project_getter, parent=self)
+            self.identification_layout.addWidget(self.identification_panel)
+        self.identification_panel.show()
+        self.identification_toggle.setText('Hide local molecular identification')
+        return self.identification_panel
+
+    def _toggle_identification(self):
+        if self.identification_panel is not None and not self.identification_panel.isHidden():
+            self.identification_panel.hide()
+            self.identification_toggle.setText('Local library: Identify Molecules')
+        else:
+            self.open_identification()
+
     def _build_workflow_panel(self, container: QWidget):
         box = QVBoxLayout(container)
         box.setContentsMargins(0, 4, 0, 4)

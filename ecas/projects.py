@@ -28,7 +28,8 @@ def _payload(spectrum):
     return dict(source_file=str(spectrum.source_file), rows=spectrum.rows,
                 columns=spectrum.columns, axis_unit=spectrum.axis_unit,
                 signal_unit=spectrum.signal_unit, signal_type=spectrum.signal_type,
-                warnings=spectrum.warnings)
+                warnings=spectrum.warnings,
+                **({'metadata': spectrum.metadata} if spectrum.metadata else {}))
 
 
 def _digest(spectrum, attachment, *, source_file=None):

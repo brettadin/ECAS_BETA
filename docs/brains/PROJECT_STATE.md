@@ -3,6 +3,59 @@
 **Last Updated:** 2026-10-29
 **Version:** 1.0 (Beta)
 
+**Local laboratory identification implemented — 2026-10-29 (uncommitted):**
+Added `ecas/identification/` (real-library discovery, AFFN JCAMP / explicit UV–Vis
+CSV loading, v1 BVLS optical-depth mixture and same-weight refitted drop-one
+statistic), `ecas/ui/identification_panel.py` (IR/UV–Vis checkboxes, explicit
+dataset variants, stable colours, plots and compact results), `ecas/observations.py`
+(project/record identities and duplicate-product handling), and
+`ecas/identification_records.py` (batch export and snapshot reproduction).
+Comparisons exposes the new panel on explicit entry; atmospheric comparison,
+dimension guards and strict cached ExoMol behavior remain separate.
+
+Imported the real library from pinned GitHub revision
+`a84c9d3ccf5e5dd230716feb9e972b60e0c454d9`: 88 files checked against Git blob IDs.
+All raw/prepared numerical files are unchanged. Corrected 22 UV–Vis manifest
+paths and IR inventory documentation links. Discovery yields 40 datasets with
+zero discovery issues (18 IR / 22 UV–Vis). Six UV–Vis CSV datasets contain negative
+measurements, preserved unchanged. The PH3 repeated wavelength remains visible
+but blocks interpolation pending an explicit reduction. Source experimental
+metadata survives imports and project storage without changing empty-metadata
+legacy integrity digests. Added SciPy 1.18.1 to project requirements/environment.
+
+Verification: initial focused engine/library checks 10 passed; final cross-review
+checks 11 passed after a disjoint-coverage regression. UI/import/integration
+selection: 20 passed. Full headless regression with warning escalation:
+**688 passed, 22 skipped, 0 failed, 0 warnings** (latest full run 29.88 s). Skips: 21 opt-in live
+network checks and one unavailable directory-symlink check. Command:
+`.venv/Scripts/python.exe -I -B -m pytest -W error -p no:cacheprovider
+-o pythonpath=. -q -rs --tb=short --basetemp=.venv/checks/identification-release-check`
+with `QT_QPA_PLATFORM=offscreen`. An earlier restricted run failed creating test
+temporary folders; explicit workspace basetemp resolved that environment issue.
+Old format-rejection tests now use genuinely unsupported `.bin` instead of the
+newly supported `.txt`; their rejection/clearing assertions remain.
+
+Both agents reviewed the integration. Corrected stale results after planet-filter
+changes, unhashed snapshot identity collisions, and empty-domain noise calculation.
+Final identity follow-up preserves an open spectrum's original project ID even
+when the project selector changes; the 26 affected UI/window tests passed (5.84 s).
+Solver/Python/NumPy versions are recorded in new analysis settings.
+Offscreen application layout rendered and visually inspected with explicitly
+loaded Windows Segoe UI font (the offscreen plugin initially exposed no system
+fonts). This is not normal-desktop user acceptance or empirical identification
+validation. Known limits: conditional uncalibrated scores, independent observations
+only, exploratory signed cross-section mode, no cross-section/optical-depth mixing,
+no direct planetary-depth fitting, unknown conditions and temperature mismatch
+warnings, assumed continuous interpolation support and unmodelled instrument
+response/reference uncertainty. Full methodology and source references:
+`docs/architecture/LABORATORY_IDENTIFICATION.md`.
+
+No commits/pushes. The pre-existing trailing blank-line change in
+`docs/HANDOFF_TO_OPENAI.md` was preserved. Next meaningful acceptance: inspect the
+workflow with an independently acquired compatible laboratory observation and
+normal desktop UI; calibrated atmospheric inference and wider UI redesign remain
+separate work.
+
 **Consolidation of Priorities 1–7 and Transit & Orbit Visualizer published to GitHub — 2026-10-29 (`4b4d1c0`):** Completed consolidation of beta core with v1 visual capabilities following `10_29_26_ecas_beta_review_initial.md` and `ECAS_going_forward_considerations.md`. Implemented: (1) `audit_observation_bin_semantics()` in `ecas/comparison/inputs.py` disentangling FWHM from top-hat bin edges and passband integration separated from grid interpolation in `ecas/comparison/alignment.py`; (2) forward-model parameter bounds in `ecas/comparison/model_generator.py` and 11 benchmark tests in `tests/test_forward_model_physics.py` (analytic Rayleigh slope within 0.5%, $H \propto T/g$, VMR scaling, cloud floor, quadrature convergence); (3) `cached_only` ExoMol opacity mode as default, blocking non-overlapping species with specific wavenumber requirements, with transparent candidate badges `[Real ExoMol]` vs `[Synthetic Template]`; (4) reduced chi-square $\chi_\nu^2 = q / N$ in `ecas/comparison/residuals.py` and ill-conditioned covariance check $\kappa > 10^{12}$ in `ecas/comparison/eligibility.py`; (5) attestation conflict detection and structured provenance (`source_provided`, `user_attested`, `bin_derived`); (6) raw file disk verification vs signed snapshots in `reproduce_selected_comparison`; and (7) interactive `TransitVisualizerPage` in `ecas/ui/transit_view.py` with limb darkening, observer sky view, blackbody star coloring, scrubbing controls, and Comparisons preset linking. Suite: **672 passed, 21 skipped, 0 failed, 0 warnings** in 23.66s (`pytest -W error`).
 
 **Post-review physics, data-accuracy & UI polish published to GitHub — 2026-10-29 (`5d55d08`):** Added 1D isothermal hydrostatic limb-transmission forward-model generator & leave-one-out multi-molecule sensitivity (`ecas/comparison/model_generator.py`), UV-Vis cross-section & emission-reference classification (`ecas/ingestion/tabular_formats.py`), top-hat passband bin integration, asymmetric uncertainty (>10%) bias guard (`ecas/comparison/inputs.py`), systematic baseline offset diagnostics (`ecas/comparison/residuals.py`), 1-click wavenumber/wavelength display toggles (`ecas/visualization/reference_plot.py`, `ecas/ui/molecular_browser.py`, `ecas/ui/comparison_browser.py`), metadata Quick Setup & `Generate, Auto-Align & Compare` workflow, opt-in `@pytest.mark.live_network` health checks (`tests/test_live_network_health.py`, `tests/test_physics_ux_and_attribution.py`), plot minimum height squish protection across `SpectraPlot`, `ReferencePlot`, and `ResidualPlot` with internal `QScrollArea`, clean 1-line `comparisonSummaryCard` with collapsible technical panel, and collapsible `Show information` toggles for observation and reference source metadata. Suite: 622 passed, 22 skipped in 16.29s (`pytest -W error`).
