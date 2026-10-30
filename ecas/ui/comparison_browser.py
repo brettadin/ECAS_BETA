@@ -925,12 +925,11 @@ class ComparisonBrowser(QWidget):
 
         self.gen_source_selector = QComboBox()
         for text, data in (
-            ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
             ('Opacities: Cached ExoMol cross sections only (strict line lists)', 'cached_only'),
+            ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
             ('Opacities: Broadband band templates (exploratory preview)', 'templates_only'),
         ):
             self.gen_source_selector.addItem(text, data)
-        self.gen_source_selector.setCurrentIndex(0)
         self.gen_source_selector.currentIndexChanged.connect(self._on_opacity_source_mode_changed)
 
         for widget in (
