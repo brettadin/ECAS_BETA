@@ -1,7 +1,10 @@
 # ECAS - Project State Document
 
-**Last Updated:** 2026-10-29
+**Last Updated:** 2026-10-30
 **Version:** 1.0 (Beta)
+
+**Unified baseline and UI exploration checkpoint for Claude — 2026-10-30 (local checkpoint):**
+Unified remote master commit 5a41fd7 (merging PR #8: laboratory identification library, FITS streaming, Identify UI panel) with verified Priorities 1–7 forward modeling, transit visualizer, and human-testing UI bug fixes (Issues 1–4). Full test suite: 707 passed, 21 skipped (opt-in network health tests), 0 failures, 0 warnings (pytest -W error). Created local checkpoint tag checkpoint-20261030-pre-claude-ui and local branch claude/ui-exploration for Claude to explore UI refinements without endangering master or project context. Captured Jupiter MIRI imaging findings in docs/research/JUPITER_MIRI_FITS_FINDINGS.md and authored comprehensive handoff in docs/HANDOFF_TO_CLAUDE.md. No push to GitHub.
 
 **Brett feedback fixes — 2026-10-29 (local, uncommitted):**
 Reproduced the blank Identify plot with the actual cached Rustamkulov WASP-39 b
