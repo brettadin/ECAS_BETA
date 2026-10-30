@@ -9,20 +9,59 @@ transit-depth comparison and fixed-parameter forward-model species attribution.
    Supported local reference schemas are uncompressed AFFN JCAMP-DX and the
    explicit wavelength_nm/absorption_cross_section_cm2_per_molecule CSV schema.
 2. In Comparisons, open **Local library: Identify Molecules**.
-3. Add the current input, or add observations from the active project. Check the
-   inputs to analyse; the planet filter limits which checked inputs are included.
+3. The current input is added on first opening when available. Use **Add observation
+   files…** to select several files directly, **Add current input**, or add observations
+   from the active project. Check the inputs to analyse; the planet filter limits
+   which checked inputs are included. The checked count and per-input progress make
+   batch execution explicit; clicking an observation previews its source measurements.
 4. Select molecule checkboxes in IR and/or UV–Vis. Choose one source/condition
-   variant per selected molecule. Variants are not automatically merged.
+   variant per selected molecule. Variants are not automatically merged. **Show
+   selected reference spectra** previews source measurements, without fitting or
+   normalization, in separate tabs for each modality, quantity and coordinate unit.
 5. Run **Identify Molecules**. Every selected reference receives a result or an
    explicit blocked reason. Inspect individual observations using the result
-   selector. The plot and table share stable molecular colours.
+   selector. The plot and table share stable molecular colours. Blocked results keep
+   the input visible in its original units, with reasons immediately above the graph;
+   a measured preview never represents a successful fit or fabricated sigma.
 6. Export a checksum-bound JSON analysis record; **Open and reproduce saved
    identification** recomputes from saved input arrays and settings without
    requiring original files. This does not re-ingest or authenticate raw sources.
 
-Planetary transit depths are blocked here. Their physical analysis remains in
-the existing atmospheric forward-model tools. A successful self-comparison of a
+Planetary transit depths are blocked here. **Open atmospheric comparison for checked
+inputs** transfers checked transit snapshots and metadata into the existing model
+workspace, selects strict cached ExoMol mode, and leaves generation explicit. This
+does not turn laboratory library files into atmospheric opacities. Laboratory batches
+run all checked inputs independently; atmospheric generation still runs one chosen
+observation at a time. A successful self-comparison of a
 reference file checks numerical consistency, not independent identification.
+
+### Feedback reproduction and FITS containers (2026-10-29)
+
+The cached Rustamkulov WASP-39 b NIRSpec PRISM observation has 207 transit-depth
+points (0.53146–5.34413 microns). The corrected panel displays all 207 before and
+after a blocked laboratory fit. The available local H2O POKAZATEL 500 K opacity
+overlaps only 122 points; 85 shorter-wavelength points are outside coverage. CO2
+and CH4 atmospheric opacity are absent from that runtime cache. The atmospheric
+path can produce a partial H2O model, with explicit temperature and line-profile
+limitations; no full-band molecular identification or calibrated sigma is claimed.
+
+FITS import now seeks through containers up to 8 GiB instead of applying the
+16 MiB text-table limit to the entire file. It loads one unambiguous scalar numeric
+spectral BINTABLE, with limits of 100,000 rows, 128 columns and 1,000,000 decoded
+cells; container scans allow 128 HDUs and 128 header blocks per HDU. Scaling
+(`TSCALn`, `TZEROn`), integer nulls and slash-containing units are preserved.
+Image extensions can precede the spectrum. Image-only, event-list, vector and
+multiple-spectral-table products need explicit extraction/selection and are not
+silently interpreted as spectra. Source hashing also streams bytes.
+
+Two 84 MiB structural FITS containers carrying unchanged, real-derived NASA
+measurements test import and hashing; these are format engineering checks, not
+new observations. The reported `jupiter__9303301451N_evt.fits` was not available
+in the inspected repository branches or local data and has not been validated.
+Project raw-source attachments still have the separate 16 MiB limit; large FITS
+can be opened directly and analysed when compatible, but cannot yet be embedded
+as raw project attachments. Generic laboratory files still require explicit
+quantity, coordinate units and IR/UV–Vis modality metadata for fitting.
 
 ## Recovered original method
 

@@ -5,6 +5,22 @@ ECAS — Exoplanetary Characterization & Astrochemistry Suite is a scientific de
 application for exoplanet spectroscopy. It uses SQLite for project spectrum
 persistence and currently has a separate NASA raw-product/provenance cache.
 
+## Identification feedback and large FITS — 2026-10-29
+
+- Separate measured previews from fitted curves. A blocked fit must keep the
+  observation visible in its original quantity/units and expose the reason next
+  to the graph. Reference previews group actual quantities and units separately;
+  they never imply physical comparability with planetary transit depth.
+- Transfer checked transit observation snapshots into atmospheric comparison
+  with strict cached ExoMol mode. Preserve individual identities/metadata and
+  require explicit model generation. Laboratory batch scores and atmospheric
+  model sensitivity remain different analyses; no combined sigma is introduced.
+- Replace whole-file FITS buffering with bounded header/row reads and seeks.
+  Permit large containers while bounding decoded tables. Apply declared scaling
+  and null values, reject ambiguous spectra, and explain required extraction for
+  images, event lists or vector tables. Retain the separate project attachment
+  size limit pending a deliberate large-source persistence design.
+
 ## Local identification / v1 recovery — 2026-10-29
 
 - Restore the actual v1 optical-depth BVLS mixture, continuum, residual MAD and

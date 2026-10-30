@@ -3,6 +3,48 @@
 **Last Updated:** 2026-10-29
 **Version:** 1.0 (Beta)
 
+**Brett feedback fixes — 2026-10-29 (local, uncommitted):**
+Reproduced the blank Identify plot with the actual cached Rustamkulov WASP-39 b
+NIRSpec PRISM transmission dataset. Laboratory eligibility correctly blocks
+planetary transit depth, but the UI previously discarded the plotted input.
+`identification_panel.py` now displays source measurements before fitting and on
+blocked results, explains failures beside the graph, previews references in
+separate quantity/unit tabs, imports several files directly, and displays checked
+counts and per-input progress. Opening the panel snapshots the current input.
+`comparison_browser.py` transfers checked transit snapshots and metadata into
+strict cached-only atmospheric comparison without generating models implicitly.
+Laboratory batches run independently; atmospheric generation remains one chosen
+observation at a time. A real IR + signed UV two-input worker regression passes.
+
+`tabular_formats.py` streams/scans FITS containers up to 8 GiB, seeking past
+images/unrelated tables and decoding one unambiguous scalar spectral BINTABLE.
+Decoded limits: 100,000 rows, 128 columns, 1,000,000 cells; scans limited to 128
+HDUs and 128 header blocks per HDU. Scaling/null values and quoted units are
+handled explicitly. Unsupported event/image/vector products receive extraction
+diagnostics. Source hashing in `observations.py`/`main_window.py` also streams.
+Project raw attachments retain their separate 16 MiB limit. Tests import two
+84 MiB structural image containers containing unchanged NASA-derived spectral
+rows using less than 8 MiB traced memory; these are format checks, not invented
+spectral observations. Brett's `jupiter__9303301451N_evt.fits` was not present in
+the inspected ECAS_BETA branches, original ECAS main, or local data/Downloads;
+its actual content and compatibility remain unverified pending a resolvable file.
+
+Verification: focused identification/comparison UI **23 passed**; agent FITS
+checks **21 passed**. Full `QT_QPA_PLATFORM=offscreen` regression with warning
+escalation: **706 passed, 22 skipped, 0 failed, 0 warnings** (41.56 s), using
+`.venv/Scripts/python.exe -I -B -m pytest -W error -p no:cacheprovider
+-o pythonpath=. -q -rs --tb=short --basetemp=.venv/checks/feedback-full`.
+Final identification/FITS checks after the input-label refinement: **24 passed**
+(4.86 s). Scoped `git diff --check` passed, excluding the pre-existing handoff edit.
+Skips are 21 opt-in live network checks and unavailable directory-symlink creation.
+Offscreen visual inspection confirms the Rustamkulov 207-point measured curve
+remains visible. Actual atmospheric handoff/generation produces two H2O/without-H2O
+candidates on 122 shared points; 85 short-wavelength points lack cached opacity.
+Only H2O POKAZATEL 500 K is locally available; its temperature mismatch with the
+1166 K preset and line-profile limitations remain. No full-band identification,
+calibrated detection sigma, or verification of the unavailable Jupiter file is
+claimed. Existing user changes to `docs/HANDOFF_TO_OPENAI.md` are untouched.
+
 **Local laboratory identification implemented — 2026-10-29 (uncommitted):**
 Added `ecas/identification/` (real-library discovery, AFFN JCAMP / explicit UV–Vis
 CSV loading, v1 BVLS optical-depth mixture and same-weight refitted drop-one

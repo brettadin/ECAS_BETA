@@ -4,7 +4,7 @@ ECAS is a scientific desktop software suite for exoplanetary atmospheric charact
 
 The suite consolidates physical radiative-transfer modeling, molecular reference data handling, and statistical residual diagnostics with an intuitive, reproducible research workflow.
 
-> **Latest local status (2026-10-29):** Local laboratory molecular identification is implemented alongside the atmospheric comparison workflow. Full offscreen regression: **688 passed, 22 skipped, 0 failed, 0 warnings** under `pytest -W error` (21 opt-in network checks and one unavailable directory-symlink check). This is software verification, not calibrated molecular detection. Authoritative implementation records and limitations are maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
+> **Latest local status (2026-10-29):** Identification now retains measured plots for blocked fits, exposes multi-input progress and atmospheric handoff, and streams supported large FITS containers. Full offscreen regression: **706 passed, 22 skipped, 0 failed, 0 warnings** under `pytest -W error` (21 opt-in network checks and one unavailable directory-symlink check). This is software verification, not calibrated molecular detection. Authoritative implementation records and limitations are maintained in [`docs/brains/PROJECT_STATE.md`](docs/brains/PROJECT_STATE.md) and [`docs/brains/DECISIONS.md`](docs/brains/DECISIONS.md).
 
 ---
 
@@ -48,7 +48,7 @@ The suite consolidates physical radiative-transfer modeling, molecular reference
 
 ### 1. Spectral Data & Ingestion
 * **NASA Exoplanet Archive Integration**: Search planets by canonical name or alias (e.g. `WASP39b`), preview published transmission spectra, retrieve raw IPAC tables (`.tbl`), and reopen cached products offline. Preserves signed uncertainties, source URLs, retrieval dates, and all 29 original columns alongside canonical coordinate/signal aliases.
-* **Broad Tabular & FITS Format Support**: Ingests Astropy ECSV (`.ecsv`), delimited ASCII tables (`.dat`, `.tsv`, `.txt`, `.asc`), and FITS 1D binary tables (`.fits`, `.fit`, `.fts` with `XTENSION = 'BINTABLE'`).
+* **Broad Tabular & FITS Format Support**: Ingests Astropy ECSV (`.ecsv`), delimited ASCII tables (`.dat`, `.tsv`, `.txt`, `.asc`), and scalar FITS spectral binary tables (`.fits`, `.fit`, `.fts` with `XTENSION = 'BINTABLE'`). FITS containers up to 8 GiB are read using bounded memory; decoded spectra are limited to 100,000 rows and 1,000,000 cells. Images/event lists require spectral extraction, and multiple spectral tables require explicit selection. Raw project attachments retain their separate 16 MiB limit.
 * **Local Laboratory Reference Formats**: Imports uncompressed AFFN JCAMP-DX (`.jdx`, `.dx`, `.jcamp`, `.jcm`) and the curated UV–Vis CSV schema, preserving signed measurements and source metadata through project storage.
 * **Observable & Unit Distinction**: Distinguishes exoplanet transmission spectra (`observable = 'transit_depth'`, units `%`, `fraction`, or `ppm`) from laboratory FTIR/UV-Vis spectroscopy (`wavenumber` in $\text{cm}^{-1}$, `absorbance`, `transmittance`, or cross section in $\text{cm}^2/\text{molecule}$). Laboratory spectra are blocked from being mistakenly compared directly against planetary transit depths.
 
@@ -97,6 +97,8 @@ The absorption engine recovers v1's nonnegative optical-depth mixture fit, conti
 UV–Vis cross-section-to-cross-section fitting is a separate exploratory measured-template adaptation that retains negative values. Cross-section/optical-depth mixing and planetary transit-depth inputs are blocked here. Phase conflicts, missing coverage and repeated coordinates produce explicit reasons rather than invented scores. Unknown conditions and temperature differences limit interpretation. Reference interpolation assumes continuous support; resolution and internal gaps require independent review.
 
 Add multiple observations from the active project, filter by planet, and inspect independent results for each input. Duplicate raw products are reported without counting them as independent evidence. Export and reproduce checksum-bound input arrays, provenance, settings and results. No combined sigma across observations is calculated. See [methodology, workflow, and limits](docs/architecture/LABORATORY_IDENTIFICATION.md).
+
+**Add observation files…** loads several inputs directly. Measured spectra remain visible before fitting and when a fit is blocked; the reason appears beside the graph. **Show selected reference spectra** displays source references separately by quantity and units. For planetary transmission observations such as WASP-39 b NIRSpec, **Open atmospheric comparison for checked inputs** transfers the observations to the physical-model tools in strict real-data mode. Atmospheric models still run one selected observation at a time and require suitable cached opacity coverage; laboratory reference selection alone cannot produce a planetary identification score.
 
 ---
 
