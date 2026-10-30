@@ -1,133 +1,94 @@
-ECAS — NIST COLLECTION VALIDATION REPORT
-=======================================================
+ECAS IR SPECTRAL LIBRARY — CURRENT INVENTORY
+================================================
 
-Files inspected: 72
+INVENTORY SCOPE
 
-FILE VALIDATION STATUS
-------------------------------
-POINT COUNT MISMATCH: 72
+This report describes the current IR files present in the ECAS spectral library.
 
-SOURCE COLLECTIONS
-------------------------------
-COBLENTZ: 15
-MSDC-IR: 7
-QUANT-IR: 50
+Raw source directory:
+    Raw_Sources/IR/
 
-PHASES
-------------------------------
-GAS (100 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
-GAS (100 mmHg, N2 ADDED, TOTAL PRESSURE 600 mmHg): 2
-GAS (150 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 2
-GAS (200 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
-GAS (40 PPM): 1
-GAS (400 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
-GAS (50 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 2
-GAS (600 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
-GAS (HEATING PARAFORMALDEHYDE; CONCENTRATION UNKNOWN): 1
-GAS; $$ MATHESON CO. 99% PURE: 1
-LIQUID (NEAT): 1
-SOLUTION (UNKNOWN CONCENTRATION IN CCl4) VS. CCl4: 1
-gas: 57
+Prepared directory:
+    Ready_For_ECAS/IR/
 
-MOLECULAR FORMULAS
-------------------------------
-C 2 H 2: 1
-C H 4: 1
-C H2 O: 2
-C H2: C H2: 25
-C H4: 1
-C O: 2
-C O 2: 1
-C O2: 1
-C2 H2: 1
-C2 H4: 1
-H 2 O: 1
-H 3 N: 1
-H2 O: 1
-H2 S: 1
-H3 N: 1
-N 2 O: 1
-N O: 1
-N2 O: 1
-O2 S: 2
-O3: 1
-S O2: 25
+CURRENT FILE COUNTS
 
-FILES NEEDING ATTENTION
-------------------------------
-Essential\CH4\CH4_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\CH4\CH4_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\CO\CO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\CO\CO_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\CO2\CO2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\CO2\CO2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\H2O\H2O_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\H2O\H2O_liquid_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\NH3\NH3_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\NH3\NH3_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\O3\O3_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index10.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index11.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index12.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index13.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index14.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index15.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index16.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index17.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index18.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index19.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index2.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index20.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index21.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index22.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index23.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index24.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index25.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index26.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index3.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index4.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index5.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index6.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index7.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index8.jdx: POINT COUNT MISMATCH — Parsed
-Essential\SO2\SO2_gas_IR_index9.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H2\C2H2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H2\C2H2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index10.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index11.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index12.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index13.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index14.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index15.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index16.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index17.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index18.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index19.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index2.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index20.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index21.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index22.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index23.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index24.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index25.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index3.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index4.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index5.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index6.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index7.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index8.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\C2H4\C2H4_gas_IR_index9.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\H2CO\H2CO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\H2CO\H2CO_solution_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\H2S\H2S_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\N2O\N2O_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\N2O\N2O_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
-High_Priority\NO\NO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Raw source files:                  18
+Prepared files:                    18
+Molecule directories represented:  13
+File format:                       JCAMP-DX (.jdx)
 
-IMPORTANT LIMITATIONS
-------------------------------
-This is an initial structural validator for XYDATA=(X++(Y..Y)) JCAMP-DX records. It does not establish scientific accuracy, calibration, or full JCAMP-DX compliance.
+MOLECULE COVERAGE
+
+C2H2:  1 file
+C2H4:  1 file
+CH4:   2 files
+CO:    2 files
+CO2:   2 files
+H2CO:  1 file
+H2O:   2 files
+H2S:   1 file
+N2O:   1 file
+NH3:   2 files
+NO:    1 file
+O3:    1 file
+SO2:   1 file
+
+TOTAL: 18 files across 13 molecules.
+
+RAW/PREPARED CORRESPONDENCE
+
+All 18 raw files have matching prepared files with the same relative paths.
+
+Comparison of the current archive confirms that the corresponding raw and prepared files are byte-for-byte identical.
+
+The Ready_For_ECAS/IR directory therefore currently contains copies of the source JCAMP-DX files. It does not represent a separate conversion, normalization, interpolation or resampling operation.
+
+SCIENTIFIC METADATA
+
+The files contain individual JCAMP-DX metadata. These records must be consulted when selecting or interpreting a spectrum.
+
+Metadata can include:
+    Molecular identity
+    Sample phase
+    X-axis units
+    Y-axis units and signal type
+    Spectral range
+    Resolution
+    Temperature and pressure
+    Instrument and sample conditions
+    Source and digitization information
+
+The collection does not contain one uniform measurement type. Some files represent absorbance, while others represent transmittance. Sample conditions and provenance also vary.
+
+The H2O collection includes both a gas-phase spectrum and a liquid-phase spectrum.
+
+A spectrum's presence in the library does not establish that it is suitable for every scientific application or directly comparable with another spectrum.
+
+VALIDATION LIMITATIONS
+
+This inventory verifies file presence and raw/prepared correspondence. It does not certify:
+    Full JCAMP-DX compliance
+    Measurement accuracy
+    Calibration
+    Scientific suitability
+    Compatibility between different signal types
+    Compatibility between different sample phases or conditions
+
+The previous 72-file validation report described an earlier collection and used paths that do not correspond to the current library structure. Its point-count mismatch results must not be interpreted as validation results for the current 18 files.
+
+HISTORICAL RECORDS
+
+Documentation/IR/manifest.csv is retained as a historical NIST acquisition manifest. Its records describe the earlier acquisition process and are not the current curated file inventory.
+
+MISSING TARGET MOLECULES
+
+The current IR collection has no files for:
+    HCN
+    O2
+    NO2
+    PH3
+
+These gaps may require future source research or fallback curation.
+
+END OF REPORT
