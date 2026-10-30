@@ -70,7 +70,7 @@ class TestFitDiagnostics:
         assert "Boundary Alert" in comp.plain_language_summary
         assert "VMR_CH4" in comp.solver_status.parameters_at_bounds
         assert len(comp.progressive_disclosure_math) >= 4
-        assert r"\chi_\nu^2" in comp.progressive_disclosure_math["Reduced Chi-Squared"]
+        assert "χ²_ν" in comp.progressive_disclosure_math["Reduced Chi-Squared"]
         assert "Awaiting MCMC / Nested-Sampling" in comp.retrieval_backend_contract["status"]
         assert "must NEVER be transformed into Bayesian posteriors" in comp.retrieval_backend_contract["boundary_warning"]
 

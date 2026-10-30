@@ -71,3 +71,19 @@ class ReferencePlot(QWidget):
     def clear(self):
         self.curve.setData([], [])
         self.current_product = None
+
+    def zoom_in(self):
+        """Zoom in by 20% on both axes."""
+        self.plot_widget.getViewBox().scaleBy((0.8, 0.8))
+
+    def zoom_out(self):
+        """Zoom out by 25% on both axes."""
+        self.plot_widget.getViewBox().scaleBy((1.25, 1.25))
+
+    def reset_view(self):
+        """Reset view range to fit all plotted reference points."""
+        self.plot_widget.getViewBox().autoRange()
+
+    def set_wheel_zoom_enabled(self, enabled: bool):
+        """Toggle mouse-wheel zoom on the plot widget."""
+        self.plot_widget.wheel_zoom_enabled = enabled

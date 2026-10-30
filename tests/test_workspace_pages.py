@@ -94,7 +94,7 @@ def test_settings_paths_and_navigation_do_not_scan_or_write_data(window, tmp_pat
     with patch.object(window.project_store, 'projects') as projects, \
          patch('ecas.ui.molecular_browser.cached_references') as cache, \
          patch('ecas.ui.comparison_browser.cached_references') as comparison_cache:
-        window.navigation.setCurrentRow(5)
+        window.navigate_to('settings')
         window.navigation.setCurrentRow(0)
         projects.assert_not_called()
         cache.assert_not_called()

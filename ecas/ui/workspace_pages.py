@@ -35,10 +35,13 @@ class OverviewPage(QWidget):
             (2, 'Inspect an observation', 'Import CSV files or search the NASA archive for supported transmission tables.'),
             (1, 'Open research projects', 'Save observations with their available source provenance and reopen saved records offline.'),
             (3, 'Find molecular references', 'Search ExoMol; retrieve supported CO2, H2O or CH4 cross sections, or reopen cached products.'),
-            (4, 'Inspect selected inputs', 'Add observation snapshots and independently select cached references. Choices last for this session.'),
-            (5, 'View settings and data locations', 'Check storage paths and choose how local CSV files are interpreted.'),
-            (6, 'Browse references and resources', 'Inspect canonical scientific software, archives, molecular databases, libraries, and benchmark publications.'),
-            (7, 'Simulate transit & orbit', 'Interactive geometric transit light curve and observer sky view simulator.'),
+            (4, 'Atmospheric analysis', 'Run physical forward models, sensitivity analysis, consistency checks, assumption comparisons, and fit diagnostics.'),
+            (5, 'Simulate transit & orbit', 'Interactive geometric transit light curve and observer sky view simulator.'),
+            (6, 'Laboratory identification', 'Fit compatible laboratory absorption measurements using real local IR or UV–Vis references.'),
+            (7, '2D FITS images', 'Inspect spatial image planes, surface brightness, and detector quality flags for 2D FITS products.'),
+            (8, 'Runs & reports', 'Monitor background analysis jobs, resume checkpoints, and export Markdown/HTML reports and JSON manifests.'),
+            (9, 'Browse references and resources', 'Inspect canonical scientific software, archives, molecular databases, libraries, and benchmark publications.'),
+            (10, 'View settings and data locations', 'Check storage paths and choose how local CSV files are interpreted.'),
         )
         for index, caption, description in steps:
             button = QPushButton(caption)
@@ -47,9 +50,9 @@ class OverviewPage(QWidget):
             layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)
             layout.addWidget(_text(description))
         layout.addWidget(_text(
-            'Calculated cross sections are reference products, not transit-depth predictions '
-            'or molecular detections. Comparison calculations and atmospheric modelling '
-            'are not available. Successful retrieval does not establish scientific compatibility.'))
+            'Physical forward models calculate predicted transit spectra using real ExoMol cross sections '
+            'and physical parameters. Observations remain empirical ground truth. '
+            'Successful retrieval or fit score does not guarantee atmospheric detection.'))
         layout.addStretch()
 
     def refresh(self):

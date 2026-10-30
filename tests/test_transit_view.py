@@ -140,9 +140,9 @@ class TestTransitVisualizerUI:
             reference_cache_dir=tmp_path / "cache",
         )
         try:
-            # Switch to Transit Visualizer page (index 7)
-            window.navigation.setCurrentRow(7)
-            assert window.pages.currentIndex() == 7
+            # Switch to Transit Visualizer page
+            assert window.navigate_to("transit visualizer")
+            assert window.pages.currentIndex() == 5
             transit_page = window.transit_page
 
             # Select HD 209458 b preset

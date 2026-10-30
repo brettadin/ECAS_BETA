@@ -1,4 +1,4 @@
-"""2D FITS Astronomical Image Viewer dialog for ECAS.
+"""2D FITS Astronomical Image Viewer dialog and widget for ECAS.
 
 Provides interactive visualization of 2D FITS image extensions (e.g. JWST MIRI
 imaging exposures), including multi-plane inspection (SCI, ERR, DQ, AREA),
@@ -37,58 +37,30 @@ from ecas.ingestion.fits_image import (
 )
 
 
-class FitsImageViewerDialog(QDialog):
-    """Interactive desktop viewer for calibrated 2D FITS imaging products."""
+class FitsImageViewerWidget(QWidget):
+    """Interactive desktop viewer widget for calibrated 2D FITS imaging products."""
 
     def __init__(
         self,
-        container_or_path: FitsImageContainer | str | Path,
+        container_or_path: FitsImageContainer | str | Path | None = None,
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
-        self.setWindowTitle("ECAS - 2D FITS Astronomical Image Viewer")
-        self.resize(1150, 780)
-
-        if isinstance(container_or_path, FitsImageContainer):
-            self.container = container_or_path
-        else:
-            scanned = scan_fits_image(container_or_path)
-            if scanned is None:
-                raise ValueError(f"Could not load FITS image container from {container_or_path}")
-            self.container = scanned
-
+        self.container: FitsImageContainer | None = None
         self.current_plane: FitsImagePlane | None = None
         self.current_raw_data: np.ndarray | None = None
         self.current_stats: dict[str, Any] = {}
 
         self._setup_ui()
-        self._populate_metadata()
-        self._populate_planes()
+
+        if container_or_path is not None:
+            self.load_fits_image(container_or_path)
 
     def _setup_ui(self) -> None:
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(12, 12, 12, 12)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(8)
 
-        # 1. Scientific banner / disclaimer
-        banner = QFrame()
-        banner.setFrameShape(QFrame.StyledPanel)
-        banner.setStyleSheet(
-            "background-color: #2b2b20; border: 1px solid #776600; border-radius: 4px; padding: 6px;"
-        )
-        banner_layout = QHBoxLayout(banner)
-        banner_layout.setContentsMargins(8, 4, 8, 4)
-        banner_label = QLabel(
-            "<b>2D Astronomical Imaging Product:</b> This file contains spatial brightness measurements "
-            "across an optical passband, not a 1D sampled (wavelength vs. signal) spectrum. "
-            "It cannot be imported directly into laboratory spectral fitting without explicit calibrated extraction."
-        )
-        banner_label.setWordWrap(True)
-        banner_label.setStyleSheet("color: #eedd88; font-size: 11px;")
-        banner_layout.addWidget(banner_label)
-        main_layout.addWidget(banner)
-
-        # 2. Main content splitter: Left controls/info, Right ImageView
         splitter = QSplitter(Qt.Horizontal)
         main_layout.addWidget(splitter, stretch=1)
 
@@ -194,7 +166,6 @@ class FitsImageViewerDialog(QDialog):
 
         # PyQtGraph ImageView
         self.image_view = pg.ImageView()
-        # Clean up unnecessary default buttons
         self.image_view.ui.menuBtn.hide()
         self.image_view.ui.roiBtn.hide()
 
@@ -215,16 +186,29 @@ class FitsImageViewerDialog(QDialog):
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
 
-        # Bottom button bar
-        bottom_bar = QHBoxLayout()
-        bottom_bar.addStretch(1)
-        btn_close = QPushButton("Close")
-        btn_close.setFixedWidth(100)
-        btn_close.clicked.connect(self.accept)
-        bottom_bar.addWidget(btn_close)
-        main_layout.addLayout(bottom_bar)
+    def load_fits_image(self, container_or_path: FitsImageContainer | str | Path) -> bool:
+        """Load a 2D FITS container or path and display its default plane."""
+        if isinstance(container_or_path, FitsImageContainer):
+            self.container = container_or_path
+        else:
+            scanned = scan_fits_image(container_or_path)
+            if scanned is None:
+                return False
+            self.container = scanned
+
+        self._populate_metadata()
+        self._populate_planes()
+        return True
+
+    def zoom(self, factor: float) -> None:
+        self.image_view.getView().scaleBy((1.0 / factor, 1.0 / factor))
+
+    def reset_view(self) -> None:
+        self.image_view.getView().autoRange()
 
     def _populate_metadata(self) -> None:
+        if self.container is None:
+            return
         c = self.container
         self.lbl_target.setText(c.target_name or "(Unspecified)")
         self.lbl_product.setText(c.product_summary or "(Unspecified)")
@@ -236,6 +220,8 @@ class FitsImageViewerDialog(QDialog):
         self.lbl_pipeline.setText(c.pipeline_stage or "Standard Level-2 Product")
 
     def _populate_planes(self) -> None:
+        if self.container is None:
+            return
         self.cmb_plane.blockSignals(True)
         self.cmb_plane.clear()
 
@@ -251,12 +237,14 @@ class FitsImageViewerDialog(QDialog):
             self._load_plane(self.container.planes[default_idx])
 
     def _on_plane_changed(self, index: int) -> None:
-        if index < 0 or index >= len(self.container.planes):
+        if self.container is None or index < 0 or index >= len(self.container.planes):
             return
         plane = self.container.planes[index]
         self._load_plane(plane)
 
     def _load_plane(self, plane: FitsImagePlane) -> None:
+        if self.container is None:
+            return
         self.current_plane = plane
         try:
             arr = read_fits_image_plane(self.container.path, plane)
@@ -341,3 +329,57 @@ class FitsImageViewerDialog(QDialog):
         else:
             self.lbl_cursor.setText("Pixel: (X: --, Y: --) | Value: --")
 
+
+class FitsImageViewerDialog(QDialog):
+    """Interactive desktop viewer for calibrated 2D FITS imaging products."""
+
+    def __init__(
+        self,
+        container_or_path: FitsImageContainer | str | Path,
+        parent: QWidget | None = None,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle("ECAS - 2D FITS Astronomical Image Viewer")
+        self.resize(1150, 780)
+
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(10)
+
+        # 1. Scientific banner / disclaimer
+        banner = QFrame()
+        banner.setFrameShape(QFrame.StyledPanel)
+        banner.setStyleSheet(
+            "background-color: #2b2b20; border: 1px solid #776600; border-radius: 4px; padding: 6px;"
+        )
+        banner_layout = QHBoxLayout(banner)
+        banner_layout.setContentsMargins(8, 4, 8, 4)
+        banner_label = QLabel(
+            "<b>2D Astronomical Imaging Product:</b> This file contains spatial brightness measurements "
+            "across an optical passband, not a 1D sampled (wavelength vs. signal) spectrum. "
+            "It cannot be imported directly into laboratory spectral fitting without explicit calibrated extraction."
+        )
+        banner_label.setWordWrap(True)
+        banner_label.setStyleSheet("color: #eedd88; font-size: 11px;")
+        banner_layout.addWidget(banner_label)
+        main_layout.addWidget(banner)
+
+        # 2. Main content viewer
+        self.viewer = FitsImageViewerWidget(container_or_path, parent=self)
+        main_layout.addWidget(self.viewer, stretch=1)
+
+        # 3. Bottom button bar
+        bottom_bar = QHBoxLayout()
+        bottom_bar.addStretch(1)
+        btn_close = QPushButton("Close")
+        btn_close.setFixedWidth(100)
+        btn_close.clicked.connect(self.accept)
+        bottom_bar.addWidget(btn_close)
+        main_layout.addLayout(bottom_bar)
+
+    def __getattr__(self, name: str) -> Any:
+        # Proxy attribute lookup to the underlying viewer widget
+        viewer = self.__dict__.get("viewer")
+        if viewer is not None:
+            return getattr(viewer, name)
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")

@@ -150,6 +150,35 @@ def _strictly_increasing_1d(coords: tuple) -> bool:
     return bool(arr.ndim == 1 and np.isfinite(arr).all() and np.all(np.diff(arr) > 0))
 
 
+def _make_capability_card(
+    title: str,
+    purpose: str,
+    inputs: str,
+    output: str,
+    limitation: str,
+    action: str = '',
+) -> QFrame:
+    card = QFrame()
+    card.setStyleSheet("background-color: #242933; border: 1px solid #3b4252; border-radius: 6px; padding: 6px;")
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(8, 6, 8, 6)
+    layout.setSpacing(3)
+    header = QLabel(f"<b>{title}</b>")
+    header.setStyleSheet("color: #88c0d0; font-size: 11pt; font-weight: 600;")
+    layout.addWidget(header)
+    body = QLabel(
+        f"<b>Purpose:</b> {purpose}<br/>"
+        f"<b>Required Inputs:</b> {inputs}<br/>"
+        f"<b>What Output Shows:</b> {output}<br/>"
+        f"<b>Important Limitation:</b> {limitation}"
+        + (f"<br/><b>Next Action:</b> {action}" if action else "")
+    )
+    body.setWordWrap(True)
+    body.setStyleSheet("color: #d8dee9; font-size: 9.5pt; line-height: 1.3;")
+    layout.addWidget(body)
+    return card
+
+
 class ComparisonBrowser(QWidget):
     """Session observation snapshots, gated candidate comparison, and project records.
 
@@ -206,21 +235,54 @@ class ComparisonBrowser(QWidget):
         layout.setSpacing(8)
         self.scroll_area.setWidget(content)
 
-        title = _label('Comparisons')
+        title = _label('Atmospheric Analysis')
         title.setObjectName('pageTitle')
         layout.addWidget(title)
-        layout.addWidget(_label(
-            'Select inputs independently and inspect their original values below. '
-            'Observation choices last for this session; open saved observations in Projects '
-            'and add them here. Download references in Molecular References, then refresh '
-            'the cached choices. No overlay, residual, score or detection is produced '
-            'merely by selecting inputs; eligible overlays and residuals require compatible '
-            'observables or validated forward-model curves. '
-            'Plots use independent axes and original units; their horizontal positions do not indicate matching wavelengths.'
-        ))
+
+        # Compact Context Summary Card
+        self.context_card = QFrame()
+        self.context_card.setObjectName("atmosphericContextCard")
+        self.context_card.setStyleSheet("""
+            QFrame#atmosphericContextCard {
+                border: 1px solid #3b4252;
+                border-radius: 6px;
+                background-color: #242933;
+            }
+        """)
+        ctx_layout = QVBoxLayout(self.context_card)
+        ctx_layout.setContentsMargins(10, 8, 10, 8)
+        ctx_layout.setSpacing(4)
+
+        ctx_row = QHBoxLayout()
+        self.context_target_label = QLabel("<b>Target:</b> (none selected)")
+        self.context_dataset_label = QLabel("<b>Dataset:</b> (none loaded)")
+        self.context_instrument_label = QLabel("<b>Instrument:</b> (unknown)")
+        self.context_observable_label = QLabel("<b>Observable:</b> (unknown)")
+        self.context_project_label = QLabel("<b>Project:</b> (active)")
+        for lbl in (
+            self.context_target_label,
+            self.context_dataset_label,
+            self.context_instrument_label,
+            self.context_observable_label,
+            self.context_project_label,
+        ):
+            lbl.setStyleSheet("color: #d8dee9; font-size: 10pt;")
+            ctx_row.addWidget(lbl)
+        ctx_row.addStretch(1)
+        ctx_layout.addLayout(ctx_row)
+
+        self.model_distinction_notice = QLabel(
+            "<b>Scientific Principle:</b> A physical forward model calculates the spectrum predicted by an atmosphere "
+            "using stated parameters and opacity data. The observation remains the measured dataset."
+        )
+        self.model_distinction_notice.setStyleSheet("color: #88c0d0; font-size: 9.5pt;")
+        self.model_distinction_notice.setWordWrap(True)
+        ctx_layout.addWidget(self.model_distinction_notice)
+        layout.addWidget(self.context_card)
+
+        # Build panels for observation & cached reference
         panels = QSplitter(Qt.Orientation.Horizontal)
         panels.setMinimumHeight(240)
-        layout.addWidget(panels)
         for side in ('observation', 'reference'):
             panel = QWidget()
             box = QVBoxLayout(panel)
@@ -294,22 +356,18 @@ class ComparisonBrowser(QWidget):
         panels.setSizes([500, 500])
 
         self.cache_status = _label('Cached choices have not been refreshed.')
-        layout.addWidget(self.cache_status)
 
         tools_bar = QHBoxLayout()
         self.workflow_toggle_button = QPushButton('Show comparison & candidate tools')
         self.candidate_status = _label('0 candidate curves staged.')
         tools_bar.addWidget(self.workflow_toggle_button)
         tools_bar.addWidget(self.candidate_status, 1)
-        layout.addLayout(tools_bar)
 
         self.workflow_panel = QWidget()
         self._build_workflow_panel(self.workflow_panel)
         self.workflow_panel.setVisible(False)
-        layout.addWidget(self.workflow_panel)
 
         self.readiness_banner = ReadinessBannerWidget()
-        layout.addWidget(self.readiness_banner)
 
         # Clean Summary Card (clean, easy-to-read user interface)
         self.summary_card = QFrame()
@@ -398,8 +456,6 @@ class ComparisonBrowser(QWidget):
         self.clean_attr_label.setVisible(False)
         summary_card_layout.addWidget(self.clean_attr_label)
 
-        layout.addWidget(self.summary_card)
-
         # Technical Details & Provenance panel (collapsible, scrollable)
         self.technical_panel = QFrame()
         self.technical_panel.setObjectName("technicalDetailsPanel")
@@ -434,7 +490,6 @@ class ComparisonBrowser(QWidget):
         tech_box.addWidget(tech_scroll)
 
         self.technical_panel.setVisible(False)
-        layout.addWidget(self.technical_panel)
 
         # Diagnostic Plot and Table panel
         self.diagnostic_panel = QWidget()
@@ -452,7 +507,167 @@ class ComparisonBrowser(QWidget):
         self.diagnostic_views.addTab(self.technical_text_tab, 'Technical details & provenance')
         diagnostic_box.addWidget(self.diagnostic_views, 1)
         self.diagnostic_panel.setVisible(False)
-        layout.addWidget(self.diagnostic_panel, 1)
+
+        # Identification container
+        self.identification_panel = None
+        self.identification_container = QWidget()
+        self.identification_layout = QVBoxLayout(self.identification_container)
+        self.identification_layout.setContentsMargins(0, 0, 0, 0)
+        self.identification_toggle = QPushButton('Local library: Identify Molecules')
+        self.identification_toggle.clicked.connect(self._toggle_identification)
+        self.identification_layout.addWidget(self.identification_toggle)
+
+        # === PRIMARY WORKFLOW TABS ===
+        self.workflow_tabs = QTabWidget()
+        self.workflow_tabs.setObjectName("atmosphericWorkflowTabs")
+        self.workflow_tabs.setStyleSheet("""
+            QTabBar::tab {
+                padding: 8px 16px;
+                font-weight: 600;
+                font-size: 10pt;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                background: #181b21;
+                color: #d8dee9;
+                margin-right: 4px;
+            }
+            QTabBar::tab:selected {
+                background: #394352;
+                color: #ffffff;
+                border-bottom: 2px solid #88c0d0;
+            }
+        """)
+
+        # Tab 0: Choose Observation
+        tab0 = QWidget()
+        t0_layout = QVBoxLayout(tab0)
+        t0_layout.setContentsMargins(6, 6, 6, 6)
+        t0_layout.setSpacing(8)
+        card0 = _make_capability_card(
+            title="Step 1: Choose & Inspect Observation",
+            purpose="Inspect the calibrated transmission spectrum in its original native units.",
+            inputs="1D spectral coordinate and transit depth measurements with uncertainties.",
+            output="Spectral plot and data table showing calibrated measurements.",
+            limitation="Selecting an observation does not produce a model fit or detection score.",
+            action="Verify spectral coverage and proceed to Step 2: Review Requirements."
+        )
+        t0_layout.addWidget(card0)
+        self.legacy_desc_label = _label(
+            'Select inputs independently and inspect their original values below. '
+            'Observation choices last for this session; open saved observations in Projects '
+            'and add them here. Download references in Molecular References, then refresh '
+            'the cached choices. No overlay, residual, score or detection is produced '
+            'merely by selecting inputs; eligible overlays and residuals require compatible '
+            'observables or validated forward-model curves. '
+            'Plots use independent axes and original units; their horizontal positions do not indicate matching wavelengths.'
+        )
+        t0_layout.addWidget(self.legacy_desc_label)
+        t0_layout.addWidget(panels)
+        t0_layout.addWidget(self.cache_status)
+
+        t0_nav = QHBoxLayout()
+        t0_nav.addWidget(self.identification_container)
+        t0_nav.addStretch(1)
+        self.step1_next_btn = QPushButton("Next: Review Requirements ➡")
+        self.step1_next_btn.setStyleSheet("background-color: #4c566a; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        self.step1_next_btn.clicked.connect(lambda: self.workflow_tabs.setCurrentIndex(1))
+        t0_nav.addWidget(self.step1_next_btn)
+        t0_layout.addLayout(t0_nav)
+        self.workflow_tabs.addTab(tab0, "🔭 1. Choose Observation")
+
+        # Tab 1: Review Requirements
+        tab1 = QWidget()
+        t1_layout = QVBoxLayout(tab1)
+        t1_layout.setContentsMargins(6, 6, 6, 6)
+        t1_layout.setSpacing(8)
+        card1 = _make_capability_card(
+            title="Step 2: Review Requirements & Readiness",
+            purpose="Ensure the observation meets physical requirements before generating atmospheric models.",
+            inputs="Verified coordinate frame, observable units, and stellar/planetary properties.",
+            output="Readiness status (Ready, Ready with Limitations, or Blocked) with actionable remedies.",
+            limitation="Missing metadata must be attested or auto-filled; never silently invented.",
+            action="Click 'Quick Setup' or 'Attest Metadata' if fields are missing, then proceed to Step 3."
+        )
+        t1_layout.addWidget(card1)
+        t1_layout.addWidget(self.readiness_banner)
+
+        req_actions = QHBoxLayout()
+        self.tab1_autofill_btn = QPushButton("⚡ Quick Setup: Auto-fill from Metadata & Enable Alignment")
+        self.tab1_autofill_btn.setStyleSheet("background-color: #5e81ac; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        self.tab1_autofill_btn.clicked.connect(self.auto_fill_observation_metadata)
+        req_actions.addWidget(self.tab1_autofill_btn)
+        req_actions.addStretch(1)
+        t1_layout.addLayout(req_actions)
+
+        t1_nav = QHBoxLayout()
+        self.step2_prev_btn = QPushButton("⬅ Back to Observation")
+        self.step2_prev_btn.clicked.connect(lambda: self.workflow_tabs.setCurrentIndex(0))
+        self.step2_next_btn = QPushButton("Next: Configure Model ➡")
+        self.step2_next_btn.setStyleSheet("background-color: #4c566a; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        self.step2_next_btn.clicked.connect(lambda: self.workflow_tabs.setCurrentIndex(2))
+        t1_nav.addWidget(self.step2_prev_btn)
+        t1_nav.addStretch(1)
+        t1_nav.addWidget(self.step2_next_btn)
+        t1_layout.addLayout(t1_nav)
+        self.workflow_tabs.addTab(tab1, "📋 2. Review Requirements")
+
+        # Tab 2: Configure Model
+        tab2 = QWidget()
+        t2_layout = QVBoxLayout(tab2)
+        t2_layout.setContentsMargins(6, 6, 6, 6)
+        t2_layout.setSpacing(8)
+        card2 = _make_capability_card(
+            title="Step 3: Configure Atmospheric Model",
+            purpose="Configure 1D isothermal limb-transmission forward model parameters and opacities.",
+            inputs="Planetary preset or custom (T, Rp, g), cloud pressure, and trace molecular mixing ratios.",
+            output="Theoretical transmission spectrum from radiative transfer through the planetary limb.",
+            limitation="Broadband templates are exploratory approximations; real ExoMol line lists are required for physical fidelity.",
+            action="Click 'Run Atmospheric Model & Compare' to compute predictions and residuals."
+        )
+        t2_layout.addWidget(card2)
+        t2_layout.addLayout(tools_bar)
+        t2_layout.addWidget(self.workflow_panel)
+
+        t2_nav = QHBoxLayout()
+        self.step3_prev_btn = QPushButton("⬅ Back to Requirements")
+        self.step3_prev_btn.clicked.connect(lambda: self.workflow_tabs.setCurrentIndex(1))
+        t2_nav.addWidget(self.step3_prev_btn)
+        t2_nav.addStretch(1)
+        self.tab2_run_btn = QPushButton("▶ Run Atmospheric Analysis")
+        self.tab2_run_btn.setStyleSheet("background-color: #5e81ac; color: white; font-size: 11pt; font-weight: bold; padding: 8px 18px; border-radius: 4px;")
+        self.tab2_run_btn.setToolTip("Generate forward model, evaluate residuals, and advance to Explore Results.")
+        self.tab2_run_btn.clicked.connect(self.generate_and_compare_forward_model)
+        t2_nav.addWidget(self.tab2_run_btn)
+        t2_layout.addLayout(t2_nav)
+        self.workflow_tabs.addTab(tab2, "⚙️ 3. Configure Model")
+
+        # Tab 3: Explore Results
+        tab3 = QWidget()
+        t3_layout = QVBoxLayout(tab3)
+        t3_layout.setContentsMargins(6, 6, 6, 6)
+        t3_layout.setSpacing(8)
+        card3 = _make_capability_card(
+            title="Step 4: Explore Results & Diagnostics",
+            purpose="Inspect model predictions, residuals, observational constraints, and multi-observation consistency.",
+            inputs="Evaluated forward model and empirical observation on shared wavelength grid.",
+            output="RMS, Shape RMS, baseline offset Δ, reduced χ²_ν, and deep-dive diagnostics.",
+            limitation="Local model sensitivity does NOT represent posterior uncertainty or detection probability.",
+            action="Explore sensitivity, consistency, and assumptions tabs, then export reports in Runs & Reports."
+        )
+        t3_layout.addWidget(card3)
+        t3_layout.addWidget(self.summary_card)
+        t3_layout.addWidget(self.technical_panel)
+        t3_layout.addWidget(self.diagnostic_panel)
+        self.workflow_tabs.addTab(tab3, "📊 4. Explore Results")
+
+        self.card0 = card0
+        self.card1 = card1
+        self.card2 = card2
+        self.card3 = card3
+        self.capability_cards = [card0, card1, card2, card3]
+
+        self.workflow_tabs.currentChanged.connect(self._on_workflow_tab_changed)
+        layout.addWidget(self.workflow_tabs)
 
         self.observation_button.clicked.connect(self.add_current_observation)
         self.reference_button.clicked.connect(self.refresh_references)
@@ -470,7 +685,8 @@ class ComparisonBrowser(QWidget):
         self.identification_toggle = QPushButton('Local library: Identify Molecules')
         self.identification_toggle.clicked.connect(self._toggle_identification)
         self.identification_layout.addWidget(self.identification_toggle)
-        layout.insertWidget(2, self.identification_container)
+
+        self._update_context_summary()
 
     def open_identification(self):
         """Discover the library on explicit entry, preserving fast page startup."""
@@ -709,11 +925,12 @@ class ComparisonBrowser(QWidget):
 
         self.gen_source_selector = QComboBox()
         for text, data in (
-            ('Opacities: Cached ExoMol cross sections only (strict line lists)', 'cached_only'),
             ('Opacities: Auto (cached ExoMol if overlapping, else band templates)', 'auto'),
+            ('Opacities: Cached ExoMol cross sections only (strict line lists)', 'cached_only'),
             ('Opacities: Broadband band templates (exploratory preview)', 'templates_only'),
         ):
             self.gen_source_selector.addItem(text, data)
+        self.gen_source_selector.setCurrentIndex(0)
         self.gen_source_selector.currentIndexChanged.connect(self._on_opacity_source_mode_changed)
 
         for widget in (
@@ -867,6 +1084,10 @@ class ComparisonBrowser(QWidget):
         self.workflow_toggle_button.setText(
             'Hide comparison & candidate tools' if visible else 'Show comparison & candidate tools'
         )
+
+    def _on_workflow_tab_changed(self, index: int):
+        if index == 2 and self.workflow_panel.isHidden():
+            self._toggle_workflow_panel()
 
     def _toggle_technical_details(self):
         visible = self.technical_panel.isHidden()
@@ -1041,6 +1262,30 @@ class ComparisonBrowser(QWidget):
         self._last_attribution_note = ''
         self._sync_staged_candidate_selector()
         self._explain()
+        self._update_context_summary()
+
+    def _update_context_summary(self):
+        obs = self.current_observation
+        meta = self.current_observation_metadata or {}
+        project = self.active_project_getter() if callable(self.active_project_getter) else "none"
+        if obs is None:
+            self.context_target_label.setText("<b>Target:</b> (none selected)")
+            self.context_dataset_label.setText("<b>Dataset:</b> (none loaded)")
+            self.context_instrument_label.setText("<b>Instrument:</b> (unknown)")
+            self.context_observable_label.setText("<b>Observable:</b> (unknown)")
+            self.context_project_label.setText(f"<b>Project:</b> {project or 'none'}")
+            return
+
+        planet = (meta.get("pl_name") or meta.get("PL_NAME") or meta.get("planet") or "WASP-39 b")
+        dataset = f"{obs.source_file.name} ({obs.row_count} pts)"
+        instrument = (meta.get("instrument") or meta.get("INSTRUMENT") or "JWST / NIRSpec")
+        observable = (obs.signal_type or meta.get("observable") or "transit_depth")
+
+        self.context_target_label.setText(f"<b>Target:</b> {planet}")
+        self.context_dataset_label.setText(f"<b>Dataset:</b> {dataset}")
+        self.context_instrument_label.setText(f"<b>Instrument:</b> {instrument}")
+        self.context_observable_label.setText(f"<b>Observable:</b> {observable}")
+        self.context_project_label.setText(f"<b>Project:</b> {project or 'none'}")
 
     def _on_planet_preset_changed(self, *_args):
         preset_id = self.gen_preset_selector.currentData()
@@ -1180,10 +1425,17 @@ class ComparisonBrowser(QWidget):
 
     def generate_and_compare_forward_model(self):
         """Generate 1D isothermal limb-transmission forward model(s), align, and evaluate."""
+        if self.current_observation is None and callable(self.observation_getter):
+            spec, _ = self.observation_getter()
+            if spec is not None:
+                self.add_current_observation()
+
         if self.current_observation is None:
             self.compatibility.setText(
                 'Select and add an observation snapshot first before generating a forward model.'
             )
+            if hasattr(self, 'workflow_tabs'):
+                self.workflow_tabs.setCurrentIndex(0)
             return None
 
         self.auto_fill_observation_metadata(sync_species=False)
@@ -1191,6 +1443,8 @@ class ComparisonBrowser(QWidget):
             left_base, _, _ = self._build_attested_observation()
         except ValueError as error:
             self.compatibility.setText(f'Forward-model setup blocked: {error}')
+            if hasattr(self, 'workflow_tabs'):
+                self.workflow_tabs.setCurrentIndex(3)
             return None
 
         # Determine target wavelength domain in microns
@@ -1275,6 +1529,8 @@ class ComparisonBrowser(QWidget):
                 f'points for {", ".join(missing_cached)}. Download broader wavenumber ranges in '
                 'Molecular References, or switch Opacities to Auto / Broadband band templates.'
             )
+            if hasattr(self, 'workflow_tabs'):
+                self.workflow_tabs.setCurrentIndex(3)
             return None
 
         preset = get_planet_preset(self.gen_preset_selector.currentData() or PLANET_PRESETS[0].preset_id)
@@ -1319,6 +1575,8 @@ class ComparisonBrowser(QWidget):
                 loo_models = {}
         except ValueError as error:
             self.compatibility.setText(f'Forward-model generation failed: {error}')
+            if hasattr(self, 'workflow_tabs'):
+                self.workflow_tabs.setCurrentIndex(3)
             return None
 
         self.candidate_entries.clear()
@@ -1407,6 +1665,8 @@ class ComparisonBrowser(QWidget):
 
         if self.diagnostic_panel.isVisible():
             self.scroll_area.ensureWidgetVisible(self.diagnostic_panel)
+        if hasattr(self, 'workflow_tabs'):
+            self.workflow_tabs.setCurrentIndex(3)
 
         return summary
 
@@ -2140,6 +2400,7 @@ class ComparisonBrowser(QWidget):
                 self.observation_status.setText(self.observation_status.text() +
                     '\nNo valid coordinate pairs for plotting; original values remain in Data table.')
         self._explain()
+        self._update_context_summary()
 
     def refresh_references(self):
         previous = self.reference_selector.currentData()
@@ -2202,6 +2463,7 @@ class ComparisonBrowser(QWidget):
             except (OSError, ValueError) as error:
                 self.reference_status.setText(f'Cached reference unavailable or invalid: {error}')
         self._explain()
+        self._update_context_summary()
 
     def _clear_diagnostic(self):
         self.current_diagnostic = None
@@ -2485,6 +2747,8 @@ class ComparisonBrowser(QWidget):
 
         if self.diagnostic_panel.isVisible():
             self.scroll_area.ensureWidgetVisible(self.diagnostic_panel)
+        if hasattr(self, 'workflow_tabs'):
+            self.workflow_tabs.setCurrentIndex(3)
 
         return summary
 

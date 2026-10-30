@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog,
-    QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QScrollArea,
+    QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QScrollArea,
     QTableWidget, QTableWidgetItem, QTabWidget, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -142,10 +142,28 @@ class IdentificationPanel(QWidget):
         layout.addWidget(self.reproduce_button, 0, Qt.AlignmentFlag.AlignLeft)
         self.status = _label('Import an absorption observation in Spectral Data, add it here, then select references.')
         layout.addWidget(self.status)
-        self.atmospheric_button = QPushButton('Open atmospheric comparison for checked inputs')
-        self.atmospheric_button.setToolTip('Transfer observations with their identities and metadata. Choose real atmospheric opacities and review model settings there.')
-        self.atmospheric_button.setVisible(False)
-        layout.addWidget(self.atmospheric_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.transit_guidance_card = QFrame()
+        self.transit_guidance_card.setStyleSheet("background-color: #242933; border: 1px solid #d08770; border-radius: 4px; padding: 6px;")
+        tg_layout = QVBoxLayout(self.transit_guidance_card)
+        tg_layout.setContentsMargins(8, 6, 8, 6)
+        tg_layout.setSpacing(4)
+        tg_title = QLabel("<b>🔭 Planetary Transit Observation Detected</b>")
+        tg_title.setStyleSheet("color: #ebcb8b; font-size: 11pt;")
+        tg_desc = QLabel(
+            "This observation measures planetary transit depth (Rp² / R*²). Laboratory identification directly fits "
+            "empirical IR/UV–Vis laboratory measurements (absorbance/transmittance), which does not directly apply to "
+            "exoplanetary transit spectra without radiative transfer. Use Atmospheric Analysis for physical forward modeling."
+        )
+        tg_desc.setWordWrap(True)
+        tg_desc.setStyleSheet("color: #d8dee9; font-size: 10pt;")
+        self.atmospheric_button = QPushButton("➡ Go to Atmospheric Analysis (Model Physical Atmosphere)")
+        self.atmospheric_button.setStyleSheet("background-color: #5e81ac; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        self.atmospheric_button.setToolTip("Transfer observation with its metadata to Atmospheric Analysis for physical modeling.")
+        tg_layout.addWidget(tg_title)
+        tg_layout.addWidget(tg_desc)
+        tg_layout.addWidget(self.atmospheric_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.transit_guidance_card.setVisible(False)
+        layout.addWidget(self.transit_guidance_card)
         self.plot_status = _label('Add an observation to preview its measured spectrum; no fit is needed.')
         layout.addWidget(self.plot_status)
         self.result_selector = QComboBox()
@@ -218,7 +236,9 @@ class IdentificationPanel(QWidget):
         self.selection_status.setText(
             f'{len(selected)} checked observation(s) in this group; {len(self.contexts)} loaded. '
             'All checked inputs run separately. Click a row to preview it.')
-        self.atmospheric_button.setVisible(any(self._is_transit(c) for c in selected))
+        has_transit = any(self._is_transit(c) for c in selected)
+        self.atmospheric_button.setVisible(has_transit)
+        self.transit_guidance_card.setVisible(has_transit)
 
     @staticmethod
     def _plot_measurements(plot, spectrum, *, name, color):
@@ -515,6 +535,8 @@ class IdentificationPanel(QWidget):
             for component in result.components:
                 self._result_row(context, component.molecule, component.modality, component.sigma,
                                  component.reason or component.status, component.dataset_id)
+            if self._is_transit(context):
+                self.transit_guidance_card.show()
         for context in self._duplicates:
             for ref in self._run_references:
                 self._result_row(context, ref.molecule, ref.modality, None,

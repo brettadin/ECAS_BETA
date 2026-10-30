@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QColor
 
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -58,6 +59,10 @@ from ecas.ui.workspace_pages import OverviewPage, SettingsPage
 from ecas.ui.resources_browser import ResourcesBrowser
 from ecas.ui.transit_view import TransitVisualizerPage
 from ecas.ingestion.tabular_formats import import_tabular_spectrum
+from ecas.ui.identification_panel import IdentificationPanel
+from ecas.ui.images_workspace import ImagesWorkspacePage
+from ecas.ui.runs_workspace import RunsReportsWorkspacePage
+from ecas.ui.event_filters import IgnoreWheelUnlessFocusedFilter, apply_wheel_protection
 
 
 class ECASWindow(QMainWindow):
@@ -146,10 +151,13 @@ class ECASWindow(QMainWindow):
             "Projects",
             "Spectral Data",
             "Molecular References",
-            "Comparisons",
-            "Settings",
-            "References & Resources",
+            "Atmospheric Analysis",
             "Transit Visualizer",
+            "Laboratory Identification",
+            "Images",
+            "Runs & Reports",
+            "References & Resources",
+            "Settings",
         ])
         self.navigation.setFixedWidth(200)
 
@@ -174,6 +182,16 @@ class ECASWindow(QMainWindow):
                                           else Path(__file__).resolve().parents[2] / 'projects')
         self.project_browser = None
         self.reference_cache_dir = reference_cache_dir
+        self.identification_panel_page = None
+        self.images_workspace = None
+        self.runs_workspace = None
+
+        # Install wheel event protection on the application to prevent unintentional scrolling changes
+        self._wheel_filter = IgnoreWheelUnlessFocusedFilter(self)
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self._wheel_filter)
+        self.installEventFilter(self._wheel_filter)
 
         # Build each page before assembling the overall window layout.
         self._build_pages()
@@ -202,6 +220,7 @@ class ECASWindow(QMainWindow):
         # The status bar gives brief feedback about the current application
         # state, such as whether a dataset has been loaded successfully.
         self.statusBar().showMessage("Ready — no dataset loaded")
+        apply_wheel_protection(self)
 
     def _build_pages(self):
         """Create the pages and add them to the stacked page container."""
@@ -212,10 +231,13 @@ class ECASWindow(QMainWindow):
             ("Projects", "Create and manage research projects."),
             ("", ""),
             ("Molecular References", "Search and manage molecular reference data."),
-            ("Comparisons", "Inspect independently selected inputs."),
-            ("Settings", "Application preferences and data locations."),
-            ("References & Resources", "Scientific software, archives, molecular databases, and publications."),
+            ("Atmospheric Analysis", "Planetary transmission observations and physical models."),
             ("Transit Visualizer", "Educational geometric exoplanet transit and orbit simulation."),
+            ("Laboratory Identification", "Fit compatible laboratory absorption measurements using real local IR or UV-Vis references."),
+            ("Images", "Inspect 2D FITS astronomical image planes and surface brightness."),
+            ("Runs & Reports", "Analysis job lifecycle, checkpoint resumption, and reproducible reporting."),
+            ("References & Resources", "Scientific software, archives, molecular databases, and publications."),
+            ("Settings", "Application preferences and data locations."),
         ]
 
         for index, (heading, description) in enumerate(definitions):
@@ -251,17 +273,6 @@ class ECASWindow(QMainWindow):
                     active_project_getter=lambda: self.project_browser.projects.currentText())
                 layout.addWidget(self.comparison_browser)
             elif index == 5:
-                self.settings_page = SettingsPage(self.spectrum_schema_selector, {
-                    'Research projects': self.project_store.root,
-                    'NASA cache': self.nasa_browser.cache_root,
-                    'ExoMol catalogue cache': self.reference_browser.cache_root,
-                    'ExoMol reference cache': self.reference_browser.cache_root / 'references',
-                }, self)
-                layout.addWidget(self.settings_page)
-            elif index == 6:
-                self.resources_browser = ResourcesBrowser(self)
-                layout.addWidget(self.resources_browser)
-            elif index == 7:
                 self.transit_page = TransitVisualizerPage(
                     on_apply_preset=self._on_transit_apply_to_comparisons,
                     parent=self,
@@ -270,6 +281,37 @@ class ECASWindow(QMainWindow):
                     self._on_transit_apply_to_comparisons
                 )
                 layout.addWidget(self.transit_page)
+            elif index == 6:
+                self.identification_panel_page = IdentificationPanel(
+                    self._comparison_observation,
+                    metadata_getter=self._comparison_metadata,
+                    description_getter=self._comparison_description,
+                    project_store=self.project_store,
+                    active_project_getter=lambda: (self.project_browser.projects.currentText()
+                                                   if self.project_browser is not None else None),
+                    parent=self,
+                )
+                self.identification_panel_page.atmospheric_requested.connect(
+                    self._on_identification_atmospheric_requested
+                )
+                layout.addWidget(self.identification_panel_page)
+            elif index == 7:
+                self.images_workspace = ImagesWorkspacePage(self)
+                layout.addWidget(self.images_workspace)
+            elif index == 8:
+                self.runs_workspace = RunsReportsWorkspacePage(self)
+                layout.addWidget(self.runs_workspace)
+            elif index == 9:
+                self.resources_browser = ResourcesBrowser(self)
+                layout.addWidget(self.resources_browser)
+            elif index == 10:
+                self.settings_page = SettingsPage(self.spectrum_schema_selector, {
+                    'Research projects': self.project_store.root,
+                    'NASA cache': self.nasa_browser.cache_root,
+                    'ExoMol catalogue cache': self.reference_browser.cache_root,
+                    'ExoMol reference cache': self.reference_browser.cache_root / 'references',
+                }, self)
+                layout.addWidget(self.settings_page)
             else:
                 # The remaining pages currently contain headings and
                 # descriptions only; they are not fully implemented yet.
@@ -286,7 +328,7 @@ class ECASWindow(QMainWindow):
 
             # Adding pages in this order is what links their indices to the
             # matching rows in the navigation list.
-            if index in (0, 5):
+            if index in (0, 5, 8):
                 scroll = QScrollArea()
                 scroll.setWidgetResizable(True)
                 scroll.setWidget(page)
@@ -627,7 +669,12 @@ class ECASWindow(QMainWindow):
         self._open_fits_image_viewer(container)
 
     def _open_fits_image_viewer(self, container_or_path) -> None:
-        """Open the 2D FITS image viewer dialog."""
+        """Open the 2D FITS image viewer workspace or fallback dialog."""
+        if hasattr(self, 'images_workspace') and self.images_workspace is not None:
+            self.images_workspace.load_fits_image(container_or_path)
+            self.navigate_to('images')
+            return
+
         from ecas.ui.fits_image_viewer import FitsImageViewerDialog
 
         dialog = FitsImageViewerDialog(container_or_path, parent=self)
@@ -690,9 +737,62 @@ class ECASWindow(QMainWindow):
             return import_tabular_spectrum(path), None
         return import_spectrum(path, archive_schema=schema), None
 
+    def _on_identification_atmospheric_requested(self, context=None):
+        """Navigate to Atmospheric Analysis when a transit observation is routed from Lab ID."""
+        self.navigation.setCurrentRow(4)
+
+    def navigate_to(self, name_or_alias: str) -> bool:
+        """Navigate to a workspace by name, alias, or index."""
+        aliases = {
+            'overview': 0,
+            'projects': 1,
+            'spectral data': 2,
+            'spectral': 2,
+            'spectra': 2,
+            'molecular references': 3,
+            'molecular': 3,
+            'references': 3,
+            'atmospheric analysis': 4,
+            'atmospheric': 4,
+            'comparisons': 4,
+            'comparison': 4,
+            'transit visualizer': 5,
+            'transit': 5,
+            'laboratory identification': 6,
+            'laboratory': 6,
+            'identification': 6,
+            'images': 7,
+            'fits': 7,
+            'fits images': 7,
+            'runs & reports': 8,
+            'runs': 8,
+            'reports': 8,
+            'jobs': 8,
+            'references & resources': 9,
+            'resources': 9,
+            'settings': 10,
+            'preferences': 10,
+        }
+        key = str(name_or_alias).strip().lower()
+        if key in aliases:
+            self.navigation.setCurrentRow(aliases[key])
+            return True
+        return False
+
+    def show_workspace(self, name_or_index):
+        """Convenience method to show a workspace by name, alias, or integer index."""
+        if isinstance(name_or_index, int):
+            if 0 <= name_or_index < self.navigation.count():
+                self.navigation.setCurrentRow(name_or_index)
+                return True
+            return False
+        return self.navigate_to(name_or_index)
+
     def closeEvent(self, event):
         if self.comparison_browser.identification_panel is not None:
             self.comparison_browser.identification_panel.shutdown()
+        if hasattr(self, 'identification_panel_page') and self.identification_panel_page is not None:
+            self.identification_panel_page.shutdown()
         self.nasa_browser.cancel()
         self.reference_browser.shutdown()
         super().closeEvent(event)

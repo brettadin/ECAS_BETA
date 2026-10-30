@@ -88,3 +88,22 @@ class ResidualPlot(QWidget):
         self.current_diagnostic = None
         self._reset_labels()
 
+    def zoom_in(self):
+        """Zoom in by 20% on both overlay and residual plots."""
+        self.overlay_widget.getViewBox().scaleBy((0.8, 0.8))
+        self.residual_widget.getViewBox().scaleBy((0.8, 0.8))
+
+    def zoom_out(self):
+        """Zoom out by 25% on both overlay and residual plots."""
+        self.overlay_widget.getViewBox().scaleBy((1.25, 1.25))
+        self.residual_widget.getViewBox().scaleBy((1.25, 1.25))
+
+    def reset_view(self):
+        """Reset view range on both overlay and residual plots."""
+        self.overlay_widget.getViewBox().autoRange()
+        self.residual_widget.getViewBox().autoRange()
+
+    def set_wheel_zoom_enabled(self, enabled: bool):
+        """Toggle mouse-wheel zoom on both plots."""
+        self.overlay_widget.wheel_zoom_enabled = enabled
+        self.residual_widget.wheel_zoom_enabled = enabled

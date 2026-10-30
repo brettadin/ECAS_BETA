@@ -261,10 +261,32 @@ def compute_comprehensive_fit_diagnostics(
     summary_text = " ".join(summary_parts)
 
     math_disclosures = {
-        "Reduced Chi-Squared": r"\chi_\nu^2 = \frac{1}{N - k} \sum_{i=1}^N \left(\frac{y_i - f(x_i)}{\sigma_i}\right)^2",
-        "Wald-Wolfowitz Runs Test": r"Z = \frac{R - (\frac{2 n_+ n_-}{N} + 1)}{\sqrt{\frac{2 n_+ n_- (2 n_+ n_- - N)}{N^2 (N - 1)}}}",
-        "Lag-1 Residual Autocorrelation": r"r_1 = \frac{\sum_{i=1}^{N-1} (r_i - \bar{r})(r_{i+1} - \bar{r})}{\sum_{i=1}^N (r_i - \bar{r})^2}",
-        "Covariance Condition Number": r"\kappa(C) = \|C\|_2 \cdot \|C^{-1}\|_2 = \frac{\lambda_{\max}(C)}{\lambda_{\min}(C)}",
+        "Reduced Chi-Squared (χ²_ν)": (
+            "χ²_ν = [1 / (N − k)] · Σ [ (y_i − f(x_i)) / σ_i ]²\n"
+            "Where N is the number of valid observed points, k is the number of fitted parameters, "
+            "and degrees of freedom ν = N − k. Evaluates goodness of fit per degree of freedom (1.0 indicates consistency with 1σ errors)."
+        ),
+        "Reduced Chi-Squared": (
+            "χ²_ν = [1 / (N − k)] · Σ [ (y_i − f(x_i)) / σ_i ]²\n"
+            "Where N is the number of valid observed points, k is the number of fitted parameters, "
+            "and degrees of freedom ν = N − k. Evaluates goodness of fit per degree of freedom (1.0 indicates consistency with 1σ errors)."
+        ),
+        "Wald-Wolfowitz Runs Test (Z)": (
+            "Z = [ R − ( (2·n₊·n₋ / N) + 1 ) ] / σ_R\n"
+            "Where R is the total number of runs, n₊ and n₋ are positive and negative residual counts, "
+            "and σ_R = √[ (2·n₊·n₋ · (2·n₊·n₋ − N)) / (N² · (N − 1)) ]. "
+            "Tests whether residuals fluctuate randomly around the model or cluster into systematic trends."
+        ),
+        "Lag-1 Residual Autocorrelation (r₁)": (
+            "r₁ = [ Σ (r_i − r̄)·(r_i₊₁ − r̄) ] / [ Σ (r_i − r̄)² ]\n"
+            "Measures point-to-point residual correlation. Values near 0 indicate independent white noise; "
+            "values > 0.3 flag correlated red noise or unmodeled molecular absorption features."
+        ),
+        "Covariance Condition Number (κ)": (
+            "κ(C) = ‖C‖₂ · ‖C⁻¹‖₂ = λ_max(C) / λ_min(C)\n"
+            "Ratio of the largest to smallest eigenvalue of the parameter covariance matrix. "
+            "Values > 10¹² indicate ill-conditioned, numerically degenerate parameter combinations."
+        ),
     }
 
     retrieval_contract = {

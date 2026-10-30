@@ -146,11 +146,29 @@ def test_main_window_has_expected_navigation():
 
     assert window.windowTitle().startswith("ECAS")
     assert [window.navigation.item(i).text() for i in range(window.navigation.count())] == [
-        'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Comparisons', 'Settings', 'References & Resources', 'Transit Visualizer']
+        'Overview', 'Projects', 'Spectral Data', 'Molecular References', 'Atmospheric Analysis', 'Transit Visualizer', 'Laboratory Identification', 'Images', 'Runs & Reports', 'References & Resources', 'Settings']
     assert window.pages.count() == window.navigation.count()
     for index in range(window.navigation.count()):
         window.navigation.setCurrentRow(index)
         assert window.pages.currentIndex() == index
+
+    # Verify navigate_to and show_workspace aliases
+    assert window.navigate_to('atmospheric analysis')
+    assert window.navigation.currentRow() == 4
+    assert window.navigate_to('transit visualizer')
+    assert window.navigation.currentRow() == 5
+    assert window.navigate_to('laboratory identification')
+    assert window.navigation.currentRow() == 6
+    assert window.navigate_to('images')
+    assert window.navigation.currentRow() == 7
+    assert window.navigate_to('runs & reports')
+    assert window.navigation.currentRow() == 8
+    assert window.navigate_to('references & resources')
+    assert window.navigation.currentRow() == 9
+    assert window.navigate_to('settings')
+    assert window.navigation.currentRow() == 10
+    assert window.show_workspace(0)
+    assert window.navigation.currentRow() == 0
 
     window.close()
 

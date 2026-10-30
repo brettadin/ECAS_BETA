@@ -16,7 +16,27 @@ os.environ["PYQTGRAPH_QT_LIB"] = "PySide6"
 from PySide6 import QtCore as qtc
 from PySide6 import QtGui as qtgui
 from PySide6 import QtWidgets as qtw
-from pyqtgraph import PlotWidget, ScatterPlotItem
+from pyqtgraph import PlotWidget as _PGPlotWidget, ScatterPlotItem
+
+
+class PlotWidget(_PGPlotWidget):
+    """PyQtGraph PlotWidget that prevents accidental zooming when scrolling a page.
+
+    By default, mouse wheel events without modifier keys are ignored and bubble up
+    to the parent scroll area, ensuring uninterrupted workspace page navigation.
+    To zoom using the mouse wheel, hold Ctrl while scrolling, or toggle wheel zoom.
+    Intentional zoom controls (Zoom In, Zoom Out, Auto-range) are also provided.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.wheel_zoom_enabled = False
+
+    def wheelEvent(self, ev):
+        if self.wheel_zoom_enabled or bool(ev.modifiers() & qtc.Qt.KeyboardModifier.ControlModifier):
+            super().wheelEvent(ev)
+        else:
+            ev.ignore()
 
 
 class SpectraPlot(qtw.QWidget):
@@ -182,6 +202,22 @@ class SpectraPlot(qtw.QWidget):
         """Reset all visible and internal state after an unsuccessful load."""
 
         self.clear()
+
+    def zoom_in(self):
+        """Zoom in by 20% on both axes."""
+        self.viewbox.scaleBy((0.8, 0.8))
+
+    def zoom_out(self):
+        """Zoom out by 25% on both axes."""
+        self.viewbox.scaleBy((1.25, 1.25))
+
+    def reset_view(self):
+        """Reset view range to fit all plotted data points."""
+        self.viewbox.autoRange()
+
+    def set_wheel_zoom_enabled(self, enabled: bool):
+        """Toggle mouse-wheel zoom on the plot widget."""
+        self.plot_widget.wheel_zoom_enabled = enabled
 
     def on_view_changed(self):
         """Placeholder for future zoom or pan handling."""

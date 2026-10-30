@@ -114,13 +114,27 @@ class FitDiagnosticsDialog(QDialog):
 
         math_text = QTextEdit()
         math_text.setReadOnly(True)
-        math_text.setStyleSheet("background-color: #1e222a; font-family: monospace; font-size: 11px; padding: 6px;")
+        math_text.setStyleSheet("background-color: #1e222a; font-family: 'Segoe UI', sans-serif; font-size: 11px; padding: 6px;")
 
-        lines = ["=== MATHEMATICAL DEFINITIONS & DIAGNOSTIC FORMULAS ===\n"]
+        html_blocks = [
+            "<div style='font-family: Segoe UI, sans-serif; color: #eceff4; font-size: 11px; padding: 6px;'>"
+            "<h3 style='color: #88c0d0; margin-bottom: 8px;'>Statistical Diagnostic Formulas & Scientific Definitions</h3>"
+            "<p style='color: #d8dee9;'>These mathematical definitions describe the quality of the model fit, "
+            "residual structure, and covariance stability without assuming unverified posterior distributions.</p>"
+        ]
         for name, formula in self.diag.progressive_disclosure_math.items():
-            lines.append(f"■ {name}:")
-            lines.append(f"  {formula}\n")
-        math_text.setPlainText("\n".join(lines))
+            parts = formula.split("\n", 1)
+            math_expr = parts[0]
+            explanation = parts[1] if len(parts) > 1 else ""
+            html_blocks.append(
+                f"<div style='background-color: #242933; border: 1px solid #3b4252; border-radius: 4px; padding: 8px; margin-bottom: 10px;'>"
+                f"<b style='color: #81a1c1; font-size: 12px;'>{name}</b><br/>"
+                f"<pre style='font-family: Consolas, monospace; font-size: 12px; color: #a3be8c; margin: 6px 0; background-color: #1a1e24; padding: 6px; border-radius: 3px;'>{math_expr}</pre>"
+                f"<span style='color: #d8dee9; font-size: 11px;'>{explanation}</span>"
+                f"</div>"
+            )
+        html_blocks.append("</div>")
+        math_text.setHtml("".join(html_blocks))
         tm_layout.addWidget(math_text)
         tabs.addTab(tab_math, "Mathematical Formulas")
 

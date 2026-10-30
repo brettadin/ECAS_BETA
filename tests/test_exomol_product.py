@@ -299,10 +299,10 @@ def test_browser_download_display_and_cached_reopen_preserve_observation(tmp_pat
         browser.download_button.click()
         assert browser.busy and not browser.search_button.isEnabled()
         window.navigation.setCurrentRow(4)
-        assert window.navigation.currentItem().text()=='Comparisons'
+        assert window.navigation.currentItem().text()=='Atmospheric Analysis'
         assert browser.busy  # Navigation does not cancel or restart the request.
         browser.product_http.finish()
-        assert window.navigation.currentItem().text()=='Comparisons'
+        assert window.navigation.currentItem().text()=='Atmospheric Analysis'
         window.navigation.setCurrentRow(3)
         assert window.navigation.currentItem().text()=='Molecular References'
         assert browser.reference_table.rowCount()==11 and browser.current_reference==result()
