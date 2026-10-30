@@ -411,6 +411,10 @@ class ECASWindow(QMainWindow):
         import_button = QPushButton("Import Spectrum")
         import_button.clicked.connect(self._import_csv)
 
+        view_fits_button = QPushButton("Inspect 2D FITS Image...")
+        view_fits_button.setToolTip("Open and visualize 2D astronomical image containers (e.g. JWST MIRI imaging products)")
+        view_fits_button.clicked.connect(self._open_fits_image_dialog)
+
         # Schema selector for choosing how to interpret the CSV data.
         schema_label = QLabel("CSV schema:")
         schema_label.setObjectName("schemaLabel")
@@ -450,6 +454,7 @@ class ECASWindow(QMainWindow):
         layout.addWidget(schema_label)
         layout.addWidget(self.spectrum_schema_selector)
         layout.addWidget(import_button, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(view_fits_button, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self.spectrum_status)
         layout.addWidget(self.spectra_plot, 2)
         layout.addWidget(self.spectrum_table, 1)
@@ -559,6 +564,75 @@ class ECASWindow(QMainWindow):
             return WASP39B_SCHEMA
         return None
 
+    def _handle_import_error(self, exc: SpectrumImportError, file_path: str | Path) -> None:
+        """Handle spectrum import failure, offering 2D image inspection if the file is an astronomical image."""
+        self._clear_spectrum_display()
+        self.statusBar().showMessage("Import failed")
+
+        resolved = Path(file_path)
+        is_fits = resolved.suffix.lower() in (".fits", ".fit", ".fts")
+        image_container = None
+        if is_fits:
+            from ecas.ingestion.fits_image import scan_fits_image
+
+            image_container = scan_fits_image(resolved)
+
+        if image_container is not None and image_container.planes:
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setWindowTitle("2D Astronomical Image Product")
+            msg_box.setText(
+                "<b>2D Astronomical Image Container Detected</b><br><br>"
+                f"{exc}<br><br>"
+                "Would you like to open the <b>2D FITS Image Viewer</b> to inspect its "
+                "calibrated spatial brightness planes and pixel statistics?"
+            )
+            btn_inspect = msg_box.addButton("Inspect 2D Image", QMessageBox.AcceptRole)
+            msg_box.addButton(QMessageBox.Close)
+            msg_box.setDefaultButton(btn_inspect)
+            msg_box.exec()
+
+            if msg_box.clickedButton() == btn_inspect:
+                self._open_fits_image_viewer(image_container)
+            return
+
+        QMessageBox.warning(
+            self,
+            "Spectrum Import Failed",
+            str(exc) or "The spectrum could not be imported. No further error details were provided.",
+        )
+
+    def _open_fits_image_dialog(self) -> None:
+        """Open a file dialog to choose and inspect a 2D FITS image."""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Inspect 2D FITS Image",
+            "",
+            "FITS images (*.fits *.fit *.fts);;All files (*)",
+        )
+        if not file_name:
+            return
+
+        from ecas.ingestion.fits_image import scan_fits_image
+
+        container = scan_fits_image(file_name)
+        if container is None or not container.planes:
+            QMessageBox.warning(
+                self,
+                "Not a 2D FITS Image",
+                f"The selected file could not be recognized as a valid 2D FITS image container: {Path(file_name).name}",
+            )
+            return
+
+        self._open_fits_image_viewer(container)
+
+    def _open_fits_image_viewer(self, container_or_path) -> None:
+        """Open the 2D FITS image viewer dialog."""
+        from ecas.ui.fits_image_viewer import FitsImageViewerDialog
+
+        dialog = FitsImageViewerDialog(container_or_path, parent=self)
+        dialog.exec()
+
     def _import_csv(self):
         """Open a file dialog and import a CSV spectrum."""
         file_name, _ = QFileDialog.getOpenFileName(
@@ -585,16 +659,7 @@ class ECASWindow(QMainWindow):
         try:
             spectrum, details = self._read_spectrum_file(file_name, selected_schema)
         except SpectrumImportError as exc:
-            # Remove the old display so it cannot be mistaken for the
-            # spectrum the user just attempted to import.
-            self._clear_spectrum_display()
-
-            QMessageBox.warning(
-                self,
-                "Spectrum Import Failed",
-                str(exc) or 'The spectrum could not be imported. No further error details were provided.',
-            )
-            self.statusBar().showMessage("Import failed")
+            self._handle_import_error(exc, file_name)
             return
 
         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))
@@ -609,16 +674,7 @@ class ECASWindow(QMainWindow):
         try:
             spectrum, details = self._read_spectrum_file(path, selected_schema)
         except SpectrumImportError as exc:
-            # Remove the old display so it cannot be mistaken for the
-            # spectrum the user just attempted to import.
-            self._clear_spectrum_display()
-
-            QMessageBox.warning(
-                self,
-                "Spectrum Import Failed",
-                str(exc) or 'The spectrum could not be imported. No further error details were provided.',
-            )
-            self.statusBar().showMessage("Import failed")
+            self._handle_import_error(exc, path)
             return
 
         self._display_spectrum(spectrum, schema=selected_schema, **({'nasa_source': True} if details is not None else {}))

@@ -140,3 +140,53 @@ dependency installation or pipeline processing was executed in this investigatio
 
 Local measurements above come from the supplied file headers and streamed SHA-256
 hashes. Architectural steps are proposed work, not implemented capabilities.
+
+## Implemented Track 1 resolution (2026-10-30)
+
+1. **Standard FITS CONTINUE Long-String Parser**:
+   Implemented in `ecas/ingestion/tabular_formats.py`. Correctly concatenates multi-card
+   continued string keywords (such as `S_REGION`) per OGIP/FITS standards, stripping
+   continuation `&` markers while preserving trailing whitespace and interior quotes.
+
+2. **Honest 2D Astronomical Image Classification**:
+   When a FITS file contains 2D image HDUs but no scalar spectral tables (like the Jupiter
+   MIRI exposures), `import_fits_bintable_spectrum` raises a scientifically informative
+   `SpectrumImportError` identifying the file as a 2D broadband imaging container
+   (reporting telescope, instrument, filter, target, pixel dimensions, and physical units)
+   and explicitly explaining that imaging flux cannot be imported as a 1D (wavelength, signal)
+   spectrum.
+
+3. **FITS Image Ingestion Engine**:
+   Implemented in `ecas/ingestion/fits_image.py`:
+   - `scan_fits_image(path)`: Bounded header traversal discovering all 2D image planes (`SCI`,
+     `ERR`, `DQ`, `AREA`, `VAR_POISSON`, `VAR_RNOISE`, `VAR_FLAT`), target, telescope, filter,
+     exposure time, and pipeline stage keywords without loading image arrays into memory.
+   - `read_fits_image_plane(path, plane)`: Targeted reading of individual planes as NumPy
+     arrays (<2 ms load time, ~4.2 MB footprint per plane), preserving native float32/int32
+     representations and applying `BSCALE`/`BZERO` if present.
+   - `compute_plane_statistics(array)`: Robust finite min, max, mean, median, standard deviation,
+     percentiles (1st, 99th), and NaN counts.
+   - `apply_display_stretch(array, stretch_name)`: Non-destructive visualization stretches
+     (Asinh, Percentile 1%-99%, Min-Max, Sqrt, Log10) for UI display without mutating scientific values.
+
+4. **Interactive 2D FITS Image Viewer**:
+   Implemented in `ecas/ui/fits_image_viewer.py` (`FitsImageViewerDialog`):
+   - Multi-plane switching (`SCI`, `ERR`, `DQ`, `AREA`, etc.)
+   - Perceptually uniform colormaps (`inferno`, `viridis`, `plasma`, `magma`, `cividis`, `turbo`)
+   - Interactive panning, zooming, and level adjustments via `pg.ImageView`
+   - Real-time hover pixel coordinate and flux readout: `X: 512, Y: 512 | Value: 142.3 MJy/sr`
+     (with bitmask decoding for integer `DQ` planes)
+   - Prominent scientific guidance disclaimer explaining that broadband imaging flux cannot
+     be imported directly into 1D spectral fitting without explicit calibrated extraction.
+
+5. **Application Integration**:
+   - In `ecas/ui/main_window.py`: When importing a FITS file that is classified as a 2D image,
+     ECAS presents an informative dialog explaining the file's nature and offering an
+     `[Inspect 2D Image]` action to immediately open `FitsImageViewerDialog`.
+   - Added an explicit "Inspect 2D FITS Image..." button directly on the Spectral Data page.
+
+6. **Verification**:
+   - `tests/test_fits_image.py` provides 9 focused unit and GUI tests verifying header scanning,
+     targeted plane reading, numerical statistics, display stretches, dialog lifecycle, and
+     the exact user files in `C:\Users\Blake\Downloads`.
+   - Full regression suite: 716 passed, 21 skipped, 0 warnings (`pytest -W error`).

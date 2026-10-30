@@ -531,11 +531,8 @@ def _fits_card_value(text: str) -> str:
                 value.append("'"); index += 2
                 continue
             if text[index + 1:].strip() and not text[index + 1:].lstrip().startswith("/"):
-                raise SpectrumImportError("Unsupported FITS continued string/header value")
-            parsed = "".join(value).strip()
-            if parsed.endswith("&"):
-                raise SpectrumImportError("FITS CONTINUE long strings are unsupported; explicit extraction required")
-            return parsed
+                raise SpectrumImportError("Unsupported trailing characters in FITS header value")
+            return "".join(value)
         value.append(text[index]); index += 1
     raise SpectrumImportError("Unterminated FITS header string")
 
@@ -543,6 +540,7 @@ def _fits_card_value(text: str) -> str:
 def _parse_fits_header_block(stream, offset: int) -> tuple[dict[str, str], int]:
     """Read bounded 2880-byte blocks; never load image arrays or the whole file."""
     cards: dict[str, str] = {}
+    continued_keyword: str | None = None
     stream.seek(offset)
     for _ in range(MAX_FITS_HEADER_BLOCKS):
         block = stream.read(2880)
@@ -555,12 +553,32 @@ def _parse_fits_header_block(stream, offset: int) -> tuple[dict[str, str], int]:
                 raise SpectrumImportError("Non-ASCII FITS header") from exc
             keyword = card[:8].strip()
             if keyword == "END":
+                if continued_keyword is not None:
+                    cards[continued_keyword] = cards[continued_keyword].rstrip()
                 return cards, stream.tell()
+            if keyword == "CONTINUE" and continued_keyword is not None:
+                if cards[continued_keyword].endswith("&"):
+                    cards[continued_keyword] = cards[continued_keyword][:-1]
+                val = _fits_card_value(card[8:])
+                if val.endswith("&"):
+                    cards[continued_keyword] += val[:-1]
+                else:
+                    cards[continued_keyword] = (cards[continued_keyword] + val).rstrip()
+                    continued_keyword = None
+                continue
+            if continued_keyword is not None:
+                cards[continued_keyword] = cards[continued_keyword].rstrip()
+                continued_keyword = None
             if not keyword or card[8:10] != "= ":
                 continue
             if keyword in cards:
                 raise SpectrumImportError(f"Duplicate FITS header keyword {keyword}")
-            cards[keyword] = _fits_card_value(card[10:])
+            val = _fits_card_value(card[10:])
+            cards[keyword] = val
+            if val.endswith("&"):
+                continued_keyword = keyword
+            else:
+                cards[keyword] = val.rstrip()
     raise SpectrumImportError(f"FITS header exceeds {MAX_FITS_HEADER_BLOCKS} blocks")
 
 
@@ -667,6 +685,7 @@ def import_fits_bintable_spectrum(path: str | Path) -> SpectrumData:
     try:
         with resolved.open('rb') as stream:
             primary = {}
+            image_hdus = []
             while offset < size:
                 if hdu >= MAX_FITS_HDUS:
                     raise SpectrumImportError(f'FITS exceeds {MAX_FITS_HDUS} HDU limit')
@@ -681,7 +700,26 @@ def import_fits_bintable_spectrum(path: str | Path) -> SpectrumData:
                 next_offset = data_start + padded
                 if next_offset > size:
                     raise SpectrumImportError(f'FITS HDU {hdu} data block is truncated')
-                if cards.get('XTENSION') == 'BINTABLE':
+
+                xtension = cards.get('XTENSION', '').strip()
+                naxis = _fits_integer(cards, 'NAXIS', default='0')
+                if (xtension == 'IMAGE' or (hdu == 0 and naxis >= 2)) and naxis >= 2:
+                    extname = cards.get('EXTNAME', f'HDU_{hdu}').strip()
+                    dims = tuple(_fits_integer(cards, f'NAXIS{i}') for i in range(1, naxis + 1))
+                    bunit = cards.get('BUNIT', '').strip()
+                    bitpix = _fits_integer(cards, 'BITPIX', minimum=-64)
+                    image_hdus.append({
+                        'hdu': hdu,
+                        'extname': extname,
+                        'dims': dims,
+                        'bunit': bunit,
+                        'bitpix': bitpix,
+                        'data_start': data_start,
+                        'data_size': padded,
+                        'cards': cards,
+                    })
+
+                if xtension == 'BINTABLE':
                     # Classify by header before parsing formats: unrelated archive
                     # tables may use strings/vectors and are safely skipped.
                     fields = _fits_integer(cards, 'TFIELDS', minimum=1, maximum=999)
@@ -703,6 +741,21 @@ def import_fits_bintable_spectrum(path: str | Path) -> SpectrumData:
             if len(candidates) > 1:
                 raise SpectrumImportError('Ambiguous FITS: multiple spectral BINTABLE extensions; extract/select one explicit spectrum first')
             if not candidates:
+                if image_hdus:
+                    sci_img = next((img for img in image_hdus if img['extname'] == 'SCI'), image_hdus[0])
+                    target = primary.get('TARGNAME') or primary.get('OBJECT') or ''
+                    telescope = primary.get('TELESCOP', '').strip()
+                    instrument = primary.get('INSTRUME', '').strip()
+                    filter_name = primary.get('FILTER', '').strip()
+                    dims_str = ' x '.join(str(d) for d in sci_img['dims'])
+                    bunit_str = f', unit: {sci_img["bunit"]}' if sci_img['bunit'] else ''
+                    product_desc = ' '.join(part for part in (telescope, instrument, filter_name) if part)
+                    target_desc = f', target: {target}' if target else ''
+                    raise SpectrumImportError(
+                        f'FITS file is a 2D astronomical image container ({product_desc}{target_desc}, {dims_str} pixels{bunit_str}; image-only product), '
+                        'not a 1D sampled spectrum. Imaging products record spatial flux across a passband rather than '
+                        'wavelength-dispersed measurements; they cannot be imported as a 1D (wavelength, signal) spectrum.'
+                    )
                 detail = '; '.join(issues[:3])
                 raise SpectrumImportError('FITS contains no supported scalar spectral BINTABLE; image-only/vector products require extraction. ' + detail)
             data_start, selected_hdu, descriptor = candidates[0]
