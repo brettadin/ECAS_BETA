@@ -1,0 +1,25 @@
+ECAS UV–Vis first-pass file validation
+Selected CSV datasets: 22
+CSV row-count checks passed: 22/22
+H2O | H2O_JPL-2010_2011__298K_121-198nm_rec_.csv | rows=98 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+CO2 | CO2_HuestisBerkowitz_2010__300K_0.1254-201.6nm_evaluation_.csv | rows=25016 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+CO2 | CO2_Shemansky_1972__298K_169.57-300.00nm.csv | rows=297 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+CO | CO_Cook_1965__295K_60.00-100.25nm.csv | rows=268 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+CH4 | CH4_Ditchburn_1955__298K_27.8-151.3nm.csv | rows=73 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+CH4 | CH4_Kameta_2002__298K_52-125nm.csv | rows=3077 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+NH3 | NH3_Cheng_2006__298K_140-230nm_0.02nm_.csv | rows=4501 | row_count_ok=True | x_nondecreasing=True | negative_y_values=7
+O2 | O2_Bogumil_2003__293K_235-389nm.csv | rows=1374 | row_count_ok=True | x_nondecreasing=True | negative_y_values=1
+O2 | O2_Bogumil_2003__293K_650-799.6nm.csv | rows=717 | row_count_ok=True | x_nondecreasing=True | negative_y_values=295
+O3 | O3_Bogumil_2003__293K_230-1070nm.csv | rows=4244 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+SO2 | SO2_ManattLane_1993__293K_106.1-403.7nm.csv | rows=2977 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+SO2 | SO2_VandaeleHermansFally_2009__298K_227.275-416.658nm.csv | rows=39999 | row_count_ok=True | x_nondecreasing=True | negative_y_values=1267
+H2S | H2S_WuChen_1998__295K_160-260nm.csv | rows=20000 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+N2O | N2O_JPL-2010_2011__298K_160-240nm_rec_.csv | rows=71 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+N2O | N2O_Zelikoff_1953__298K_108-208nm.csv | rows=223 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+C2H2 | C2H2_Vattulainen_1997__292K_195-300nm_2bar_.csv | rows=211 | row_count_ok=True | x_nondecreasing=True | negative_y_values=49
+C2H2 | C2H2_Wu_1989__155K_153-210nm.csv | rows=9467 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+PH3 | PH3_Halmann_1963__296K_185-218nm.csv | rows=25 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+NO | NO_Watanabe_1967__298K_110-135nm.csv | rows=258 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+NO | NO_Watanabe_1967__298K_58-110nm.csv | rows=573 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0
+NO2 | NO2_Bogumil_2003__293K_230-930nm.csv | rows=3729 | row_count_ok=True | x_nondecreasing=True | negative_y_values=28
+H2CO | CH2O_JPL-2010_2011__298K_226-375nm_rec_1nm_.csv | rows=150 | row_count_ok=True | x_nondecreasing=True | negative_y_values=0

@@ -1,0 +1,133 @@
+ECAS — NIST COLLECTION VALIDATION REPORT
+=======================================================
+
+Files inspected: 72
+
+FILE VALIDATION STATUS
+------------------------------
+POINT COUNT MISMATCH: 72
+
+SOURCE COLLECTIONS
+------------------------------
+COBLENTZ: 15
+MSDC-IR: 7
+QUANT-IR: 50
+
+PHASES
+------------------------------
+GAS (100 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
+GAS (100 mmHg, N2 ADDED, TOTAL PRESSURE 600 mmHg): 2
+GAS (150 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 2
+GAS (200 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
+GAS (40 PPM): 1
+GAS (400 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
+GAS (50 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 2
+GAS (600 mmHg DILUTED TO A TOTAL PRESSURE OF 600 mmHg WITH N2): 1
+GAS (HEATING PARAFORMALDEHYDE; CONCENTRATION UNKNOWN): 1
+GAS; $$ MATHESON CO. 99% PURE: 1
+LIQUID (NEAT): 1
+SOLUTION (UNKNOWN CONCENTRATION IN CCl4) VS. CCl4: 1
+gas: 57
+
+MOLECULAR FORMULAS
+------------------------------
+C 2 H 2: 1
+C H 4: 1
+C H2 O: 2
+C H2: C H2: 25
+C H4: 1
+C O: 2
+C O 2: 1
+C O2: 1
+C2 H2: 1
+C2 H4: 1
+H 2 O: 1
+H 3 N: 1
+H2 O: 1
+H2 S: 1
+H3 N: 1
+N 2 O: 1
+N O: 1
+N2 O: 1
+O2 S: 2
+O3: 1
+S O2: 25
+
+FILES NEEDING ATTENTION
+------------------------------
+Essential\CH4\CH4_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\CH4\CH4_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\CO\CO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\CO\CO_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\CO2\CO2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\CO2\CO2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\H2O\H2O_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\H2O\H2O_liquid_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\NH3\NH3_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\NH3\NH3_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\O3\O3_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index10.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index11.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index12.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index13.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index14.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index15.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index16.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index17.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index18.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index19.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index2.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index20.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index21.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index22.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index23.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index24.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index25.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index26.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index3.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index4.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index5.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index6.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index7.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index8.jdx: POINT COUNT MISMATCH — Parsed
+Essential\SO2\SO2_gas_IR_index9.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H2\C2H2_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H2\C2H2_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index10.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index11.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index12.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index13.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index14.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index15.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index16.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index17.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index18.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index19.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index2.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index20.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index21.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index22.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index23.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index24.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index25.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index3.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index4.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index5.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index6.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index7.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index8.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\C2H4\C2H4_gas_IR_index9.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\H2CO\H2CO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\H2CO\H2CO_solution_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\H2S\H2S_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\N2O\N2O_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\N2O\N2O_gas_IR_index1.jdx: POINT COUNT MISMATCH — Parsed
+High_Priority\NO\NO_gas_IR_index0.jdx: POINT COUNT MISMATCH — Parsed
+
+IMPORTANT LIMITATIONS
+------------------------------
+This is an initial structural validator for XYDATA=(X++(Y..Y)) JCAMP-DX records. It does not establish scientific accuracy, calibration, or full JCAMP-DX compliance.
