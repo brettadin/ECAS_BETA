@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "created_utc": "2026-10-29T22:16:54.520068+00:00",
+  "fields": {
+    "species_name": "Canonical species/material name",
+    "formula": "Chemical formula or atomic symbol",
+    "species_state": "Gas, liquid, solid, solution, plasma, etc.",
+    "dataset_type": "Measured spectrum, cross-section, line list, or synthetic spectrum",
+    "spectral_region": "IR, UV-Vis, NIR, etc.",
+    "x_axis_name": "Wavelength, wavenumber, frequency, etc.",
+    "x_axis_units": "nm, um, cm-1, Hz, etc.",
+    "y_axis_name": "Absorbance, transmittance, cross-section, line intensity, etc.",
+    "y_axis_units": "Units exactly as supplied by source",
+    "temperature_K": "Measurement or simulation temperature",
+    "pressure_value_and_units": "Pressure and its units",
+    "sample_preparation": "Neat liquid, solution, film, powder, pellet, gas cell, etc.",
+    "solvent_concentration_path_length": "Required where applicable for UV-Vis solution data",
+    "instrument_and_resolution": "Where available",
+    "source_database_and_record_id": "Database plus stable record identifier",
+    "primary_reference_doi_or_citation": "Source's scientific reference",
+    "license_and_usage_terms": "Usage/redistribution terms",
+    "original_filename_and_sha256": "Preserve source original; hash recommended",
+    "processing_history": "Any normalization, interpolation, conversion, or smoothing",
+    "is_measured_or_synthetic": "Never infer; record explicitly",
+    "isotope_and_ionization_state": "e.g. 12C16O, Fe I, Fe II"
+  }
+}

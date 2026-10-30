@@ -1,413 +1,493 @@
-# ECAS — Development Plan Reconciliation and Autonomous Development Workflow
+# ECAS Development Handoff — Spectral Identification Rework and UI Improvements
 
-**Repository:** https://github.com/brettadin/ECAS_BETA  
-**Project:** ECAS — Exoplanetary Characterization & Astrochemistry Suite  
-**Initial mode:** PLAN  
-**Scope:** Reconcile project documentation with the actual implementation, revise the development plan, and establish a safe workflow for autonomous development after planning and documentation are complete.
+## Project
 
-## Objective
+**ECAS — Exoplanetary Characterization & Astrochemistry Suite**
 
-Review the current project state and authoritative documentation. Establish what has genuinely been completed, what remains outstanding, and what needs to change in the development plan. See: `docs/ECAS_development_plan.md`
+Repository:
+https://github.com/brettadin/ECAS_BETA
 
-The revised plan must accurately represent the current state of Chunk 4 and establish a clear, evidence-based path into Chunks 5, 5.1, and 6.
+You are working with two local AI development agents that collaborate and hand work between each other. Coordinate your investigation, planning, implementation and verification between both agents.
 
-After the necessary planning, documentation reconciliation, and verification are complete, the intended workflow is for the agent to **continue working through eligible development tasks without requiring a separate human approval for every routine step**.
+Unlike a conventional planning-only exercise, this task is intended to result in working software.
 
-This is a staged task:
+**You are authorised to investigate, plan, implement, test, and update documentation. Do not stop after producing a plan.**
 
-1. **Planning and reconciliation:** Investigate the repository, prepare a reviewable plan, and identify required documentation changes. Do not edit files or implement features in this phase.
-2. **Documentation and roadmap:** After the initial plan is approved, reconcile the relevant records and finalize the development roadmap.
-3. **Autonomous development:** Once the documentation and roadmap are reconciled, use the established roadmap to plan, implement, test, review, and document subsequent eligible tasks in controlled increments, without stopping for routine approval between each step.
-
-Autonomous execution does not mean unrestricted changes. Preserve scientific integrity, repository safety, explicit acceptance criteria, and clear stop conditions. The agent must not bypass a necessary human decision simply to keep working.
+Work incrementally, but keep progressing until the requested functionality is implemented and verified.
 
 ---
 
-## 1. Establish the current state
+# 1. Background: Why ECAS has a local spectral library
 
-Inspect the current branch, working-tree status, relevant commit history, authoritative project-state and decision records, and the development plan.
+ECAS is being developed as a tool for exoplanetary atmospheric characterization and astrochemistry.
 
-Locate the relevant chunk plans, implementation reports, review records, test evidence, handoffs, and decisions. Start with the authoritative documents and most recent relevant records; inspect additional files when needed to resolve specific questions.
+An important part of the project has been building a local spectral library rather than relying on external websites or requiring users to locate and download spectra themselves.
 
-Determine whether the current checkout includes the relevant recent work. Distinguish committed changes from local changes and identify discrepancies between the current code, documentation, and historical records.
+The objectives are:
 
-Use the actual repository and available verification evidence to establish implementation status. Previous conversations and historical plans may provide context, but are not proof that something was implemented, tested, or accepted.
+- Reliable local access to spectral datasets.
+- Reproducible analysis using known datasets.
+- Traceable scientific provenance.
+- Support for both IR and UV–Vis spectroscopy.
+- Broader molecular coverage over time.
+- A fallback curation process for molecules or spectral regions not adequately covered by primary sources.
+- A foundation for future atmospheric characterization and molecular identification workflows.
 
-Reuse existing evidence and decisions wherever possible. Avoid redundant investigations, unnecessary rewrites, and duplicate documentation.
+The application must use the actual spectral datasets included in the project.
 
-Do not overwrite, discard, or silently modify unrelated user changes. Before any implementation work, establish the branch and working-tree state and preserve a safe boundary around existing work.
+**MOCK DATA IS STRICTLY PROHIBITED.**
 
-## 2. Reconcile documentation and implementation status
+Do not introduce fabricated spectra, synthetic reference datasets, placeholder molecular measurements, or simulated detection results to make the identification system appear functional.
 
-Identify the specific documentation that requires correction or updating.
-
-For each relevant task, distinguish between:
-
-- Planned but not implemented.
-- Partially implemented.
-- Implemented but not fully tested.
-- Tested but not manually verified where manual verification is required.
-- Reviewed but not yet accepted.
-- Verified and accepted.
-- Deferred or blocked.
-
-These states must not be treated as interchangeable.
-
-Inspect Chunk 4 in particular, including the NASA transmission-spectrum retrieval workflow, caching and provenance, offline reopening, failure handling, outstanding interactive verification, independent review, and integration with newer development work.
-
-Verify each relevant status against the current code, test evidence, review records, and acceptance criteria. Do not assume every item listed above remains outstanding; determine its actual status.
-
-Update the development plan and authoritative project-state or decision records only where changes are justified. Preserve historical plans and evidence unless a specific correction is necessary. Do not rewrite completed historical plans merely to make them match the current roadmap.
-
-Do not mark Chunk 4 complete or merge-ready unless its applicable acceptance criteria have been satisfied.
-
-## 3. Revise the development plan
-
-Locate the authoritative development plan and revise its relevant sections to reflect the following intended structure.
-
-Preserve the existing document organization and terminology where practical. If the plan already contains relevant material, revise it in place rather than creating a competing version.
-
-### Chunk 5 — Spectral Comparison Foundations and Method Selection
-
-**Purpose:** Establish what makes spectra scientifically comparable and select an appropriate comparison method before implementing the production workflow.
-
-The plan must cover:
-
-- **Spectral compatibility:** Define the conditions required for scientifically meaningful comparisons, including units, spectral axes, coverage, resolution, sampling, uncertainty, instrument characteristics, and relevant measurement conditions.
-- **Representative test cases:** Identify realistic cases involving noisy, incomplete, overlapping, and incompatible spectra.
-- **Candidate methods:** Investigate simple line matching and scientifically appropriate alternatives. Evaluate their assumptions, scientific validity, robustness, interpretability, limitations, and computational practicality.
-- **Evaluation criteria:** Define how candidate methods will be assessed, including how uncertainty, spectral overlap, ambiguous matches, and false matches will be handled.
-- **Comparison contract:** Define required inputs, validation behavior, outputs, provenance, and compatibility rules.
-- **Method selection:** Document an evidence-based decision explaining why the selected method is appropriate for ECAS's supported data and intended scientific use.
-
-Do not assume simple line matching is sufficient. Do not select a method merely because it is easy to implement. Equally, avoid unnecessary complexity if a simpler method adequately meets the requirements.
-
-**Completion criterion:** A justified method selection supported by explicit constraints, representative test cases, evaluation criteria, and documented limitations. If the available evidence is insufficient, record the unresolved questions instead of forcing a decision.
-
-This chunk is primarily investigation, evaluation, and specification. It does not require implementation of the production comparison workflow.
-
-### Chunk 5.1 — Molecular Reference Spectra and Comparison Data Integration
-
-**Purpose:** Establish the infrastructure for discovering, retrieving, caching, organizing, and selecting molecular reference spectra for use in ECAS.
-
-The plan must cover the following areas.
-
-**A. Provider and format investigation**
-
-- Investigate suitable scientific reference-data providers and file formats.
-- Evaluate NIST as a candidate, alongside relevant alternatives. Investigate JCAMP-DX and other appropriate formats without assuming any provider or format is automatically the best choice.
-- Assess actual availability of molecular spectra, supported search mechanisms, downloadable data products, spectral coverage, units, resolution, metadata, access restrictions, and suitability for the intended scientific use.
-- Select an appropriate initial provider and supported representation based on the findings.
-- Determine which additional sources or formats should be deferred rather than expanding the initial implementation unnecessarily.
-
-**B. In-application molecular search**
-
-ECAS must eventually be able to search for molecular spectral data directly from within the application.
-
-- Provide a search workflow that queries the selected provider from ECAS rather than requiring users to locate and download every spectrum manually outside the program.
-- Support searching by molecule name and, where the provider supports it, chemical formula, molecular identifiers, or other relevant search fields.
-- Display available datasets and useful metadata before retrieval, including molecular identity, source, spectral coverage, data type, units, and other metadata supported by the provider.
-- Allow users to select an available dataset for retrieval and caching.
-- Clearly communicate when a search fails, no results are available, a product cannot be retrieved, or the provider does not expose the required search or download capability.
-- Investigate the provider's actual interfaces, access policies, and technical constraints before choosing an implementation approach. Do not assume that a website offers a suitable public API or automated download mechanism without verifying it.
-- If NIST is not the most suitable initial source, document the evidence for selecting an alternative while preserving the requirement for in-application molecular search.
-
-**C. Retrieval, caching, and provenance**
-
-- Implement retrieval, parsing, local caching, integrity validation, provenance preservation, and offline reopening for the selected reference-data source.
-- Investigate whether existing ECAS caching and persistence patterns can be reused. Do not assume that the exoplanet-data cache is suitable without examining its architecture and requirements.
-- Preserve source identifiers, original data where feasible, retrieval details, units, metadata, and the transformations applied during parsing or processing.
-- Distinguish measured reference spectra, theoretical line lists, simulated spectra, and processed data.
-- Handle missing metadata, invalid products, interrupted retrievals, and cache-integrity failures explicitly.
-
-**D. Molecular catalogue and comparison interface**
-
-- Establish a searchable molecular catalogue linking molecular identities to available reference datasets and their metadata.
-- Support multiple reference datasets for a molecule where applicable; do not treat datasets from different sources, conditions, or representations as interchangeable without justification.
-- Integrate the catalogue and reference-data selection into the Comparisons tab.
-- Allow users to select the observational or input dataset independently of the reference dataset or datasets.
-- Allow users to select individual molecules or inspect all eligible molecular references currently available.
-- Show which datasets are available, cached, uncached, unavailable, invalid, or incompatible as appropriate.
-- Make it clear which molecular reference dataset is selected and which observational or input dataset it will be compared against.
-
-**E. Verification**
-
-Plan focused tests covering provider search, retrieval, parsing, caching, provenance, integrity validation, offline reopening, catalogue behavior, dataset selection, and error handling.
-
-Use real provider data where feasible, supplemented by documented fixtures for reproducible edge cases. Do not treat a successful download or file parse as independent scientific validation of the reference data.
-
-**Completion criterion:** ECAS can search the selected initial provider from within the application, discover available molecular reference datasets, retrieve and cache selected spectra with traceable provenance, catalogue the available datasets by molecule, reopen cached spectra offline, and expose eligible reference and observational datasets for selection in the Comparisons tab.
-
-This chunk establishes reference-data access and selection. It does not require the production comparison algorithm to be finalized or implemented, nor does it establish that any molecule is present in an observed atmosphere.
-
-### Chunk 6 — Scientific Comparison, Interpretation, and Projections
-
-**Purpose:** Implement the comparison workflow using the method selected in Chunk 5 and the reference-data infrastructure established in Chunk 5.1.
-
-The plan must cover:
-
-- **Dataset selection and validation:** Allow users to select eligible observational or input datasets and one or more molecular reference datasets. Validate compatibility before comparison.
-- **Comparison execution:** Implement the selected method and its defined preprocessing, alignment, resolution handling, uncertainty treatment, and other required operations.
-- **Multiple candidates:** Support comparison against individual molecules or multiple eligible reference datasets where the selected method permits.
-- **Compatibility and failure explanations:** Explain why a comparison cannot proceed, which requirements are unmet, and what limitations affect the results.
-- **Results and interpretation:** Present visualizations and derived comparison results appropriate to the selected method. Distinguish numerical agreement from scientific identification.
-- **Projections and forward modelling:** Investigate and implement projections only where the required inputs, physical assumptions, and validation are established. Define the distinction between comparing an existing reference spectrum and predicting a spectrum under specified conditions.
-- **Reproducibility:** Preserve input and reference dataset identities, source provenance, method version, preprocessing choices, relevant settings, and other information required to reproduce a result. Document limitations when original data or software versions cannot be recovered.
-- **Scientific and technical verification:** Test known matches, ambiguous overlaps, incompatible inputs, changes in resolution or sampling, noise, incomplete data, missing metadata, and failure conditions.
-- **Scientific reporting:** Clearly separate observed measurements, reference spectra, projected spectra, and derived comparison results. Do not present spectral overlap as proof of atmospheric composition or report unsupported abundance estimates.
-
-**Completion criterion:** A user can select eligible datasets, run the documented comparison method, inspect and understand its results and limitations, and reproduce the analysis from preserved inputs and settings within the documented reproducibility limits. Any projections must be supported by explicitly defined and validated assumptions.
-
-Do not expand these chunks into additional major chunks unless a concrete dependency or requirement demonstrates that the existing structure is insufficient.
-
-## 4. Establish the correct sequence and dependencies
-
-Evaluate the following intended sequence against the actual repository:
-
-1. Finish outstanding Chunk 4 verification, review, and branch-integration requirements.
-2. Update Chunk 4 documentation and acceptance status based on verified evidence.
-3. Investigate and select the comparison method in Chunk 5.
-4. Establish in-application molecular search, reference-data retrieval, caching, catalogue management, and Comparisons-tab selection in Chunk 5.1.
-5. Implement the selected comparison workflow and scientifically justified projections in Chunk 6.
-
-Confirm whether this ordering is appropriate given the current repository. If a dependency requires a different order, explain the reason and propose the smallest necessary adjustment.
-
-Identify preliminary scientific or architectural questions that must be answered before implementation. Distinguish decisions that must be made during investigation from decisions that can safely remain open until evidence is available.
-
-Do not prematurely design the entire future system or prescribe technologies before the investigation supports them.
-
-## 5. Scientific and documentation requirements
-
-Apply these principles throughout the plan and any documentation changes:
-
-- Do not invent scientific data, sources, implementation results, test outcomes, or verification claims.
-- Preserve source provenance and distinguish observations, measured reference spectra, theoretical line lists, simulated data, processed data, and projections.
-- Do not assume spectra are comparable merely because they can be plotted together.
-- Do not infer molecular presence from a spectral match alone.
-- Do not assume that a provider, API, file format, or comparison method has been selected before the investigation establishes that decision.
-- Keep deferred features explicitly deferred rather than silently absorbing them into the current scope.
-- Preserve useful historical records and existing decisions unless evidence justifies revising them.
-- Make unresolved questions and limitations explicit rather than silently making assumptions.
-- Keep documentation changes focused on the approved scope.
-
-## 6. Required PLAN-mode response
-
-Before editing any files, provide a specific, reviewable plan containing:
-
-1. **Files examined:** The authoritative development plan and relevant project-state, decision, chunk, review, and test records found.
-2. **Current status:** What is complete, incomplete, unverified, deferred, or blocked, with supporting evidence.
-3. **Documentation issues:** Exact file paths and sections requiring changes, with a brief explanation of each issue.
-4. **Proposed edits:** Which files will change and what will change in each.
-5. **Revised roadmap:** How Chunks 5, 5.1, and 6 will be represented, including dependencies and completion criteria.
-6. **Outstanding decisions:** Missing evidence, unresolved scientific questions, provider capabilities that need investigation, and architectural dependencies.
-7. **Verification plan:** How the resulting documentation will be checked for accuracy, consistency, and accidental changes.
-8. **Autonomy readiness:** What capabilities, repository permissions, and execution conditions are needed for the agent to continue working after documentation reconciliation, and which of these are actually available in the current environment.
-9. **Boundaries:** What will remain untouched or deferred.
-
-Do not edit files or implement application functionality during PLAN mode. Do not claim that tests, reviews, or manual verification have been performed unless there is evidence that they actually have been.
-
-Wait for approval before proceeding to ACT mode for the initial documentation reconciliation.
-
-## 7. ACT-mode requirements for the initial reconciliation
-
-Once the initial plan is approved:
-
-- Make only the agreed documentation and development-plan changes.
-- Read each target file before editing.
-- Preserve historical records, unrelated work, and existing local changes.
-- Base status updates on verified evidence.
-- Inspect the complete diff for accuracy, consistency, accidental deletions, and unrelated modifications.
-- Run appropriate documentation checks or repository validation commands where available.
-- Report the exact files changed, substantive edits, verification performed and actual results, unresolved issues, and the next recommended task.
-
-If investigation reveals that a proposed status update cannot be supported, leave the status unresolved and explain what evidence is missing. Do not manufacture certainty to complete the documentation.
-
-If a separate implementation or review task is required to close an outstanding Chunk 4 item, document that requirement rather than performing unrelated work as part of the initial reconciliation.
-
-Do not implement Chunks 5, 5.1, or 6 application functionality during this initial reconciliation task.
-
-**Initial deliverable:** An accurate, internally consistent development plan and project record that reflects the actual state of ECAS, identifies remaining Chunk 4 requirements, and provides a practical, evidence-based roadmap for the next controlled development steps.
+If data is missing or unsuitable, report that limitation honestly.
 
 ---
 
-## 8. Autonomous development after planning and documentation are complete
+# 2. First: Inspect the current project and its spectral data
 
-After the initial reconciliation is completed and its documentation and roadmap have been verified, transition to the autonomous development workflow below. Do not treat this section as permission to skip the initial planning, reconciliation, or verification stages.
+The current spectral library is located at:
 
-### 8.1 Transition conditions
+`data/ECAS_Spectral_Library/`
 
-Begin autonomous development only when all of the following are true:
+Inspect this directory and its contents before implementation.
 
-- The authoritative development plan and project-state records are consistent with the repository evidence.
-- The next eligible task and its dependencies are clear.
-- Applicable acceptance criteria and verification requirements are documented.
-- The agent has confirmed that it can access the required files, execute the necessary tools, and run the relevant tests.
-- The current branch and working-tree state are understood, and existing work is protected.
-- No unresolved human decision is a prerequisite for the next task.
+Expected structure:
 
-If any condition is unmet, resolve it within the current authorized scope or stop and report the blocker. Do not pretend that a prerequisite has been satisfied.
+```text
+data/ECAS_Spectral_Library/
+├── Raw_Sources/
+│   ├── IR/
+│   └── Uv-Vis/
+├── Ready_For_ECAS/
+│   ├── IR/
+│   └── Uv-Vis/
+├── Documentation/
+│   ├── IR/
+│   └── UV-Vis/
+└── README.txt
+```
 
-### 8.2 Autonomous task loop
+The current collection contains approximately:
 
-Once the transition conditions are satisfied, continue through the development roadmap without requiring a separate approval for each routine task.
+- 18 IR JCAMP-DX files across 13 molecules.
+- 22 original UV–Vis TXT files across 15 molecules.
+- 22 prepared UV–Vis CSV files.
 
-For each task:
+The prepared UV–Vis datasets use wavelength in nm and absorption cross-section in cm²/molecule.
 
-1. **Select the next task.** Use the authoritative roadmap, dependency order, and outstanding work. Prefer the smallest meaningful task that advances the next chunk.
-2. **Inspect before acting.** Examine relevant code, tests, documentation, repository state, and existing decisions before proposing or making changes.
-3. **Plan the task.** Define a bounded scope, expected behavior, acceptance criteria, likely risks, and verification steps. Record the plan in the appropriate existing project records when it materially affects future work.
-4. **Implement the bounded task.** Make only changes required by that task. Preserve existing behavior unless a justified change is required by the approved roadmap.
-5. **Verify.** Run relevant focused tests first, followed by broader tests or checks where appropriate. Execute the actual commands; do not infer success from a plan or from code inspection alone.
-6. **Review the changes.** Inspect the complete diff, test coverage, error paths, compatibility, data integrity, provenance, documentation consistency, and unintended side effects.
-7. **Resolve failures.** Diagnose and correct failures within the task's scope when the cause is understood and the fix is safe. Re-run affected checks after changes. Do not repeatedly retry without new evidence.
-8. **Update project records.** Record actual implementation status, tests run and results, known limitations, decisions, deferred work, and any remaining acceptance requirements.
-9. **Assess completion.** Mark the task complete only when its acceptance criteria are supported by evidence. Otherwise record it as partial, unverified, blocked, or deferred.
-10. **Continue.** Select the next eligible task and repeat without waiting for routine human approval.
+The IR datasets retain their original JCAMP-DX metadata.
 
-Keep each task small enough that its changes and verification can be understood independently. Do not combine an entire chunk into one large, difficult-to-review change merely to reduce pauses.
+Important scientific distinctions:
 
-### 8.3 PLAN and ACT behavior during autonomous work
+- IR datasets may represent absorbance or transmittance.
+- Sample phases and experimental conditions vary.
+- The IR prepared files currently correspond to copies of the raw files.
+- UV–Vis datasets have different wavelength ranges, temperatures and sampling densities.
+- Some UV–Vis datasets contain negative cross-section values. These must not be silently removed or corrected.
+- Not every molecule has both IR and UV–Vis coverage.
 
-Use the PLAN and ACT behavior according to the capabilities of the installed environment.
+Read the library README and documentation to establish the exact current paths, formats and limitations.
 
-- Use planning before each meaningful implementation task, but do not require the user to manually relay and approve every routine plan.
-- After checking that the task falls within the established roadmap and autonomy boundaries, proceed to implementation where the environment permits.
-- If the tool requires a mode switch or confirmation that cannot be performed autonomously, report that limitation clearly. Do not claim to have continued automatically when the environment has paused.
-- Do not reinterpret the original PLAN-mode restriction as a permanent prohibition on implementation. It applies to the initial reconciliation phase; subsequent implementation is authorized only under this autonomous-development section and its safeguards.
+Do not assume that every spectrum can be compared directly with every other spectrum.
 
-### 8.4 Scope and decision authority
+---
 
-The agent may independently perform routine, reversible development work that is supported by the roadmap, established decisions, and documented acceptance criteria, including:
+# 3. Investigate the current Comparison tab
 
-- Inspecting and modifying application code and tests within the active task's scope.
-- Implementing planned features in dependency order.
-- Fixing defects directly related to the active task.
-- Updating relevant documentation and project-state records to reflect verified changes.
-- Refactoring narrowly where necessary for the task, provided existing behavior is preserved and tests support the change.
-- Running available tests, static checks, and other relevant validation.
-- Investigating candidate providers, formats, and methods as specified in the roadmap, then documenting evidence and recommendations.
+Inspect the existing ECAS comparison functionality in detail.
 
-The agent must not silently make consequential decisions that lack adequate evidence. It must stop for human input when progress depends on decisions such as:
+Determine:
 
-- Choosing between scientifically consequential methods when evidence does not resolve the choice.
-- Introducing assumptions that materially change scientific interpretation or claims.
-- Accepting an unresolved provenance, licensing, privacy, security, or data-integrity risk.
-- Removing or destructively migrating user data, rewriting unrelated history, or overwriting unrelated user work.
-- Changing the approved project scope or introducing a substantial new dependency or architecture without justification under the roadmap.
-- Merging to a protected branch, publishing a release, deploying, spending money, or taking another externally consequential action without explicit authorization.
-- Accepting a feature whose scientific validity or required verification remains unresolved.
+- How spectra are currently imported and represented.
+- How the Comparison tab obtains its data.
+- How spectral datasets are selected.
+- How comparisons are calculated.
+- How results are presented.
+- What currently works.
+- What is incomplete or scientifically weak.
+- Which existing components can be reused.
 
-When a decision can safely be deferred, document it and continue with independent work rather than stopping the entire workflow unnecessarily.
+Do not discard working application infrastructure unnecessarily.
 
-### 8.5 Repository safety and change management
+The goal is to improve the existing comparison functionality by introducing a substantially better molecular identification workflow.
 
-- Preserve existing user changes. Never discard work simply to obtain a clean working tree.
-- Use the repository's established branch conventions. Keep autonomous changes isolated from unrelated work.
-- Do not use destructive commands or broad rewrites without a clear, task-specific justification.
-- Do not commit, push, merge, publish, or deploy unless the repository's existing workflow explicitly authorizes that action and the required safety conditions are met. If uncertain, do not perform the external action.
-- Never embed secrets, tokens, credentials, or private user data in source code, logs, tests, or documentation.
-- Do not weaken tests, remove validation, suppress errors, or change acceptance criteria merely to make a task pass.
-- Do not silently modify unrelated files. If an unrelated issue is discovered, record it for later unless it blocks the current task or creates an immediate risk.
-- Keep changes incremental and inspectable. Avoid large batches of unrelated modifications.
+---
 
-### 8.6 Scientific integrity and evidence requirements
+# 4. Investigate ECAS v1 — use its Identify tab as the reference
 
-These requirements apply to every autonomous task, not only the original planning phase.
+There is an older version of the application called `ecas_v1`. (https://github.com/brettadin/ecas)
 
-- Do not fabricate data, source references, provider capabilities, test results, review outcomes, or scientific conclusions.
-- Preserve provenance and distinguish observed measurements, measured reference spectra, theoretical line lists, simulated spectra, processed data, and projections.
-- Do not assume that two spectra are scientifically comparable merely because they can be displayed together.
-- Do not treat spectral similarity or overlap as proof of molecular presence, atmospheric composition, or abundance.
-- Do not implement forward modelling or projections without defined inputs, explicit assumptions, and a defensible validation strategy.
-- Do not describe fixtures, synthetic test data, or internally consistent cached files as independent scientific validation.
-- Distinguish code-level correctness, successful data retrieval, software verification, scientific validation, and human acceptance.
-- If scientific evidence is inadequate, document the uncertainty and continue only with work that does not depend on the unresolved claim.
+It is included in the project history/archive.
 
-### 8.7 Testing and acceptance gates
+Locate and inspect it.
 
-For every task:
+The most important reference is the **Identify tab** in ECAS v1.
 
-- Identify which tests and checks are applicable before implementation.
-- Run the most relevant focused tests after changes.
-- Run broader regression tests at appropriate milestones and before declaring a chunk complete.
-- Add or update tests for new behavior, failure paths, and relevant regressions.
-- Report actual command outcomes, including failures and skipped tests.
-- Never claim that a test passed if it was not executed or if the result is ambiguous.
-- Treat manual verification as outstanding until it is actually performed or the acceptance criteria are formally revised with justification.
-- Treat independent review as outstanding until the review evidence exists.
-- Do not mark a chunk complete or merge-ready until its documented acceptance criteria have been satisfied.
+The previous identification implementation was significantly better than the current comparison tool.
 
-If a test or verification step cannot be run because of environment limitations, record exactly what could not be verified, why, and what remains necessary. Continue with independent tasks only when doing so will not conceal or compound the unverified issue.
+Investigate its actual implementation, particularly:
 
-### 8.8 Failure, uncertainty, and stop conditions
+- How molecular reference spectra were loaded.
+- How observed and reference spectra were compared.
+- How matching was calculated.
+- How sigma confidence was calculated and interpreted.
+- How detection confidence was displayed.
+- How multiple molecular candidates were handled.
+- How the user selected molecules.
+- How results were presented.
 
-Stop the affected task and report a clear blocker when:
+Pay particular attention to the sigma-confidence methodology.
 
-- Required evidence is unavailable and the missing information materially affects correctness.
-- A scientific or architectural decision cannot be made responsibly from available evidence.
-- A change risks damaging user work, corrupting data, or compromising repository integrity.
-- Required permissions or tools are unavailable.
-- A failure persists after a reasonable, evidence-driven diagnostic attempt.
-- The only apparent path forward would violate the scope, safety boundaries, or acceptance criteria.
+We want to bring the useful identification logic from ECAS v1 into the current ECAS application.
 
-When blocked:
+**Do not simply recreate the appearance of the old tab. Recover and reuse the underlying identification methodology wherever practical.**
 
-1. Record the exact blocker and supporting evidence.
-2. Identify what has and has not been completed.
-3. State the minimum decision, access, or verification needed to proceed.
-4. Continue other independent, authorized tasks where safe and useful.
-5. Do not repeatedly retry the same failed operation without a meaningful change in diagnosis or approach.
+Preserve the useful mathematics and confidence interpretation from v1 rather than inventing a new scoring system without justification.
 
-Do not stop the entire development roadmap because one independent task is blocked. Equally, do not bypass a blocker when downstream work depends on its resolution.
+If the original v1 sigma calculation depends on assumptions, normalization, uncertainty estimates or thresholds, document those assumptions.
 
-### 8.9 Persistent progress and handoffs
+Do not claim that a sigma value represents a statistically rigorous detection significance unless the underlying calculation supports that interpretation.
 
-Maintain the existing authoritative project records rather than inventing a parallel tracking system.
+If the v1 implementation cannot be found, investigate the old project thoroughly before attempting to reconstruct it. Report any parts that cannot be recovered.
 
-As appropriate to the repository's conventions, record:
+---
 
-- Current chunk and task.
-- Implementation status and acceptance status separately.
-- Files and major components changed.
-- Tests and checks executed, with actual results.
-- Manual verification and independent review status.
-- Decisions made and evidence supporting them.
-- Outstanding uncertainties, risks, and blockers.
-- Deferred work and its dependencies.
-- The next eligible task and the conditions for starting it.
+# 5. Implement the new molecular identification workflow
 
-Update records at meaningful milestones and before ending a session. Do not repeatedly rewrite the entire roadmap after every small change.
+Integrate the improved identification functionality into the current ECAS application.
 
-The records must allow a future agent session to resume from the actual repository state without relying on conversational memory or assuming that an earlier task finished successfully.
+The objective is to allow a user to select molecules from the local spectral library and identify their potential presence in an observed spectrum.
 
-### 8.10 Autonomous continuation and session limits
+The workflow should be straightforward.
 
-Continue working through eligible tasks in the established dependency order for as long as the execution environment permits.
+## A. Molecule selection interface
 
-Do not stop merely because one task has been completed, if the next task is clear, authorized, and safe to begin.
+Provide selectable molecule checkboxes.
 
-However:
+For UI clarity, separate the available reference molecules into two groups:
 
-- Do not claim to operate in the background or continue after the execution environment has ended unless the installed agent system explicitly supports that behavior.
-- Do not assume that a prompt can override tool permission prompts, execution limits, session limits, or unavailable capabilities.
-- If the environment pauses for a required confirmation, explain the precise intervention needed rather than implying that work is continuing.
-- If nearing an execution or context limit, prioritize preserving the actual state, verification results, and next action so work can resume safely.
+**IR molecules**
 
-At the end of an autonomous run, provide a concise but complete report of work completed, actual verification results, unresolved issues, current acceptance status, and the next eligible task.
+**UV–Vis molecules**
 
-### 8.11 Definition of autonomous progress
+Populate these choices from the actual local spectral library.
 
-Autonomous progress means the agent can move from one bounded, authorized task to the next, using documented dependencies and acceptance criteria, without routine human approval at every step.
+Do not hardcode molecules that do not have corresponding local reference data.
 
-It does **not** mean that the agent should:
+The user should be able to select multiple molecules.
 
-- Declare success without evidence.
-- Skip review or testing.
-- Resolve unsupported scientific questions by guessing.
-- Ignore blockers or tool limitations.
-- Make irreversible or externally consequential changes without authorization.
-- Mark partially completed or unverified work as complete.
+The selected molecules become the reference candidates for identification.
 
-The objective is sustained, incremental development with traceable decisions and verification—not unrestricted changes or artificial completion.
+Make it clear which modality is being used.
 
-**Final objective:** Reconcile ECAS's current state and roadmap first, then progress autonomously through the eligible work in Chunks 4, 5, 5.1, and 6, and any justified follow-on tasks, while preserving scientific integrity, repository safety, accurate documentation, and verifiable acceptance criteria.
+If the observed spectrum is IR, use compatible IR reference data.
+
+If the observed spectrum is UV–Vis, use compatible UV–Vis reference data.
+
+Do not compare incompatible spectral types or units.
+
+## B. Identification action
+
+Provide a clearly labelled action, such as:
+
+`Identify Molecules`
+
+When activated:
+
+1. Retrieve the selected observed spectrum or spectra.
+2. Retrieve the selected molecular reference datasets from the local library.
+3. Apply the recovered ECAS v1 identification/comparison methodology.
+4. Calculate the matching results and sigma confidence.
+5. Display the potential molecular identifications.
+
+The calculation must use actual spectral values.
+
+Do not generate results from molecule names, predefined scores or mock detection data.
+
+## C. Sigma confidence
+
+Use the same kind of sigma-confidence calculation that made ECAS v1 more effective.
+
+Investigate and reproduce the original methodology as closely as possible.
+
+Preserve the useful features of the v1 calculation, including its interpretation and thresholds where they are supported by the original implementation.
+
+The resulting sigma values should be associated with each molecular candidate.
+
+Do not arbitrarily invent confidence thresholds.
+
+If some datasets lack information required by the v1 calculation, establish a scientifically defensible handling strategy and clearly document the limitations.
+
+## D. Molecular result visualization
+
+Each selected molecule should receive a distinct, consistent colour.
+
+Use those colours when displaying the comparison or identification results.
+
+The user must be able to visually distinguish which molecular reference contributes to each result.
+
+Avoid assigning colours that change unpredictably between calculations.
+
+## E. Results table
+
+At the bottom of the identification interface, add a compact results table.
+
+At minimum, it should display:
+
+| Molecule | Modality | Colour | Sigma |
+|---|---|---|---|
+
+The table should contain the selected molecules and their corresponding calculated results.
+
+Use the same colour assigned to each molecule in the plot.
+
+Display sigma values clearly.
+
+Where a molecule cannot be evaluated because of missing or incompatible data, report that condition rather than inventing a result.
+
+---
+
+# 6. Multiple datasets from the same exoplanet
+
+Investigate how ECAS currently represents observations and datasets associated with an exoplanet.
+
+We need to consider a future workflow in which a user can:
+
+- Select an exoplanet.
+- Access multiple observational datasets associated with that same planet.
+- Select one or more of those datasets.
+- Run molecular identification against those datasets.
+- Compare identification results between observations.
+
+For example, a planet might have several observations from different instruments, observation dates, wavelength ranges or published studies.
+
+We need to understand how this could work with the existing data model and UI.
+
+Investigate:
+
+- Whether the current database already supports multiple datasets per planet.
+- How observations and spectra are associated with planetary records.
+- Whether multiple spectra can be loaded into the identification workflow.
+- Whether the v1 identification logic can operate on multiple observations.
+- How results could be compared across separate observations.
+
+Implement the necessary foundations where reasonably achievable without disrupting existing functionality.
+
+Do not fabricate planetary observations or datasets.
+
+If the existing application does not yet have sufficient real observational data to test this functionality, implement the appropriate architecture and report the limitation.
+
+---
+
+# 7. UI redesign — begin addressing the wider application
+
+The current ECAS UI needs significant visual improvement.
+
+It is functional in places, but the overall presentation is unattractive and inconsistent.
+
+Do not let this derail the molecular identification work, but begin thinking about a coherent UI redesign.
+
+Consider:
+
+- More consistent spacing and alignment.
+- Better visual hierarchy.
+- Cleaner navigation.
+- More modern tab layouts.
+- Improved typography.
+- Consistent colours and visual conventions.
+- Better scientific plots and result tables.
+- Reduced visual clutter.
+- Better use of available screen space.
+- More consistent controls across the application.
+
+The identification interface should be implemented with this future redesign in mind.
+
+Avoid creating an isolated interface that looks completely different from the rest of ECAS.
+
+You may make sensible UI improvements as part of this task, but avoid a complete application-wide redesign until the identification functionality is working.
+
+---
+
+# 8. Scientific and implementation constraints
+
+These requirements are mandatory.
+
+### Real data only
+
+Use the actual local IR and UV–Vis datasets.
+
+Never use mock spectra or fabricated detection results.
+
+### Preserve scientific meaning
+
+Do not silently interchange:
+
+- Absorbance.
+- Transmittance.
+- Absorption cross-sections.
+- Molar absorptivity.
+- Quantum yields.
+- Gas-phase measurements.
+- Liquid-phase measurements.
+
+Use compatible quantities and units for comparisons.
+
+### Preserve provenance
+
+Reference datasets must retain their source identity and relevant experimental metadata.
+
+### Handle incomplete coverage honestly
+
+If a molecule has no suitable local reference dataset, it must not appear as a successful identification candidate.
+
+### Preserve existing functionality
+
+Do not break the current import, plotting, persistence, database or other application workflows.
+
+### Reuse v1 intelligently
+
+Recover the original sigma-confidence logic rather than inventing an unrelated replacement.
+
+### Testing
+
+Add or update tests for:
+
+- Local spectral library discovery.
+- Molecule selection.
+- Correct modality filtering.
+- Reference spectrum loading.
+- Sigma calculations.
+- Incompatible dataset handling.
+- Missing data handling.
+- Multiple molecular candidates.
+- Colour consistency.
+- Results table population.
+- Multiple observations where implemented.
+
+Tests must use real project datasets where appropriate, or small explicitly identified test fixtures derived from real source data. Do not use fabricated spectra to demonstrate scientific success.
+
+---
+
+# 9. Documentation
+
+Update the relevant ECAS documentation after implementation.
+
+Record:
+
+- The identification methodology recovered from v1.
+- The sigma calculation and assumptions.
+- How local spectral reference data are discovered and loaded.
+- How IR and UV–Vis candidates are separated.
+- Data compatibility requirements.
+- Missing molecule coverage.
+- Limitations of the current identification workflow.
+- How multiple observations per planet are handled or planned.
+- Any remaining work required for the wider UI redesign.
+
+Do not create unnecessary duplicate documentation.
+
+Update the authoritative project documentation and decision records where implementation decisions warrant it.
+
+---
+
+# 10. Execution order
+
+Work through the following sequence.
+
+**Phase 1 — Investigation**
+
+- Inspect current Comparison tab.
+- Locate and inspect ECAS v1 Identify tab.
+- Recover sigma-confidence calculation.
+- Inspect current local spectral library.
+- Inspect planetary observation/database relationships.
+
+**Phase 2 — Identification implementation**
+
+- Implement molecule selection grouped by IR and UV–Vis.
+- Load actual local reference spectra.
+- Integrate the v1 identification methodology.
+- Implement sigma-confidence results.
+- Add consistent molecule colours.
+- Add the compact results table.
+
+**Phase 3 — Multi-observation foundations**
+
+- Establish how multiple datasets from the same planet can be selected.
+- Integrate identification with multiple observations where the existing architecture supports it.
+- Preserve individual observation identities and results.
+
+**Phase 4 — Testing and verification**
+
+- Test the complete workflow using the actual local library.
+- Verify calculations and modality compatibility.
+- Confirm that no mock data has entered the production workflow.
+- Check for regressions in existing functionality.
+
+**Phase 5 — Documentation and further development**
+
+- Update authoritative documentation.
+- Identify outstanding limitations.
+- Once the requested functionality is working, continue with other worthwhile improvements in the existing project roadmap.
+
+---
+
+# 11. Collaboration between the two agents
+
+Coordinate work to avoid duplication.
+
+Suggested division:
+
+**Agent 1 — Investigation and scientific methodology**
+- Inspect ECAS v1.
+- Recover the original sigma-confidence calculation.
+- Inspect the current comparison implementation.
+- Assess scientific compatibility of local datasets.
+- Review the correctness of the new calculations.
+
+**Agent 2 — Application implementation**
+- Inspect the current application architecture.
+- Implement the molecule selection UI.
+- Integrate the identification engine.
+- Implement plots, colours and result tables.
+- Investigate multiple-observation integration.
+- Add tests and documentation.
+
+Both agents should communicate findings and review each other's work.
+
+Do not allow the implementation agent to invent a replacement mathematical method while the other agent is still investigating v1.
+
+---
+
+# 12. Definition of done
+
+The primary task is complete when:
+
+1. The current ECAS application can discover its local IR and UV–Vis reference datasets.
+2. Users can select multiple molecules using modality-grouped checkboxes.
+3. The Identify action performs actual spectral comparisons.
+4. The identification uses the recovered v1 sigma-confidence methodology.
+5. Each molecule has a distinct, consistent colour.
+6. A compact results table displays molecule, modality, colour and sigma.
+7. Results are based on actual spectral measurements.
+8. Incompatible or missing reference data are handled honestly.
+9. Existing application functionality remains operational.
+10. The implementation has been tested and documented.
+
+Multiple-observation support should be implemented to the extent the current architecture allows, with any remaining limitations explicitly documented.
+
+After these requirements are satisfied, continue with other useful improvements rather than stopping unnecessarily.
+
+## Final instruction
+
+This is an implementation task, not another prolonged planning exercise.
+
+Investigate the existing code and v1 methodology, agree on the approach between both agents, implement the functionality, test it, and report the results.
+
+Prioritize getting a scientifically defensible, working molecular identification tool into the current ECAS application.
+
+We can refine thresholds, presentation and advanced functionality later. The immediate objective is to restore the stronger identification approach from ECAS v1 using the real local spectral library.
+
+### last minute manual edit
+
+make sure you update the readme and other documents and records as you go. if we get this new version of the identify thing in, the readme and other stuff will be out of date. so if you get bored, make sure all our documents are up to date and accurate. verify all your stuff by reading through the code before you claim something to be true in the documents. 
