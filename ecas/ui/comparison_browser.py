@@ -1941,6 +1941,7 @@ class ComparisonBrowser(QWidget):
         return dlg
 
     def open_candidate_suggestions(self, *, exec_dialog: bool = True):
+        from dataclasses import replace
         from ecas.comparison.candidate_screener import build_candidate_pool, screen_candidates
         from ecas.ui.candidate_suggestion_dialog import CandidateSuggestionDialog
         from ecas.comparison.inputs import observation_input
@@ -1958,15 +1959,66 @@ class ComparisonBrowser(QWidget):
         adapted = observation_input(self.current_observation, self.current_observation_hash)
         comp = adapted.comparison_input
 
+        # Extract source error columns if available so screening has calibrated 1-sigma errors
+        if comp.sigma is None and adapted.raw_uncertainty_columns:
+            unc_map = dict(adapted.raw_uncertainty_columns)
+            raw_unc = unc_map.get("uncertainty")
+            if raw_unc is None and "pl_trandeperr1" in unc_map:
+                try:
+                    e1 = np.array([float(v) if v is not None and not isinstance(v, bool) else np.nan for v in unc_map["pl_trandeperr1"]], dtype=float)
+                    e2 = np.array([float(v) if v is not None and not isinstance(v, bool) else np.nan for v in unc_map.get("pl_trandeperr2", unc_map["pl_trandeperr1"])], dtype=float)
+                    avg_e = np.nanmean([np.abs(e1), np.abs(e2)], axis=0)
+                    if np.all(np.isfinite(avg_e)) and np.all(avg_e > 0):
+                        raw_unc = tuple(float(x) for x in avg_e)
+                except Exception:
+                    raw_unc = None
+            elif raw_unc is not None:
+                parsed_unc = []
+                for v in raw_unc:
+                    if v is not None and not isinstance(v, bool):
+                        try:
+                            fv = float(v)
+                            if fv > 0 and np.isfinite(fv):
+                                parsed_unc.append(fv)
+                            else:
+                                parsed_unc = []
+                                break
+                        except (ValueError, TypeError):
+                            parsed_unc = []
+                            break
+                    else:
+                        parsed_unc = []
+                        break
+                if len(parsed_unc) == len(comp.values):
+                    raw_unc = tuple(parsed_unc)
+                else:
+                    raw_unc = None
+
+            if raw_unc and len(raw_unc) == len(comp.values):
+                comp = replace(
+                    comp,
+                    sigma=raw_unc,
+                    noise_kind="independent_gaussian_1sigma",
+                    noise_evidence="imported_source_column",
+                )
+
         preset_id = "wasp-39b"
-        if hasattr(self, 'gen_planet_selector'):
-            text = self.gen_planet_selector.currentText().lower()
-            if "wasp-39" in text:
-                preset_id = "wasp-39b"
-            elif "wasp-96" in text:
-                preset_id = "wasp-96b"
-            elif "hd 209458" in text or "hd-209458" in text:
-                preset_id = "hd-209458b"
+        if hasattr(self, "gen_preset_selector"):
+            chosen = self.gen_preset_selector.currentData()
+            if chosen:
+                preset_id = str(chosen)
+
+        # If preset is default or generic, attempt to infer from observation target / filename
+        if self.current_observation and (preset_id == "wasp-39b" or not preset_id):
+            target_str = (
+                str(getattr(self.current_observation, "target", ""))
+                + " "
+                + str(getattr(self.current_observation, "source_file", ""))
+            ).lower()
+            for p in PLANET_PRESETS:
+                if p.preset_id.lower() in target_str or p.planet_name.lower() in target_str:
+                    preset_id = p.preset_id
+                    break
 
         lib_dir = Path("data/ECAS_Spectral_Library")
         pool = build_candidate_pool(comp, self.cache_root, lib_dir)
@@ -1983,9 +2035,12 @@ class ComparisonBrowser(QWidget):
         if hasattr(self, 'workflow_tabs'):
             self.workflow_tabs.setCurrentIndex(2)
 
+        # Exact matching of species formula/symbol (avoiding substring bugs like CO matching CO2)
+        clean_selected = {sp.strip().upper() for sp in selected_species}
+
         if hasattr(self, 'gen_species_checks'):
             for sp_name, chk in self.gen_species_checks.items():
-                is_selected = any(sp.lower() == sp_name.lower() or sp_name.lower() in sp.lower() for sp in selected_species)
+                is_selected = (sp_name.strip().upper() in clean_selected)
                 chk.setChecked(is_selected)
 
         if hasattr(self, 'gen_status_label'):

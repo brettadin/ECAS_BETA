@@ -132,6 +132,7 @@ class CandidateScreeningResult:
     supporting_regions_um: tuple[tuple[float, float], ...]
     candidate_model_curve: tuple[tuple[float, float], ...]  # (wavelength, transit_depth)
     baseline_model_curve: tuple[tuple[float, float], ...]
+    observed_curve: tuple[tuple[float, float, float], ...] = ()  # (wavelength, observed_signal, uncertainty)
     source_sha256: str | None = None
     is_selected_for_followup: bool = False
 
@@ -207,6 +208,8 @@ class ScreeningReport:
     results: list[CandidateScreeningResult]
     joint_pairs: list[JointCandidateResult] = field(default_factory=list)
     unexplained_regions_um: list[tuple[float, float]] = field(default_factory=list)
+    has_calibrated_uncertainties: bool = True
+    uncertainty_notice: str | None = None
     scientific_disclosures: tuple[str, ...] = SCIENTIFIC_DISCLOSURES
 
     def top_candidates(self, limit: int = 5) -> list[CandidateScreeningResult]:
@@ -227,6 +230,8 @@ class ScreeningReport:
             "observable": self.observable,
             "mode": self.mode,
             "planet_preset_id": self.planet_preset_id,
+            "has_calibrated_uncertainties": self.has_calibrated_uncertainties,
+            "uncertainty_notice": self.uncertainty_notice,
             "baseline_parameters": self.baseline_parameters,
             "screening_config": self.screening_config,
             "pool_summary": self.pool.summary(),
@@ -278,6 +283,7 @@ class ScreeningReport:
             f"- **Observable:** {self.observable} ({self.mode})",
             f"- **Atmospheric Preset:** {self.planet_preset_id or 'Custom'}",
             f"- **Wavelength Coverage:** {self.pool.observation_domain_um[0]:.3f} – {self.pool.observation_domain_um[1]:.3f} µm ({self.pool.observation_points_count} points)",
+            f"- **Uncertainty Calibration:** {'Calibrated 1-sigma errors' if self.has_calibrated_uncertainties else 'Uncalibrated / Nominal scatter'}",
             "",
             "## 1. Candidate Pool Summary",
             "",
@@ -365,15 +371,7 @@ def build_candidate_pool(
         observable=observation.observable,
     )
 
-    is_transmission = (
-        observation.observable == "transit_depth"
-        or (
-            observation.axis_unit in ("um", "microns", "nm")
-            and observation.signal_unit in ("percent", "fraction")
-            and observation.observable not in ("absorbance", "transmittance", "optical_depth", "cross_section")
-            and "lab" not in observation.source_id.lower()
-        )
-    )
+    is_transmission = (observation.observable == "transit_depth")
 
     # 1. Inspect ExoMol Cached References
     cached_root_path = Path(cache_root) / "references" if not str(cache_root).endswith("references") else Path(cache_root)
@@ -629,16 +627,36 @@ def screen_candidates(
     """Screen candidate molecules against the observation using instrument-aware physical modelling."""
     obs_coords = np.asarray(observation.coordinates, dtype=float)
     obs_vals = np.asarray(observation.values, dtype=float)
-    obs_unc = np.asarray(observation.sigma, dtype=float) if observation.sigma else np.ones_like(obs_vals) * 0.01
-    is_transmission = (
-        observation.observable == "transit_depth"
-        or (
-            observation.axis_unit in ("um", "microns", "nm")
-            and observation.signal_unit in ("percent", "fraction")
-            and observation.observable not in ("absorbance", "transmittance", "optical_depth", "cross_section")
-            and "lab" not in observation.source_id.lower()
+
+    has_calibrated_uncertainties = False
+    uncertainty_notice: str | None = None
+    if observation.sigma is not None:
+        raw_sig = np.asarray(observation.sigma, dtype=float)
+        if len(raw_sig) == len(obs_vals) and np.all(np.isfinite(raw_sig)) and np.all(raw_sig > 0):
+            obs_unc = raw_sig
+            has_calibrated_uncertainties = True
+        else:
+            obs_unc = None
+    else:
+        obs_unc = None
+
+    if obs_unc is None:
+        diffs = np.diff(obs_vals)
+        finite_diffs = diffs[np.isfinite(diffs)]
+        if len(finite_diffs) > 1:
+            med_scatter = float(np.median(np.abs(finite_diffs)) / 1.4826)
+            nominal_err = med_scatter if med_scatter > 1e-8 else (0.01 * float(np.nanstd(obs_vals)) if np.nanstd(obs_vals) > 0 else 0.01)
+        else:
+            nominal_err = 0.01
+        obs_unc = np.full_like(obs_vals, nominal_err)
+        has_calibrated_uncertainties = False
+        uncertainty_notice = (
+            "Observation provides no calibrated 1-sigma uncertainties (sigma=None). "
+            f"Screening uses nominal empirical scatter (estimated ~{nominal_err:.4g}) for relative candidate ranking. "
+            "Delta-chi-square values are exploratory unweighted metrics, not absolute detection likelihoods."
         )
-    )
+
+    is_transmission = (observation.observable == "transit_depth")
 
     # Resolve planetary parameters
     if planet_preset_id:
@@ -673,7 +691,7 @@ def screen_candidates(
     screening_config = {
         "screening_vmr": screening_vmr,
         "nuisance_refit": "vertical_baseline_offset",
-        "instrument_integration": "shared_passband_grid",
+        "instrument_integration": "central_wavelength_sampling",
     }
 
     candidates_to_evaluate = pool.searchable + pool.partial
@@ -738,6 +756,7 @@ def screen_candidates(
 
             cand_curve = tuple(zip([float(c) for c in sub_coords], [float(y) for y in cand_fit]))
             base_curve = tuple(zip([float(c) for c in sub_coords], [float(y) for y in base_fit]))
+            obs_curve = tuple(zip([float(c) for c in sub_coords], [float(v) for v in sub_vals], [float(u) for u in sub_unc]))
 
             results.append(
                 CandidateScreeningResult(
@@ -769,6 +788,7 @@ def screen_candidates(
                     supporting_regions_um=((low, high),),
                     candidate_model_curve=cand_curve,
                     baseline_model_curve=base_curve,
+                    observed_curve=obs_curve,
                     source_sha256=entry.source_sha256,
                     is_selected_for_followup=(outcome in ("Strong Candidate", "Moderate Support")),
                 )
@@ -786,6 +806,8 @@ def screen_candidates(
             results=results,
             joint_pairs=[],
             unexplained_regions_um=[],
+            has_calibrated_uncertainties=has_calibrated_uncertainties,
+            uncertainty_notice=uncertainty_notice,
         )
 
     prepared_specs: list[MolecularComponentSpec] = []
@@ -916,6 +938,7 @@ def screen_candidates(
         # Model curves for visualization
         cand_curve = tuple(zip([float(c) for c in sub_coords], [float(y) for y in cand_fit]))
         base_curve = tuple(zip([float(c) for c in sub_coords], [float(y) for y in base_fit]))
+        obs_curve = tuple(zip([float(c) for c in sub_coords], [float(v) for v in sub_vals], [float(u) for u in sub_unc]))
 
         results.append(
             CandidateScreeningResult(
@@ -947,6 +970,7 @@ def screen_candidates(
                 supporting_regions_um=tuple(supporting_regs),
                 candidate_model_curve=cand_curve,
                 baseline_model_curve=base_curve,
+                observed_curve=obs_curve,
                 source_sha256=entry.source_sha256,
                 is_selected_for_followup=(outcome in ("Strong Candidate", "Moderate Support")),
             )
@@ -980,23 +1004,46 @@ def screen_candidates(
                 components=[spec_a, spec_b],
                 **base_params,
             )
+            # Evaluate single model A on the exact shared intersection coords_ab
+            single_a_ab = generate_isothermal_transmission_model(
+                target_wavelengths_um=coords_ab,
+                components=[spec_a],
+                **base_params,
+            )
+            # Evaluate single model B on the exact shared intersection coords_ab
+            single_b_ab = generate_isothermal_transmission_model(
+                target_wavelengths_um=coords_ab,
+                components=[spec_b],
+                **base_params,
+            )
+
             base_fit_ab = np.array(base_ab.comparison_input.values, dtype=float) + float(np.mean(vals_ab - np.array(base_ab.comparison_input.values)))
             joint_fit_ab = np.array(joint_model.comparison_input.values, dtype=float) + float(np.mean(vals_ab - np.array(joint_model.comparison_input.values)))
+            fit_a_ab = np.array(single_a_ab.comparison_input.values, dtype=float) + float(np.mean(vals_ab - np.array(single_a_ab.comparison_input.values)))
+            fit_b_ab = np.array(single_b_ab.comparison_input.values, dtype=float) + float(np.mean(vals_ab - np.array(single_b_ab.comparison_input.values)))
 
             chi2_base_ab = float(np.sum(((vals_ab - base_fit_ab) / unc_ab) ** 2))
             chi2_joint_ab = float(np.sum(((vals_ab - joint_fit_ab) / unc_ab) ** 2))
+            chi2_a_ab = float(np.sum(((vals_ab - fit_a_ab) / unc_ab) ** 2))
+            chi2_b_ab = float(np.sum(((vals_ab - fit_b_ab) / unc_ab) ** 2))
+
             d_chi2_joint = chi2_base_ab - chi2_joint_ab
-            additive_gain = d_chi2_joint - max(cand_a.delta_chi2, cand_b.delta_chi2)
+            d_chi2_a_ab = chi2_base_ab - chi2_a_ab
+            d_chi2_b_ab = chi2_base_ab - chi2_b_ab
+
+            # Additive gain is strictly improvement of joint A+B beyond the best single candidate on identical coordinates
+            best_single_dchi2_ab = max(d_chi2_a_ab, d_chi2_b_ab)
+            additive_gain = d_chi2_joint - best_single_dchi2_ab
 
             joint_rms = float(np.sqrt(np.mean((vals_ab - joint_fit_ab) ** 2)))
             pair_label = f"{cand_a.formula} + {cand_b.formula}"
 
             if additive_gain > 5.0:
                 p_outcome = "Additive Improvement"
-                p_expl = f"Combining {cand_a.formula} and {cand_b.formula} improves fit significantly beyond either single absorber (additive Δχ² = +{additive_gain:.1f})."
+                p_expl = f"Combining {cand_a.formula} and {cand_b.formula} improves fit significantly beyond either single absorber on shared domain (additive Δχ² = +{additive_gain:.1f})."
             elif additive_gain > 0.0:
                 p_outcome = "Marginal Additive Support"
-                p_expl = f"Combining {cand_a.formula} and {cand_b.formula} yields slight additive improvement (Δχ² = +{additive_gain:.1f})."
+                p_expl = f"Combining {cand_a.formula} and {cand_b.formula} yields slight additive improvement on shared domain (Δχ² = +{additive_gain:.1f})."
             else:
                 p_outcome = "Redundant / Degenerate"
                 p_expl = f"No significant additive gain from combining {cand_a.formula} and {cand_b.formula}; features may be degenerate or overlapping."
@@ -1041,4 +1088,6 @@ def screen_candidates(
         results=results,
         joint_pairs=joint_pairs,
         unexplained_regions_um=unexplained_regions,
+        has_calibrated_uncertainties=has_calibrated_uncertainties,
+        uncertainty_notice=uncertainty_notice,
     )

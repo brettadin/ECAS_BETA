@@ -201,6 +201,12 @@ class CandidateSuggestionDialog(QDialog):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
+        if self.report.uncertainty_notice:
+            banner = QLabel(f"⚠️ <b>Methodological Notice:</b> {self.report.uncertainty_notice}")
+            banner.setWordWrap(True)
+            banner.setStyleSheet("background-color: #451a03; color: #fde047; border: 1px solid #b45309; padding: 6px 10px; border-radius: 4px; font-size: 11px;")
+            layout.addWidget(banner)
+
         splitter = QSplitter(Qt.Horizontal)
 
         # Left Panel: Results Table
@@ -557,15 +563,27 @@ class CandidateSuggestionDialog(QDialog):
                 name=f"Candidate Model ({r.formula})",
             )
 
-        # Plot 3: Observation Points
-        # Filter observation points to candidate domain
-        if r.candidate_model_curve:
-            dom_min, dom_max = r.evaluated_wavelength_range_um
-            sub_mask = (cand_x >= dom_min) & (cand_x <= dom_max)
-            # Use candidate coordinates and observation values
+        # Plot 3: Observation Points and Error Bars
+        if r.observed_curve:
+            obs_x = np.array([pt[0] for pt in r.observed_curve], dtype=float)
+            obs_y = np.array([pt[1] for pt in r.observed_curve], dtype=float)
+            obs_err = np.array([pt[2] for pt in r.observed_curve], dtype=float)
+
+            # Error bars
+            if np.any(obs_err > 0):
+                err_item = pg.ErrorBarItem(
+                    x=obs_x,
+                    y=obs_y,
+                    top=obs_err,
+                    bottom=obs_err,
+                    beam=0.005,
+                    pen=pg.mkPen(color="#94a3b8", width=1),
+                )
+                self.plot_widget.addItem(err_item)
+
             self.plot_widget.plot(
-                cand_x,
-                cand_y,  # anchor
+                obs_x,
+                obs_y,
                 pen=None,
                 symbol="o",
                 symbolSize=5,

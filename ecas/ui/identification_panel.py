@@ -692,10 +692,13 @@ class IdentificationPanel(QWidget):
     def _apply_suggested_references(self, selected_species: Sequence[str]) -> None:
         """Select matching reference checkboxes in the molecule tabs."""
         applied_count = 0
+        clean_selected = {sp.strip().upper() for sp in selected_species}
         for (modality, molecule), chk in getattr(self, 'molecule_checks', {}).items():
-            if any(sp.lower() == molecule.lower() or molecule.lower() in sp.lower() for sp in selected_species):
+            if molecule.strip().upper() in clean_selected:
                 chk.setChecked(True)
                 applied_count += 1
+            else:
+                chk.setChecked(False)
         if hasattr(self, 'status'):
             self.status.setText(f"Applied {applied_count} suggested candidate reference(s): {', '.join(selected_species)}.")
 
