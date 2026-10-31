@@ -567,6 +567,11 @@ class ComparisonBrowser(QWidget):
 
         t0_nav = QHBoxLayout()
         t0_nav.addWidget(self.identification_container)
+        self.tab0_suggest_btn = QPushButton("💡 Suggest Candidate Molecules...")
+        self.tab0_suggest_btn.setStyleSheet("background-color: #0284c7; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        self.tab0_suggest_btn.setToolTip("Screen available molecular reference libraries against this observation to discover candidate absorbers.")
+        self.tab0_suggest_btn.clicked.connect(self.open_candidate_suggestions)
+        t0_nav.addWidget(self.tab0_suggest_btn)
         t0_nav.addStretch(1)
         self.step1_next_btn = QPushButton("Next: Review Requirements ➡")
         self.step1_next_btn.setStyleSheet("background-color: #4c566a; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
@@ -632,6 +637,11 @@ class ComparisonBrowser(QWidget):
         self.step3_prev_btn = QPushButton("⬅ Back to Requirements")
         self.step3_prev_btn.clicked.connect(lambda: self.workflow_tabs.setCurrentIndex(1))
         t2_nav.addWidget(self.step3_prev_btn)
+        self.tab2_suggest_btn = QPushButton("💡 Suggest Candidate Molecules...")
+        self.tab2_suggest_btn.setStyleSheet("background-color: #0284c7; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        self.tab2_suggest_btn.setToolTip("Screen available molecular reference libraries to discover which candidates deserve investigation.")
+        self.tab2_suggest_btn.clicked.connect(self.open_candidate_suggestions)
+        t2_nav.addWidget(self.tab2_suggest_btn)
         t2_nav.addStretch(1)
         self.tab2_run_btn = QPushButton("▶ Run Atmospheric Analysis")
         self.tab2_run_btn.setStyleSheet("background-color: #5e81ac; color: white; font-size: 11pt; font-weight: bold; padding: 8px 18px; border-radius: 4px;")
@@ -1929,6 +1939,59 @@ class ComparisonBrowser(QWidget):
         if exec_dialog:
             dlg.exec()
         return dlg
+
+    def open_candidate_suggestions(self, *, exec_dialog: bool = True):
+        from ecas.comparison.candidate_screener import build_candidate_pool, screen_candidates
+        from ecas.ui.candidate_suggestion_dialog import CandidateSuggestionDialog
+        from ecas.comparison.inputs import observation_input
+        from PySide6.QtWidgets import QMessageBox
+
+        if self.current_observation is None:
+            if exec_dialog:
+                QMessageBox.information(
+                    self,
+                    "No Observation Loaded",
+                    "Please select or import an observation first in 'Choose Observation' or Spectral Data.",
+                )
+            return None
+
+        adapted = observation_input(self.current_observation, self.current_observation_hash)
+        comp = adapted.comparison_input
+
+        preset_id = "wasp-39b"
+        if hasattr(self, 'gen_planet_selector'):
+            text = self.gen_planet_selector.currentText().lower()
+            if "wasp-39" in text:
+                preset_id = "wasp-39b"
+            elif "wasp-96" in text:
+                preset_id = "wasp-96b"
+            elif "hd 209458" in text or "hd-209458" in text:
+                preset_id = "hd-209458b"
+
+        lib_dir = Path("data/ECAS_Spectral_Library")
+        pool = build_candidate_pool(comp, self.cache_root, lib_dir)
+        report = screen_candidates(comp, pool, planet_preset_id=preset_id)
+
+        dlg = CandidateSuggestionDialog(report, parent=self)
+        dlg.candidates_applied.connect(self.apply_suggested_candidates)
+        if exec_dialog:
+            dlg.exec()
+        return dlg
+
+    def apply_suggested_candidates(self, selected_species: Sequence[str]) -> None:
+        """Apply suggested candidate molecules to Step 3 (Configure Model)."""
+        if hasattr(self, 'workflow_tabs'):
+            self.workflow_tabs.setCurrentIndex(2)
+
+        if hasattr(self, 'gen_species_checks'):
+            for sp_name, chk in self.gen_species_checks.items():
+                is_selected = any(sp.lower() == sp_name.lower() or sp_name.lower() in sp.lower() for sp in selected_species)
+                chk.setChecked(is_selected)
+
+        if hasattr(self, 'gen_status_label'):
+            self.gen_status_label.setText(
+                f"Applied suggested candidate(s): {', '.join(selected_species)}. Adjust mixing ratios and click 'Run Atmospheric Analysis'."
+            )
 
     def _build_attested_observation(self) -> tuple[ComparisonInput, dict, list[str]]:
         if self.current_observation is None:

@@ -126,12 +126,17 @@ class IdentificationPanel(QWidget):
         layout.addWidget(self.library_status)
         row = QHBoxLayout()
         self.identify_button = QPushButton('Identify Molecules')
+        self.suggest_button = QPushButton('💡 Suggest Candidates...')
+        self.suggest_button.setStyleSheet("background-color: #0284c7; color: white; font-weight: bold; padding: 4px 10px; border-radius: 4px;")
+        self.suggest_button.setToolTip("Screen available laboratory library references against this observation to discover candidates.")
+        self.suggest_button.clicked.connect(self.open_candidate_suggestions)
         self.threshold = QDoubleSpinBox()
         self.threshold.setRange(1., 20.)
         self.threshold.setValue(3.)
         self.threshold.setSuffix(' σ score')
         self.threshold.setToolTip('Original v1 default threshold: 3. This is not a calibrated detection significance.')
         row.addWidget(self.identify_button)
+        row.addWidget(self.suggest_button)
         row.addWidget(_label('Conditional score threshold'))
         row.addWidget(self.threshold)
         self.export_button = QPushButton('Export analysis record')
@@ -638,6 +643,61 @@ class IdentificationPanel(QWidget):
             self.status.setText('Reproduced saved arrays and settings successfully. Original raw files were not re-ingested.')
         except (OSError, ValueError, KeyError, TypeError) as exc:
             self.status.setText(f'Reproduction failed: {exc}')
+
+    def open_candidate_suggestions(self, *, exec_dialog: bool = True):
+        from pathlib import Path
+        from ecas.comparison.candidate_screener import build_candidate_pool, screen_candidates
+        from ecas.ui.candidate_suggestion_dialog import CandidateSuggestionDialog
+        from ecas.comparison.inputs import observation_input
+        from PySide6.QtWidgets import QMessageBox
+
+        if not self.contexts:
+            if exec_dialog:
+                QMessageBox.information(
+                    self,
+                    "No Observations Added",
+                    "Please add a laboratory observation file first in 'Add observation files' or from Spectral Data.",
+                )
+            return None
+
+        index = self.observations.currentRow()
+        if index < 0 or index >= len(self.contexts):
+            index = 0
+        context = self.contexts[index]
+
+        if self._is_transit(context):
+            self.transit_guidance_card.show()
+            if exec_dialog:
+                QMessageBox.warning(
+                    self,
+                    "Planetary Transmission Spectrum Detected",
+                    "This observation represents planetary transit depth (Rp/R*)^2. "
+                    "Atmospheric transmission modeling with ExoMol opacities is required instead of empirical laboratory fitting. "
+                    "Please switch to Atmospheric Analysis to screen candidates.",
+                )
+            return None
+
+        adapted = observation_input(context.spectrum, context.source_sha256)
+        comp = adapted.comparison_input
+
+        pool = build_candidate_pool(comp, Path("data/ExoMol/cache"), self.library_root)
+        report = screen_candidates(comp, pool)
+
+        dlg = CandidateSuggestionDialog(report, parent=self)
+        dlg.candidates_applied.connect(self._apply_suggested_references)
+        if exec_dialog:
+            dlg.exec()
+        return dlg
+
+    def _apply_suggested_references(self, selected_species: Sequence[str]) -> None:
+        """Select matching reference checkboxes in the molecule tabs."""
+        applied_count = 0
+        for (modality, molecule), chk in getattr(self, 'molecule_checks', {}).items():
+            if any(sp.lower() == molecule.lower() or molecule.lower() in sp.lower() for sp in selected_species):
+                chk.setChecked(True)
+                applied_count += 1
+        if hasattr(self, 'status'):
+            self.status.setText(f"Applied {applied_count} suggested candidate reference(s): {', '.join(selected_species)}.")
 
     def shutdown(self):
         if self._worker is not None and self._worker.isRunning():
