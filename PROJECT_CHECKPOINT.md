@@ -80,6 +80,35 @@
     - Human-readable Markdown and HTML reports.
     - Machine-readable JSON manifest compliant with `ecas-analysis-manifest-v1`.
 
+### 7. "Suggest Candidate Molecules" Screening & Hypothesis Discovery
+- **Backend**: `ecas/comparison/candidate_screener.py` (`build_candidate_pool`, `screen_candidates`, `CandidatePool`, `CandidateScreeningResult`, `ScreeningReport`)
+- **Frontend**: `ecas/ui/candidate_suggestion_dialog.py` (`CandidateSuggestionDialog`)
+- **Functionality**:
+  * Constructs an exhaustive candidate pool from actual library/cache holdings partitioned into:
+    - `searchable`: Full usable domain coverage.
+    - `partial_coverage`: Partial spectral coverage on observation grid.
+    - `unavailable_data`: Present in catalogue but un-cached (with explicit non-absence disclosure).
+    - `incompatible`: Physical model or observable mismatch (e.g. lab transmission vs planetary transit depth).
+  * Evaluates physical transmission models on identical observation points refitting baseline offsets.
+  * Computes $\Delta\text{RMS}$, $\Delta\chi^2$, residual runs-test structure, and competing alternative identification.
+  * Evaluates multi-candidate joint pairs on identical sub-domain intersections to prevent domain-mixing bias.
+  * Direct 1-click handoff to Step 3 (Configure Model) with exact formula matching.
+
+### 8. Cross-Observation Predictive Benchmark (Water in WASP-39 b)
+- **Backend**: `ecas/comparison/predictive_benchmark.py` (`run_wasp39b_water_benchmark`, `verify_observation_independence`, `calculate_band_contrast`)
+- **Frontend**: `ecas/ui/predictive_benchmark_dialog.py` (`PredictiveBenchmarkDialog`)
+- **Standalone Runner**: `benchmark_wasp39b_water.py`
+- **Functionality**:
+  * Directly answers: *"When ECAS suggests a molecule, does including that molecule improve its prediction of an absorption feature in a separate observation?"*
+  * Verifies observation independence between separate physical transits:
+    - Fitting: JWST NIRSpec G395H (Visit 02, Alderson et al. 2022/2023)
+    - Validation: JWST NIRSpec PRISM (Visit 01, Rustamkulov et al. 2023)
+  * Pre-declares band interval (3.10–3.30 µm holdout window or 2.76–3.00 µm peak) and continuum references (2.80–3.00 µm and 3.40–3.60 µm) before evaluating validation depths.
+  * Refits shared parameters (radius multiplier and baseline) fairly for both Model with H2O and Continuum Baseline (No H2O).
+  * Isolates visit-level average offset (~107–158 ppm) from feature shape contrast.
+  * Pre-declared statistical decision rule returns **“This observation cannot distinguish the models.”** when contrast difference is within the 2-sigma observational uncertainty interval ($\pm 72.1\text{ ppm}$), preserving strict scientific honesty.
+  * Generates publication-grade JSON manifest, Markdown report, and PyQtGraph visual plot.
+
 ---
 
 ## 2. Desktop UI Integration & Navigation

@@ -186,6 +186,12 @@ class CandidateSuggestionDialog(QDialog):
         self.export_btn.clicked.connect(self._export_manifest)
         bottom_bar.addWidget(self.export_btn)
 
+        self.benchmark_btn = QPushButton("🔬 Cross-Visit Predictive Benchmark...")
+        self.benchmark_btn.setStyleSheet("background-color: #3b0764; color: #f3e8ff; font-weight: bold; padding: 8px 14px; border: 1px solid #a855f7; border-radius: 5px;")
+        self.benchmark_btn.setToolTip("Test whether including water improves prediction of an absorption feature on an independent separate observation visit.")
+        self.benchmark_btn.clicked.connect(self._open_predictive_benchmark)
+        bottom_bar.addWidget(self.benchmark_btn)
+
         bottom_bar.addStretch()
 
         close_btn = QPushButton("Close")
@@ -712,3 +718,32 @@ class CandidateSuggestionDialog(QDialog):
             QMessageBox.information(self, "Export Complete", f"Pool inventory exported to:\n{path}")
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"Failed to save pool inventory: {e}")
+
+    def _open_predictive_benchmark(self) -> None:
+        """Run the cross-observation predictive benchmark on separate JWST visits."""
+        from ecas.comparison.predictive_benchmark import run_wasp39b_water_benchmark
+        from ecas.ui.predictive_benchmark_dialog import PredictiveBenchmarkDialog
+
+        f_fit = Path("data/NASA/cache/entry-d39db942be204812b8d322bb17f554d8/source.tbl")
+        f_val = Path("data/NASA/cache/entry-174704980c13407d83953412906fd60c/source.tbl")
+        ref_p = Path("data/ExoMol/cache/references/3228bc548ff442f882e074e1234f5577.json")
+
+        if not f_fit.exists() or not f_val.exists() or not ref_p.exists():
+            QMessageBox.warning(
+                self,
+                "Required Benchmark Data Missing",
+                "The WASP-39 b cross-visit benchmark requires cached NIRSpec G395H (Visit 02) "
+                "and NIRSpec PRISM (Visit 01) observations, and cached POKAZATEL water cross sections.\n\n"
+                f"Missing paths:\n"
+                f"- G395H: {f_fit.exists()}\n"
+                f"- PRISM: {f_val.exists()}\n"
+                f"- Opacity: {ref_p.exists()}",
+            )
+            return
+
+        try:
+            bench_res = run_wasp39b_water_benchmark(f_fit, f_val, ref_p)
+            dlg = PredictiveBenchmarkDialog(bench_res, parent=self)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Benchmark Error", f"Failed to run predictive benchmark: {e}")

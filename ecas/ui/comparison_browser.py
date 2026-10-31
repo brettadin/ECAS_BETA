@@ -2048,6 +2048,32 @@ class ComparisonBrowser(QWidget):
                 f"Applied suggested candidate(s): {', '.join(selected_species)}. Adjust mixing ratios and click 'Run Atmospheric Analysis'."
             )
 
+    def open_predictive_benchmark(self, *, exec_dialog: bool = True):
+        """Open the reproducible cross-observation predictive benchmark dialog."""
+        from ecas.comparison.predictive_benchmark import run_wasp39b_water_benchmark
+        from ecas.ui.predictive_benchmark_dialog import PredictiveBenchmarkDialog
+        from PySide6.QtWidgets import QMessageBox
+
+        f_fit = Path("data/NASA/cache/entry-d39db942be204812b8d322bb17f554d8/source.tbl")
+        f_val = Path("data/NASA/cache/entry-174704980c13407d83953412906fd60c/source.tbl")
+        ref_p = Path("data/ExoMol/cache/references/3228bc548ff442f882e074e1234f5577.json")
+
+        if not f_fit.exists() or not f_val.exists() or not ref_p.exists():
+            if exec_dialog:
+                QMessageBox.warning(
+                    self,
+                    "Required Benchmark Data Missing",
+                    "The WASP-39 b cross-visit benchmark requires cached NIRSpec G395H (Visit 02) "
+                    "and NIRSpec PRISM (Visit 01) observations, and cached POKAZATEL water cross sections.",
+                )
+            return None
+
+        bench_res = run_wasp39b_water_benchmark(f_fit, f_val, ref_p)
+        dlg = PredictiveBenchmarkDialog(bench_res, parent=self)
+        if exec_dialog:
+            dlg.exec()
+        return dlg
+
     def _build_attested_observation(self) -> tuple[ComparisonInput, dict, list[str]]:
         if self.current_observation is None:
             raise ValueError('Select an observation in Comparisons first')

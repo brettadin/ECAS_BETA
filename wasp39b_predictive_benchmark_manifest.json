@@ -1,0 +1,125 @@
+{
+  "schema": "ecas-predictive-benchmark-v1",
+  "benchmark_name": "WASP-39 b Cross-Observation Water Predictive Benchmark",
+  "created_utc": "2026-10-31T06:09:51.877482+00:00",
+  "target_planet": "WASP-39 b",
+  "molecule_tested": "H2O",
+  "are_observations_independent": true,
+  "independence_evidence": "Verified independent observing visits: Fitting observation is Near Infrared Spectrograph (NIRSpec) - G395H (Prog 1366, Visit 02, observed 2022-07-30/31), while validation observation is Near Infrared Spectrograph (NIRSpec) - PRISM (Prog 1366, Visit 01, observed 2022-07-10/11). The datasets represent separate physical transits separated in time with distinct instrument readouts.",
+  "fitting_observation": {
+    "target_id": "WASP-39 b",
+    "source_file": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\data\\NASA\\cache\\entry-d39db942be204812b8d322bb17f554d8\\source.tbl",
+    "source_sha256": "673864e0da003115352d832c686a6b50abb975f21b6b6368fee61f771ce2a7a8",
+    "instrument": "Near Infrared Spectrograph (NIRSpec) - G395H",
+    "facility": "JWST",
+    "program_id": "1366",
+    "observing_visit": "Visit 02",
+    "observation_date": "2022-07-30/31",
+    "authors": "Alderson et al. 2022 / 2023",
+    "data_points_count": 344,
+    "wavelength_range_um": [
+      2.76293,
+      5.16907
+    ],
+    "reference_bibcode": "2023Natur.614..664A"
+  },
+  "validation_observation": {
+    "target_id": "WASP-39 b",
+    "source_file": "C:\\AI-Projects\\Bwett AI Project UwU\\ECAS_BETA\\data\\NASA\\cache\\entry-174704980c13407d83953412906fd60c\\source.tbl",
+    "source_sha256": "135d6f22f6cf04f6d5a757d8570fbb50a0b2a0ef9f1f347dbaabef6a18e863e7",
+    "instrument": "Near Infrared Spectrograph (NIRSpec) - PRISM",
+    "facility": "JWST",
+    "program_id": "1366",
+    "observing_visit": "Visit 01",
+    "observation_date": "2022-07-10/11",
+    "authors": "Rustamkulov et al. 2023",
+    "data_points_count": 207,
+    "wavelength_range_um": [
+      0.53146,
+      5.34413
+    ],
+    "reference_bibcode": "2023Natur.614..659R"
+  },
+  "opacity_provenance": {
+    "dataset": "POKAZATEL",
+    "formula": "H2O",
+    "isotopologue": "1H2-16O",
+    "tabulated_temperature_k": 500.0,
+    "atmospheric_temperature_k": 1166.0,
+    "pressure_treatment": "Doppler broadening at zero pressure; pressure-broadened wings neglected",
+    "approximation_justification": "The 500 K POKAZATEL zero-pressure cross section preserves fundamental vibrational band centers (2.7-3.3 \u00b5m) and envelope structure, allowing comparative testing of band contrast vs continuum. Higher-energy thermal state populations and pressure broadening are known approximations.",
+    "missing_requirement": "High-temperature cross section tabulated at T=1166 K, P=0.01 bar with H2/He line broadening. Can be generated via ExoMol cross-section ingestion workflow once online access is authorized.",
+    "citations": [
+      "Polyansky et al. 2018, MNRAS 480, 2597 (POKAZATEL)",
+      "Tennyson & Yurchenko 2012, MNRAS 425, 21 (ExoMol)"
+    ]
+  },
+  "band_definition": {
+    "name": "WASP-39 b 3.10-3.30 \u00b5m Water Band (Holdout Window)",
+    "band_interval_um": [
+      3.1,
+      3.3
+    ],
+    "blue_reference_interval_um": [
+      2.8,
+      3.0
+    ],
+    "red_reference_interval_um": [
+      3.4,
+      3.6
+    ],
+    "weighting_method": "inverse_variance",
+    "decision_threshold_sigmas": 2.0,
+    "scientific_justification": "Evaluates the 3.10-3.30 \u00b5m water feature relative to local continuum reference levels at 2.80-3.00 \u00b5m and 3.40-3.60 \u00b5m across separate visits."
+  },
+  "observed_contrast": {
+    "band_depth_percent": 2.132192681072289,
+    "continuum_depth_percent": 2.159530025549533,
+    "contrast_ppm": -273.37344477243784,
+    "uncertainty_ppm": 36.06250579098502
+  },
+  "models": {
+    "with_molecule": {
+      "model_name": "Physical Atmospheric Model (+H2O)",
+      "contains_target_molecule": true,
+      "fitted_parameters": {
+        "log10_h2o_vmr": -5.2899077765057685,
+        "h2o_vmr": 5.129703029233884e-06,
+        "radius_multiplier": 1.0028498304851083
+      },
+      "training_rms_ppm": 287.40478115623773,
+      "training_weighted_q_over_n": 3.152915430274101,
+      "validation_mean_depth_percent": 2.1457328949110406,
+      "validation_mean_offset_ppm": 140.6817792990811,
+      "validation_shape_rms_ppm": 274.32166035085504,
+      "predicted_band_depth_percent": 2.1428354848955875,
+      "predicted_continuum_depth_percent": 2.1457988906202825,
+      "predicted_contrast_ppm": -29.634057246950007,
+      "contrast_error_ppm": 243.7393875254878
+    },
+    "without_molecule_baseline": {
+      "model_name": "Continuum Baseline (No H2O)",
+      "contains_target_molecule": false,
+      "fitted_parameters": {
+        "radius_multiplier": 1.0054918522662986
+      },
+      "training_rms_ppm": 370.4246632436558,
+      "training_weighted_q_over_n": 5.080353672587947,
+      "validation_mean_depth_percent": 2.149761533178279,
+      "validation_mean_offset_ppm": 180.9681619714665,
+      "validation_shape_rms_ppm": 300.4447864092691,
+      "predicted_band_depth_percent": 2.149762246714828,
+      "predicted_continuum_depth_percent": 2.149763137000589,
+      "predicted_contrast_ppm": -0.00890285761112608,
+      "contrast_error_ppm": 273.3645419148267
+    }
+  },
+  "comparison": {
+    "contrast_accuracy_improvement_ppm": 29.62515438933889,
+    "outcome_decision": "This observation cannot distinguish the models.",
+    "plain_language_summary": "This observation cannot distinguish the models. Both the physical water model (contrast error = 243.7 ppm) and the flat continuum baseline (contrast error = 273.4 ppm) predict band contrasts within the 2-sigma observational uncertainty interval (\u00b172.1 ppm) of the validation observation. While adding water improved the training fit on NIRSpec G395H by 83.0 ppm, the separate NIRSpec PRISM observation's per-bin measurement scatter is comparable to the contrast difference, preventing a statistically decisive preference between the two models on this feature."
+  },
+  "validation_points_count": 53,
+  "protocol_sha256": null,
+  "prediction_sha256": null
+}
